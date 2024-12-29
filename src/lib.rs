@@ -10,11 +10,14 @@ use bevy_ecs::prelude::*;
 use firewheel::FirewheelConfig;
 
 pub mod activity;
+pub mod adsr;
+pub mod bpf;
 pub mod context;
 pub mod label;
 pub mod lpf;
 pub mod node;
 pub mod sample;
+pub mod saw;
 
 pub use activity::{Pause, Stop};
 pub use context::AudioContext;
@@ -28,7 +31,7 @@ pub use node::{RegisterNode, RegisterParamsNode};
 // the version of firewheel tracked by this crate
 // may just be an arbitrary commit in a fork.
 pub use firewheel;
-pub use firewheel::basic_nodes::VolumeNode;
+pub use firewheel::basic_nodes::{MixNode, VolumeNode};
 
 /// Node label derive macro.
 ///
@@ -108,8 +111,12 @@ impl Plugin for SeedlingPlugin {
             .init_asset::<sample::Sample>()
             .register_asset_loader(sample::SampleLoader { sample_rate })
             .register_node::<sample::SamplePlayer>()
+            .register_params_node::<adsr::AdsrNode>()
+            .register_params_node::<saw::SawNode>()
             .register_params_node::<lpf::LowPassNode>()
+            .register_params_node::<bpf::BandPassNode>()
             .register_params_node::<VolumeNode>()
+            .register_node::<MixNode>()
             .configure_sets(
                 Last,
                 (

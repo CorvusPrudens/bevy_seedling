@@ -8,6 +8,7 @@ use bevy_log::{error, warn_once};
 use bevy_utils::HashMap;
 use firewheel::node::{AudioNode, EventData, NodeEvent, NodeID};
 use firewheel::param::AudioParam;
+use firewheel::ChannelConfig;
 
 #[derive(Component)]
 struct ParamsDiff<T>(pub(crate) T);
@@ -36,11 +37,17 @@ impl Events {
 
 fn generate_param_events<T: AudioParam + Component + Clone + Send + Sync + 'static>(
     mut nodes: Query<(&mut T, &mut ParamsDiff<T>, &mut Events)>,
+    mut ctx: ResMut<AudioContext>,
 ) {
-    for (params, mut diff, mut events) in nodes.iter_mut() {
+    let now = ctx.now();
+
+    for (mut params, mut diff, mut events) in nodes.iter_mut() {
+        // Keep params roughly synched.
+        params.tick(now);
+
         params.diff(
             &diff.0,
-            |event| events.push(EventData::Parameter(event)),
+            |event| events.push(EventData::Parameter(Box::new(event))),
             Default::default(),
         );
 
@@ -49,15 +56,15 @@ fn generate_param_events<T: AudioParam + Component + Clone + Send + Sync + 'stat
 }
 
 fn acquire_id<T: Into<Box<dyn AudioNode>> + Component + Clone>(
-    q: Query<(Entity, &T, Option<&NodeLabels>), Without<Node>>,
+    q: Query<(Entity, &T, Option<&NodeLabels>, Option<&ChannelConfig>), Without<Node>>,
     mut context: ResMut<AudioContext>,
     mut commands: Commands,
     mut node_map: ResMut<NodeMap>,
 ) {
     context.with(|context| {
         if let Some(graph) = context.graph_mut() {
-            for (entity, container, labels) in q.iter() {
-                let node = match graph.add_node(container.clone().into(), None) {
+            for (entity, container, labels, config) in q.iter() {
+                let node = match graph.add_node(container.clone().into(), config.cloned()) {
                     Ok(node) => node,
                     Err(e) => {
                         error!("failed to insert node: {e}");

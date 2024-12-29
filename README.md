@@ -1,3 +1,6 @@
+[![crates.io](https://img.shields.io/crates/v/bevy_seedling)](https://crates.io/crates/bevy_seedling)
+[![docs.rs](https://docs.rs/bevy_seedling/badge.svg)](https://docs.rs/bevy_seedling)
+
 A sprouting integration of the [Firewheel](https://github.com/BillyDM/firewheel)
 audio engine for [Bevy](https://bevyengine.org/).
 
