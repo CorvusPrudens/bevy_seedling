@@ -10,7 +10,6 @@ use bevy_ecs::prelude::*;
 use firewheel::FirewheelConfig;
 
 pub mod activity;
-pub mod adsr;
 pub mod bpf;
 pub mod context;
 pub mod label;
@@ -114,7 +113,6 @@ impl Plugin for SeedlingPlugin {
             .init_asset::<sample::Sample>()
             .register_asset_loader(sample::SampleLoader { sample_rate })
             .register_node::<sample::SamplePlayer>()
-            .register_params_node::<adsr::AdsrNode>()
             .register_params_node::<saw::SawNode>()
             .register_params_node::<lpf::LowPassNode>()
             .register_params_node::<bpf::BandPassNode>()
