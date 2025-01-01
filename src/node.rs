@@ -172,7 +172,7 @@ pub(crate) struct PendingRemovals(Vec<NodeID>);
 ///
 /// [`ConnectTarget`] can be constructed manually or
 /// used as a part of the [`ConnectNode`] API.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConnectTarget {
     /// A global label such as [`MainBus`].
     Label(InternedNodeLabel),
@@ -180,6 +180,32 @@ pub enum ConnectTarget {
     Entity(Entity),
     /// An existing node from the audio graph.
     Node(NodeID),
+}
+
+impl ConnectTarget {
+    pub fn get(&self, nodes: &Query<&Node>, map: &NodeMap) -> Option<NodeID> {
+        match self {
+            ConnectTarget::Entity(entity) => {
+                let Ok(dest_node) = nodes.get(*entity) else {
+                    warn_once!("no target {entity:?} found for audio node connection");
+
+                    return None;
+                };
+
+                Some(dest_node.0)
+            }
+            ConnectTarget::Label(label) => {
+                let Some(dest_node) = map.get(label) else {
+                    warn_once!("no active label found for audio node connection");
+
+                    return None;
+                };
+
+                Some(*dest_node)
+            }
+            ConnectTarget::Node(node) => Some(*node),
+        }
+    }
 }
 
 /// A pending connection between two nodes.
@@ -360,25 +386,8 @@ pub(crate) fn process_connections(
         if let Some(graph) = context.graph_mut() {
             for (mut connections, source_node) in conn.iter_mut() {
                 connections.0.retain(|connection| {
-                    let dest_node = match connection.target {
-                        ConnectTarget::Entity(entity) => {
-                            let Ok(dest_node) = targets.get(entity) else {
-                                warn_once!("no target {entity:?} found for audio node connection");
-                                return true;
-                            };
-
-                            dest_node.0
-                        }
-                        ConnectTarget::Label(label) => {
-                            let Some(dest_node) = node_map.get(&label) else {
-                                warn_once!("no active label found for audio node connection");
-
-                                return true;
-                            };
-
-                            *dest_node
-                        }
-                        ConnectTarget::Node(node) => node,
+                    let Some(dest_node) = connection.target.get(&targets, &node_map) else {
+                        return false;
                     };
 
                     let ports = connection.ports.as_deref().unwrap_or(&[(0, 0), (1, 1)]);

@@ -4,10 +4,12 @@
 
 extern crate self as bevy_seedling;
 
-use bevy_app::{Last, Plugin, Startup};
+use bevy_app::{Last, Plugin, PreStartup};
 use bevy_asset::AssetApp;
 use bevy_ecs::prelude::*;
 use firewheel::FirewheelConfig;
+
+mod auto_mix;
 
 pub mod activity;
 pub mod bpf;
@@ -128,7 +130,7 @@ impl Plugin for SeedlingPlugin {
                         .after(SeedlingSystems::Queue),
                 ),
             )
-            .add_systems(Startup, label::insert_main_bus)
+            .add_systems(PreStartup, label::insert_main_bus)
             .add_systems(
                 Last,
                 (
