@@ -1,6 +1,6 @@
 [package]
 name = "bevy_seedling"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.83.0"
 license = "MIT OR Apache-2.0"
@@ -13,6 +13,8 @@ keywords = ["gamedev", "audio", "bevy", "firewheel"]
 categories = ["game-development", "multimedia::audio"]
 exclude = ["/assets"]
 
+[features]
+profiling = []
 
 [dependencies]
 bevy_reflect = { version = "0.15" }
@@ -23,14 +25,13 @@ bevy_log = "0.15"
 bevy_hierarchy = "0.15"
 bevy_asset = "0.15"
 bevy_math = "0.15"
-firewheel = { path = "../firewheel" }
+firewheel = { git = "https://github.com/corvusprudens/firewheel", branch = "params" }
 symphonium = "0.2.2"
 symphonia = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 smallvec = "1.13"
 arrayvec = "0.7"
 seedling_macros = { path = "./seedling_macros", version = "0.1.0" }
-
 
 [dev-dependencies]
 bevy = { version = "0.15", default-features = false, features = [
@@ -42,3 +43,9 @@ bevy = { version = "0.15", default-features = false, features = [
   "multi_threaded",
   "sysinfo_plugin",
 ] }
+criterion = "0.5"
+
+[[bench]]
+name = "basic"
+harness = false
+required-features = ["profiling"]

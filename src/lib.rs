@@ -19,6 +19,9 @@ pub mod node;
 pub mod sample;
 pub mod saw;
 
+#[cfg(feature = "profiling")]
+pub mod profiling;
+
 pub use activity::{Pause, Stop};
 pub use context::AudioContext;
 pub use label::{MainBus, NodeLabel};

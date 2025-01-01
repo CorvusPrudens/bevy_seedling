@@ -1,5 +1,8 @@
-//! This example demonstrates how to set up a formant
-//! generator from `bevy_seedling`'s built-in nodes.
+//! This example demonstrates a more complicated graph.
+//!
+//! Note that you should generally implement things
+//! like this within a single, custom node since `bevy_seedling`
+//! does not expose a rich set of nodes like Max or Pure Data.
 
 use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::{
@@ -91,6 +94,10 @@ fn main() {
         .run();
 }
 
+/// Switch between formant groups according to the timer.
+///
+/// A small bit of smoothing is applied to the amplitudes
+/// and filter frequencies.
 fn switch_formant(
     q: Query<&FormantGroup>,
     mut formants: Query<&mut BandPassNode>,
@@ -119,6 +126,7 @@ fn switch_formant(
                         now + ClockSeconds(0.05),
                         EaseFunction::Linear,
                     );
+
                     formant.q.push_curve(
                         data.frequency / data.bandwidth,
                         now,
