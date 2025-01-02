@@ -46,24 +46,13 @@ fn main() {
         .add_systems(
             Startup,
             |server: Res<AssetServer>, mut commands: Commands| {
-                let mix = commands
-                    .spawn((
-                        MixNode,
-                        ChannelConfig {
-                            num_inputs: ChannelCount::new(TENOR[0].len() as u32).unwrap(),
-                            num_outputs: ChannelCount::MONO,
-                        },
-                    ))
-                    .connect_with(MainBus, &[(0, 0), (0, 1)])
-                    .id();
-
                 let filters: Vec<_> = TENOR[0]
                     .iter()
                     .enumerate()
                     .map(|(i, f)| {
                         let vol = commands
                             .spawn(VolumeNode::new(db(f.amplitude)))
-                            .connect_with(mix, &[(0, i as u32)])
+                            .connect_with(MainBus, &[(0, 0), (0, 1)])
                             .id();
 
                         let filter = commands

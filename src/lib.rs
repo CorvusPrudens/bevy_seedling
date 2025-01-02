@@ -9,8 +9,6 @@ use bevy_asset::AssetApp;
 use bevy_ecs::prelude::*;
 use firewheel::FirewheelConfig;
 
-mod auto_mix;
-
 pub mod activity;
 pub mod bpf;
 pub mod context;
