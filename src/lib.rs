@@ -26,6 +26,7 @@ pub use context::AudioContext;
 pub use label::{MainBus, NodeLabel};
 pub use node::{ConnectNode, ConnectTarget, Node};
 pub use node::{RegisterNode, RegisterParamsNode};
+pub use seedling_macros::AudioParam;
 
 // Re-export firewheel.
 //

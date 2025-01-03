@@ -27,7 +27,7 @@ bevy_log = "0.15"
 bevy_hierarchy = "0.15"
 bevy_asset = "0.15"
 bevy_math = "0.15"
-firewheel = { git = "https://github.com/corvusprudens/firewheel", branch = "params" }
+firewheel = { path = "firewheel" }
 symphonium = "0.2.2"
 symphonia = "0.5"
 serde = { version = "1.0", features = ["derive"] }

@@ -1,11 +1,15 @@
+extern crate proc_macro;
+
 use bevy_macro_utils::fq_std::{FQOption, FQResult};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
-use quote::ToTokens;
+use quote::{quote, ToTokens};
 use syn::spanned::Spanned;
 
-pub fn derive_param_inner(input: TokenStream) -> syn::Result<TokenStream2> {
+pub fn derive_param_inner(
+    input: TokenStream,
+    firewheel_path: TokenStream2,
+) -> syn::Result<TokenStream2> {
     let input: syn::DeriveInput = syn::parse(input)?;
     let identifier = &input.ident;
 
@@ -64,7 +68,7 @@ pub fn derive_param_inner(input: TokenStream) -> syn::Result<TokenStream2> {
         predicates: Default::default(),
     });
 
-    let param_path = quote! { ::bevy_seedling::firewheel::param };
+    let param_path = quote! { #firewheel_path::param };
 
     for (_, ty) in &fields {
         where_generics
@@ -85,7 +89,7 @@ pub fn derive_param_inner(input: TokenStream) -> syn::Result<TokenStream2> {
                 }
             }
 
-            fn tick(&mut self, time: ::bevy_seedling::firewheel::clock::ClockSeconds) {
+            fn tick(&mut self, time: #firewheel_path::clock::ClockSeconds) {
                 #(#ticks)*
             }
         }
