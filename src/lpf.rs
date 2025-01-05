@@ -2,9 +2,8 @@
 
 use bevy_ecs::prelude::*;
 use firewheel::{
-    node::{AudioNode, AudioNodeProcessor, EventData, ProcessStatus},
-    param::AudioParam,
-    param::Timeline,
+    node::{AudioNode, AudioNodeProcessor, NodeEventType, ProcessStatus},
+    param::{AudioParam, ParamEvent, Timeline},
     ChannelConfig, ChannelCount,
 };
 
@@ -67,7 +66,7 @@ impl AudioNode for LowPassNode {
         Ok(Box::new(LowPassProcessor {
             params: self.clone(),
             channels: vec![
-                Lpf::new(stream_info.sample_rate as f32, self.frequency.get());
+                Lpf::new(stream_info.sample_rate.get() as f32, self.frequency.get());
                 channel_config.num_inputs.get() as usize
             ],
         }))
@@ -133,8 +132,10 @@ impl AudioNodeProcessor for LowPassProcessor {
         // more smooth, or it should at least be easy to
         // properly report errors without panicking or allocations.
         for event in events {
-            if let EventData::Parameter(p) = event {
-                let _ = self.params.patch(&p.data, &p.path);
+            if let NodeEventType::Custom(event) = event {
+                if let Some(param) = event.downcast_ref::<ParamEvent>() {
+                    let _ = self.params.patch(&param.data, &param.path);
+                }
             }
         }
 

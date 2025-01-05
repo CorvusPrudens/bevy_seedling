@@ -7,7 +7,7 @@ use bevy_ecs::{prelude::*, world::DeferredWorld};
 use bevy_log::{error, error_once, warn_once};
 use bevy_utils::HashMap;
 use firewheel::basic_nodes::MixNode;
-use firewheel::node::{AudioNode, EventData, NodeEvent, NodeID};
+use firewheel::node::{AudioNode, NodeEvent, NodeEventType, NodeID};
 use firewheel::param::AudioParam;
 use firewheel::{ChannelConfig, ChannelCount};
 
@@ -19,20 +19,20 @@ struct ParamsDiff<T>(pub(crate) T);
 /// When inserted into an entity that contains a [Node],
 /// these events will automatically be drained and sent
 /// to the audio context in the [SeedlingSystems::Flush] set.
-#[derive(Debug, Component, Default)]
-pub struct Events(Vec<EventData>);
+#[derive(Component, Default)]
+pub struct Events(Vec<NodeEventType>);
 
 impl Events {
     /// Push a new event.
-    pub fn push(&mut self, event: EventData) {
+    pub fn push(&mut self, event: NodeEventType) {
         self.0.push(event);
     }
 
     /// Push a custom event.
     ///
-    /// `value` is boxed and wrapped in [EventData::Custom].
+    /// `value` is boxed and wrapped in [NodeEventType::Custom].
     pub fn push_custom<T: Send + Sync + 'static>(&mut self, value: T) {
-        self.0.push(EventData::Custom(Box::new(value)));
+        self.0.push(NodeEventType::Custom(Box::new(value)));
     }
 }
 
@@ -48,7 +48,7 @@ fn generate_param_events<T: AudioParam + Component + Clone + Send + Sync + 'stat
 
         params.diff(
             &diff.0,
-            |event| events.push(EventData::Parameter(Box::new(event))),
+            |event| events.push(NodeEventType::Custom(Box::new(event))),
             Default::default(),
         );
 
@@ -592,6 +592,7 @@ pub(crate) fn flush_events(
                     graph.queue_event(NodeEvent {
                         node_id: node.0,
                         event,
+                        delay: firewheel::clock::EventDelay::Immediate,
                     });
                 }
             }

@@ -3,9 +3,8 @@
 use bevy_ecs::prelude::*;
 use firewheel::{
     clock::ClockSeconds,
-    node::{AudioNode, AudioNodeProcessor, EventData, ProcessStatus},
-    param::AudioParam,
-    param::Timeline,
+    node::{AudioNode, AudioNodeProcessor, NodeEventType, ProcessStatus},
+    param::{AudioParam, ParamEvent, Timeline},
     ChannelConfig, ChannelCount,
 };
 
@@ -66,7 +65,7 @@ impl AudioNode for SawNode {
         _: ChannelConfig,
     ) -> Result<Box<dyn firewheel::node::AudioNodeProcessor>, Box<dyn std::error::Error>> {
         Ok(Box::new(SawProcessor::new(
-            stream_info.sample_rate as f32,
+            stream_info.sample_rate.get() as f32,
             self.clone(),
         )))
     }
@@ -129,8 +128,10 @@ impl AudioNodeProcessor for SawProcessor {
         // more smooth, or it should at least be easy to
         // properly report errors without panicking or allocations.
         for event in events {
-            if let EventData::Parameter(p) = event {
-                let _ = self.params.patch(&p.data, &p.path);
+            if let NodeEventType::Custom(event) = event {
+                if let Some(param) = event.downcast_ref::<ParamEvent>() {
+                    let _ = self.params.patch(&param.data, &param.path);
+                }
             }
         }
 

@@ -1,5 +1,7 @@
 //! Profiling utilities.
 
+use std::num::NonZeroU32;
+
 use firewheel::{
     clock::ClockSeconds,
     node::StreamStatus,
@@ -23,11 +25,13 @@ impl ProfilingContext {
 
         let processor = context
             .activate(StreamInfo {
-                sample_rate,
-                max_block_samples: 256,
+                sample_rate: NonZeroU32::new(sample_rate).unwrap(),
+                declick_frames: NonZeroU32::MIN,
+                sample_rate_recip: 1.0 / sample_rate as f64,
+                max_block_frames: NonZeroU32::new(256).unwrap(),
                 num_stream_in_channels: 2,
                 num_stream_out_channels: 2,
-                stream_latency_samples: None,
+                stream_latency_frames: None,
             })
             .unwrap();
 

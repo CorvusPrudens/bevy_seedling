@@ -35,6 +35,8 @@ pub use seedling_macros::AudioParam;
 // may just be an arbitrary commit in a fork.
 pub use firewheel;
 pub use firewheel::basic_nodes::{MixNode, VolumeNode};
+pub use firewheel::node::RepeatMode;
+pub use firewheel::sampler::SamplerNode;
 
 /// Node label derive macro.
 ///
@@ -94,31 +96,54 @@ pub enum SeedlingSystems {
 /// This spawns the audio task in addition
 /// to inserting `bevy_seedling`'s systems
 /// and resources.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct SeedlingPlugin {
     /// [`firewheel`]'s config, forwarded directly to
     /// the engine.
     ///
     /// [`firewheel`]: firewheel
-    pub settings: FirewheelConfig,
+    pub config: FirewheelConfig,
+
+    /// The number of sampler nodes for the default
+    /// sampler pool.
+    ///
+    /// This must not exceed 32 nodes.
+    pub sample_pool_size: usize,
 }
+
+impl Default for SeedlingPlugin {
+    fn default() -> Self {
+        Self {
+            config: Default::default(),
+            sample_pool_size: 24,
+        }
+    }
+}
+
+#[derive(Resource)]
+struct SamplePoolSize(usize);
 
 impl Plugin for SeedlingPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        let mut context = AudioContext::new(self.settings);
+        if self.sample_pool_size > 32 {
+            panic!("`sample_pool_size` must not exceed 32 nodes");
+        }
+
+        let mut context = AudioContext::new(self.config);
         let sample_rate = context.with(|ctx| ctx.stream_info().unwrap().sample_rate);
 
         app.insert_resource(context)
             .init_resource::<node::NodeMap>()
             .init_resource::<node::PendingRemovals>()
+            .insert_resource(SamplePoolSize(self.sample_pool_size))
             .init_asset::<sample::Sample>()
             .register_asset_loader(sample::SampleLoader { sample_rate })
-            .register_node::<sample::SamplePlayer>()
             .register_params_node::<saw::SawNode>()
             .register_params_node::<lpf::LowPassNode>()
             .register_params_node::<bpf::BandPassNode>()
             .register_params_node::<VolumeNode>()
             .register_node::<MixNode>()
+            .register_node::<SamplerNode>()
             .configure_sets(
                 Last,
                 (
@@ -133,12 +158,10 @@ impl Plugin for SeedlingPlugin {
             .add_systems(
                 Last,
                 (
-                    sample::on_add.in_set(SeedlingSystems::Acquire),
                     node::auto_connect
                         .before(SeedlingSystems::Connect)
                         .after(SeedlingSystems::Acquire),
                     node::process_connections.in_set(SeedlingSystems::Connect),
-                    sample::trigger_pending_samples.in_set(SeedlingSystems::Queue),
                     (
                         node::process_removals,
                         node::flush_events,
@@ -148,5 +171,7 @@ impl Plugin for SeedlingPlugin {
                         .in_set(SeedlingSystems::Flush),
                 ),
             );
+
+        app.add_plugins(sample::pool::SamplePoolPlugin);
     }
 }

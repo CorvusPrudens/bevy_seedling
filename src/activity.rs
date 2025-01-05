@@ -2,7 +2,7 @@
 
 use crate::node::Events;
 use bevy_ecs::{component::ComponentId, prelude::*, world::DeferredWorld};
-use firewheel::node::EventData;
+use firewheel::node::NodeEventType;
 
 /// Pause an audio node and its queued events.
 ///
@@ -36,7 +36,7 @@ fn on_add_pause(mut world: DeferredWorld, entity: Entity, _: ComponentId) {
         .entry::<Events>()
         .or_default()
         .and_modify(|mut events| {
-            events.push(EventData::Pause);
+            events.push(NodeEventType::Pause);
         });
 }
 
@@ -53,7 +53,7 @@ fn on_remove_pause(mut world: DeferredWorld, entity: Entity, _: ComponentId) {
         .entry::<Events>()
         .or_default()
         .and_modify(|mut events| {
-            events.push(EventData::Resume);
+            events.push(NodeEventType::Resume);
         });
 }
 
@@ -82,7 +82,7 @@ fn on_add_stop(mut world: DeferredWorld, entity: Entity, _: ComponentId) {
         .entry::<Events>()
         .or_default()
         .and_modify(|mut events| {
-            events.push(EventData::Stop);
+            events.push(NodeEventType::Stop);
         });
 }
 
@@ -99,6 +99,6 @@ fn on_remove_stop(mut world: DeferredWorld, entity: Entity, _: ComponentId) {
         .entry::<Events>()
         .or_default()
         .and_modify(|mut events| {
-            events.push(EventData::Resume);
+            events.push(NodeEventType::Resume);
         });
 }

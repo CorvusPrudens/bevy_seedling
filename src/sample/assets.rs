@@ -1,12 +1,7 @@
-//! Audio sample node.
-
-use crate::node::Events;
-use bevy_asset::{Asset, AssetLoader, Assets, Handle};
-use bevy_ecs::prelude::*;
+use bevy_asset::{Asset, AssetLoader};
 use bevy_reflect::TypePath;
-use firewheel::node::AudioNode;
 use firewheel::sample_resource::SampleResource;
-use firewheel::sampler::one_shot::OneShotSamplerNode;
+use std::num::NonZeroU32;
 use std::sync::Arc;
 
 /// An audio sample.
@@ -26,21 +21,6 @@ impl core::fmt::Debug for Sample {
     }
 }
 
-#[derive(Debug, Component, Clone)]
-pub struct SamplePlayer(pub(crate) Handle<Sample>);
-
-impl From<SamplePlayer> for Box<dyn AudioNode> {
-    fn from(_: SamplePlayer) -> Self {
-        OneShotSamplerNode::new(Default::default()).into()
-    }
-}
-
-impl SamplePlayer {
-    pub fn new(handle: Handle<Sample>) -> Self {
-        Self(handle)
-    }
-}
-
 /// A simple loader for audio samples.
 #[derive(Debug)]
 pub struct SampleLoader {
@@ -48,7 +28,7 @@ pub struct SampleLoader {
     ///
     /// This must be kept in sync with the engine if
     /// the sample rate changes.
-    pub sample_rate: u32,
+    pub sample_rate: NonZeroU32,
 }
 
 /// Errors produced while loading samples.
@@ -113,38 +93,5 @@ impl AssetLoader for SampleLoader {
 
     fn extensions(&self) -> &[&str] {
         &["wav"]
-    }
-}
-
-/// A marker struct for entities that are waiting
-/// for a sample to load.
-#[derive(Debug, Component)]
-#[component(storage = "SparseSet")]
-pub struct LoadingSample;
-
-pub(crate) fn on_add(
-    q: Query<Entity, (Added<SamplePlayer>, Without<LoadingSample>)>,
-    mut commands: Commands,
-) {
-    for player in q.iter() {
-        commands.entity(player).insert(LoadingSample);
-    }
-}
-
-pub(crate) fn trigger_pending_samples(
-    mut q: Query<(Entity, &SamplePlayer, &mut Events), With<LoadingSample>>,
-    mut commands: Commands,
-    assets: Res<Assets<Sample>>,
-) {
-    for (entity, player, mut events) in q.iter_mut() {
-        if let Some(asset) = assets.get(&player.0) {
-            events.push_custom(firewheel::sampler::one_shot::Sample {
-                sample: asset.get(),
-                normalized_volume: 1.0,
-                stop_other_voices: false,
-            });
-
-            commands.entity(entity).remove::<LoadingSample>();
-        }
     }
 }

@@ -9,7 +9,6 @@ use bevy_seedling::{
     bpf::BandPassNode,
     firewheel::{basic_nodes::VolumeNode, clock::ClockSeconds},
     node::NodeMap,
-    sample::SamplePlayer,
     saw::SawNode,
     AudioContext, ConnectNode, MainBus, NodeLabel, SeedlingPlugin,
 };

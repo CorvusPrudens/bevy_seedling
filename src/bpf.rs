@@ -2,9 +2,8 @@
 
 use bevy_ecs::prelude::*;
 use firewheel::{
-    node::{AudioNode, AudioNodeProcessor, EventData, ProcessStatus},
-    param::AudioParam,
-    param::Timeline,
+    node::{AudioNode, AudioNodeProcessor, NodeEventType, ProcessStatus},
+    param::{AudioParam, ParamEvent, Timeline},
     ChannelConfig, ChannelCount,
 };
 
@@ -70,7 +69,7 @@ impl AudioNode for BandPassNode {
             params: self.clone(),
             channels: vec![
                 Bpf::new(
-                    stream_info.sample_rate as f32,
+                    stream_info.sample_rate.get() as f32,
                     self.frequency.get(),
                     self.q.get()
                 );
@@ -144,20 +143,14 @@ impl AudioNodeProcessor for BandPassProcessor {
         events: firewheel::node::NodeEventIter,
         proc_info: firewheel::node::ProcInfo,
     ) -> ProcessStatus {
-        // It would be nice if this process were made a little
-        // more smooth, or it should at least be easy to
-        // properly report errors without panicking or allocations.
         for event in events {
-            if let EventData::Parameter(p) = event {
-                let _ = self.params.patch(&p.data, &p.path);
+            if let NodeEventType::Custom(event) = event {
+                if let Some(param) = event.downcast_ref::<ParamEvent>() {
+                    let _ = self.params.patch(&param.data, &param.path);
+                }
             }
         }
 
-        // Actually this won't _technically_ be true, since
-        // the filter may cary over a bit of energy from
-        // when the inputs were just active.
-        //
-        // Allowing a bit of settling time would resolve this.
         if proc_info.in_silence_mask.all_channels_silent(inputs.len()) {
             // All inputs are silent.
             return ProcessStatus::ClearAllOutputs;
