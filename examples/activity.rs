@@ -18,13 +18,16 @@ fn main() {
             SeedlingPlugin::default(),
         ))
         .insert_resource(Delay(Timer::new(
-            Duration::from_millis(300),
+            Duration::from_millis(500),
             TimerMode::Repeating,
         )))
         .add_systems(
             Startup,
             |server: Res<AssetServer>, mut commands: Commands| {
-                commands.spawn(SamplePlayer::new(server.load("snd_wobbler.wav")));
+                commands.spawn((
+                    SamplePlayer::new(server.load("snd_wobbler.wav")),
+                    PlaybackSettings::LOOP,
+                ));
             },
         )
         .add_systems(Update, toggle_activity)

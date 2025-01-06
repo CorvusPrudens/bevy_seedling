@@ -19,7 +19,7 @@ impl SawNode {
     /// Create a new [`SawNode`] with an initial frequency.
     ///
     /// ```
-    /// # use bevy_seedling::{*, lpf::SawNode};
+    /// # use bevy_seedling::{*, saw::SawNode};
     /// # use bevy::prelude::*;
     /// # fn system(mut commands: Commands) {
     /// commands.spawn(SawNode::new(440.0));

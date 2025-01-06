@@ -5,12 +5,15 @@ use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::{
     firewheel::{basic_nodes::VolumeNode, clock::ClockSeconds},
     lpf::LowPassNode,
-    sample::SamplePlayer,
-    AudioContext, ConnectNode, NodeLabel, SeedlingPlugin,
+    sample::{pool::SpawnPool, SamplePlayer},
+    AudioContext, ConnectNode, NodeLabel, PlaybackSettings, PoolLabel, SeedlingPlugin,
 };
 
 #[derive(NodeLabel, PartialEq, Eq, Debug, Hash, Clone)]
 struct EffectsBus;
+
+#[derive(PoolLabel, PartialEq, Eq, Debug, Hash, Clone)]
+struct EffectsPool;
 
 fn main() {
     App::new()
@@ -39,16 +42,26 @@ fn main() {
                     .spawn((VolumeNode::new(1.), EffectsBus))
                     .connect(effects);
 
-                // Since we're here, we might as well trigger a one-shot sample
-                // and send it through the effects chain.
+                // Let's create a new sample player pool and route it to our effects bus.
+                commands.spawn_pool(EffectsPool, 4).connect(EffectsBus);
+
+                // Finally, let's play a sample through the chain.
                 commands
-                    .spawn(SamplePlayer::new(server.load("snd_wobbler.wav")))
+                    .spawn((
+                        SamplePlayer::new(server.load("snd_wobbler.wav")),
+                        PlaybackSettings::LOOP,
+                        EffectsPool,
+                    ))
                     .connect(EffectsBus);
 
                 // Once these connections are synchronized with the audio graph,
                 // it will look like:
                 //
-                // SamplePlayer -> VolumeNode (EffectsBus) -> LowPassNode -> VolumeNode (MainBus) -> Audio Output
+                // SamplePlayer -> VolumeNode (EffectsPool) -> VolumeNode (EffectsBus) -> LowPassNode -> VolumeNode (MainBus) -> Audio Output
+                //
+                // The four sampler nodes in the effects pool are routed to a volume node.
+                // We then route that node to our effects bus volume node, passing
+                // through the effects to the main bus, which finally reaches the output.
             },
         )
         .add_systems(
@@ -60,9 +73,9 @@ fn main() {
 
                 node.frequency
                     .push_curve(
-                        0.,
+                        80.,
                         now,
-                        now + ClockSeconds(0.5),
+                        now + ClockSeconds(4.0),
                         EaseFunction::ExponentialOut,
                     )
                     .unwrap();
@@ -70,8 +83,8 @@ fn main() {
                 node.frequency
                     .push_curve(
                         10000.,
-                        now + ClockSeconds(0.5),
-                        now + ClockSeconds(2.0),
+                        now + ClockSeconds(4.0),
+                        now + ClockSeconds(8.0),
                         EaseFunction::ExponentialOut,
                     )
                     .unwrap();

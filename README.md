@@ -4,17 +4,13 @@
 A sprouting integration of the [Firewheel](https://github.com/BillyDM/firewheel)
 audio engine for [Bevy](https://bevyengine.org/).
 
-**NOTE**: this crate is very much a work-in-progress.
-The APIs are not set in stone, and not all platforms
-are supported (notably `wasm`).
-
 ## Getting started
 
 First, you'll need to add the dependency to your `Cargo.toml`.
 
 ```toml
 [dependencies]
-bevy_seedling = "0.1"
+bevy_seedling = "0.2"
 
 # At this stage, it may be better to track the main branch
 [dependencies]
@@ -77,19 +73,7 @@ if necessary.
   providing non-default channel configurations will
   need to be added.
 
-- One-shot node pool
-
-  One-shot audio nodes should be pooled, queuing up
-  samples to play as sample entities are spawned.
-
-- More audio nodes
-
-  There are plenty of nodes that remain to be authored either
-  in Firewheel or in this crate directly. Most pressing
-  are probably looping sample players.
-
 - Platform support
 
   Both Firewheel and this crate have some work to do in
   order to support `wasm` targets.
-

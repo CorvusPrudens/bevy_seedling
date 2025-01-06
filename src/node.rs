@@ -1,7 +1,7 @@
 //! Audio node connections and management.
 
-use crate::label::NodeLabels;
-use crate::{label::InternedNodeLabel, AudioContext, MainBus, NodeLabel, SeedlingSystems};
+use crate::node_label::NodeLabels;
+use crate::{node_label::InternedNodeLabel, AudioContext, MainBus, NodeLabel, SeedlingSystems};
 use bevy_app::Last;
 use bevy_ecs::{prelude::*, world::DeferredWorld};
 use bevy_log::{error, error_once, warn_once};
@@ -21,6 +21,15 @@ struct ParamsDiff<T>(pub(crate) T);
 /// to the audio context in the [SeedlingSystems::Flush] set.
 #[derive(Component, Default)]
 pub struct Events(Vec<NodeEventType>);
+
+// Not ideal, but we're waiting for Firewheel to implement debug.
+impl core::fmt::Debug for Events {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list()
+            .entries((0..self.0.len()).map(|_| ()))
+            .finish()
+    }
+}
 
 impl Events {
     /// Push a new event.
@@ -292,7 +301,7 @@ pub trait ConnectNode {
     ///
     /// ```
     /// # use bevy::prelude::*;
-    /// # use bevy_seedling::{label::MainBus, VolumeNode, ConnectNode};
+    /// # use bevy_seedling::{MainBus, VolumeNode, ConnectNode};
     /// # fn system(mut commands: Commands) {
     /// // Connect a node to the MainBus.
     /// let node = commands.spawn(VolumeNode::new(0.5)).connect(MainBus).id();

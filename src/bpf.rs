@@ -19,10 +19,10 @@ impl BandPassNode {
     /// Create a new [`BandPassNode`] with an initial cutoff frequency and quality.
     ///
     /// ```
-    /// # use bevy_seedling::{*, lpf::BandPassNode};
+    /// # use bevy_seedling::{*, bpf::BandPassNode};
     /// # use bevy::prelude::*;
     /// # fn system(mut commands: Commands) {
-    /// commands.spawn(BandPassNode::new(1000.0));
+    /// commands.spawn(BandPassNode::new(1000.0, 1.0));
     /// # }
     /// ```
     pub fn new(frequency: f32, q: f32) -> Self {
@@ -158,13 +158,20 @@ impl AudioNodeProcessor for BandPassProcessor {
 
         let seconds = proc_info.clock_seconds;
         for sample in 0..inputs[0].len() {
-            let seconds = seconds
-                + firewheel::clock::ClockSeconds(sample as f64 * proc_info.sample_rate_recip);
-            self.params.tick(seconds);
-            let frequency = self.params.frequency.get();
+            if sample % 32 == 0 {
+                let seconds = seconds
+                    + firewheel::clock::ClockSeconds(sample as f64 * proc_info.sample_rate_recip);
+                self.params.tick(seconds);
+                let frequency = self.params.frequency.get();
+                let q = self.params.q.get();
+
+                for channel in self.channels.iter_mut() {
+                    channel.center_freq = frequency;
+                    channel.q = q;
+                }
+            }
 
             for (i, channel) in self.channels.iter_mut().enumerate() {
-                channel.center_freq = frequency;
                 outputs[i][sample] = channel.process(inputs[i][sample]);
             }
         }

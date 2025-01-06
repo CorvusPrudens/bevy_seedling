@@ -46,7 +46,7 @@ impl ProfilingContext {
     pub fn process_interleaved(&mut self, input: &[f32], output: &mut [f32]) {
         let samples = output.len() / 2;
 
-        match self.processor.process_interleaved(
+        let status = self.processor.process_interleaved(
             input,
             output,
             2,
@@ -54,11 +54,10 @@ impl ProfilingContext {
             samples,
             self.time,
             StreamStatus::empty(),
-        ) {
-            FirewheelProcessorStatus::DropProcessor => {
-                panic!("received DropProcessor status");
-            }
-            _ => {}
+        );
+
+        if matches!(status, FirewheelProcessorStatus::DropProcessor) {
+            panic!("received DropProcessor status");
         }
 
         self.time.0 += self.sample_rate_recip * samples as f64;

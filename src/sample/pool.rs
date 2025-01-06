@@ -1,9 +1,9 @@
-use super::{PlaybackSettings, QueuedSample, Sample, SamplePlayer};
-use crate::{node::Events, ConnectNode, SamplePoolSize, SeedlingSystems};
-use bevy_app::{Last, Plugin, PreStartup};
+use super::{label::PoolLabelContainer, PlaybackSettings, QueuedSample, Sample, SamplePlayer};
+use crate::{node::Events, ConnectNode, DefaultPool, PoolLabel, SeedlingSystems};
+use bevy_app::{Last, Plugin};
 use bevy_asset::Assets;
 use bevy_ecs::{component::ComponentId, prelude::*, world::DeferredWorld};
-use bevy_hierarchy::DespawnRecursiveExt;
+use bevy_hierarchy::{BuildChildren, DespawnRecursiveExt};
 use firewheel::{
     node::NodeEventType,
     sampler::{SamplerConfig, SamplerNode},
@@ -15,14 +15,105 @@ pub(crate) struct SamplePoolPlugin;
 
 impl Plugin for SamplePoolPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        app.init_resource::<NodeRank>()
-            .add_systems(PreStartup, spawn_pool)
-            .add_systems(
-                Last,
-                (remove_finished, rank_nodes, assign_work, monitor_active)
-                    .chain()
-                    .in_set(SeedlingSystems::Queue),
-            );
+        app.add_systems(
+            Last,
+            (
+                (remove_finished, assign_default)
+                    .before(SeedlingSystems::Queue)
+                    .after(SeedlingSystems::Connect),
+                monitor_active
+                    .before(SeedlingSystems::Flush)
+                    .after(SeedlingSystems::Queue),
+            ),
+        );
+    }
+}
+
+/// Provides methods on [`Commands`] to spawn new sample pools.
+pub trait SpawnPool {
+    /// Spawn a sample pool, returning the [`EntityCommands`] for
+    /// the terminal volume node.
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// use bevy_seedling::{SpawnPool, PoolLabel, SamplePlayer};
+    ///
+    /// #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
+    /// struct CustomPool;
+    ///
+    /// fn spawn_custom_pool(server: Res<AssetServer>, mut commands: Commands) {
+    ///     // Spawn a custom sample pool
+    ///     commands.spawn_pool(CustomPool, 16);
+    ///
+    ///     // Trigger sample playback in the custom pool
+    ///     commands.spawn((
+    ///         SamplePlayer::new(server.load("my_sample.wav")),
+    ///         CustomPool,
+    ///     ));
+    /// }
+    /// ```
+    fn spawn_pool<T: PoolLabel + Component + Clone>(
+        &mut self,
+        marker: T,
+        size: usize,
+    ) -> EntityCommands<'_> {
+        self.spawn_pool_with(marker, size, 1.0)
+    }
+
+    /// Spawn a sample pool with an initial volume, returning the [`EntityCommands`] for
+    /// the terminal volume node.
+    fn spawn_pool_with<T: PoolLabel + Component + Clone>(
+        &mut self,
+        marker: T,
+        size: usize,
+        volume: f32,
+    ) -> EntityCommands<'_>;
+}
+
+impl SpawnPool for Commands<'_, '_> {
+    fn spawn_pool_with<T: PoolLabel + Component + Clone>(
+        &mut self,
+        marker: T,
+        size: usize,
+        volume: f32,
+    ) -> EntityCommands<'_> {
+        self.queue(|world: &mut World| {
+            world.schedule_scope(Last, |_, schedule| {
+                schedule.add_systems(
+                    (rank_nodes::<T>, assign_work::<T>)
+                        .chain()
+                        .in_set(SeedlingSystems::Queue),
+                );
+            });
+        });
+
+        let bus = self
+            .spawn((
+                crate::VolumeNode::new(volume),
+                SamplePoolNode,
+                marker.clone(),
+            ))
+            .id();
+
+        let rank = self.spawn((NodeRank::default(), marker.clone())).id();
+
+        let nodes: Vec<_> = (0..size)
+            .map(|_| {
+                self.spawn((
+                    crate::SamplerNode::new(SamplerConfig::default()),
+                    SamplePoolNode,
+                    marker.clone(),
+                ))
+                .connect(bus)
+                .id()
+            })
+            .collect();
+
+        let mut commands = self.entity(bus);
+
+        commands.add_children(&nodes).add_child(rank);
+
+        commands
     }
 }
 
@@ -34,24 +125,17 @@ struct SamplePoolNode;
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SamplePoolBus;
 
-#[derive(Resource, Default)]
+#[derive(Default, Component)]
 struct NodeRank(Vec<(Entity, u64)>);
 
-fn spawn_pool(mut commands: Commands, size: Res<SamplePoolSize>) {
-    // spawn the bus
-    commands.spawn((crate::VolumeNode::new(1.0), SamplePoolBus));
+fn rank_nodes<T: Component>(
+    q: Query<(Entity, &SamplerNode), (With<SamplePoolNode>, With<T>)>,
+    mut rank: Query<&mut NodeRank, With<T>>,
+) {
+    let Ok(mut rank) = rank.get_single_mut() else {
+        return;
+    };
 
-    for _ in 0..size.0 {
-        commands
-            .spawn((
-                crate::SamplerNode::new(SamplerConfig::default()),
-                SamplePoolNode,
-            ))
-            .connect(SamplePoolBus);
-    }
-}
-
-fn rank_nodes(q: Query<(Entity, &SamplerNode), With<SamplePoolNode>>, mut rank: ResMut<NodeRank>) {
     rank.0.clear();
 
     for (e, sampler) in q.iter() {
@@ -98,13 +182,20 @@ fn remove_finished(
     }
 }
 
-fn assign_work(
-    mut nodes: Query<(Entity, &mut Events), With<SamplePoolNode>>,
-    queued_samples: Query<(Entity, &SamplePlayer, &PlaybackSettings), With<QueuedSample>>,
-    mut rank: ResMut<NodeRank>,
+fn assign_work<T: Component>(
+    mut nodes: Query<(Entity, &mut Events), (With<SamplePoolNode>, With<T>)>,
+    queued_samples: Query<
+        (Entity, &SamplePlayer, &PlaybackSettings),
+        (With<QueuedSample>, With<T>),
+    >,
+    mut rank: Query<&mut NodeRank, With<T>>,
     assets: Res<Assets<Sample>>,
     mut commands: Commands,
 ) {
+    let Ok(mut rank) = rank.get_single_mut() else {
+        return;
+    };
+
     for (sample, player, settings) in queued_samples.iter() {
         let Some(asset) = assets.get(&player.0) else {
             continue;
@@ -147,5 +238,14 @@ fn monitor_active(
 
             commands.entity(node_entity).remove::<ActiveSample>();
         }
+    }
+}
+
+fn assign_default(
+    samples: Query<Entity, (With<SamplePlayer>, Without<PoolLabelContainer>)>,
+    mut commands: Commands,
+) {
+    for sample in samples.iter() {
+        commands.entity(sample).insert(DefaultPool);
     }
 }

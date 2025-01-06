@@ -151,13 +151,18 @@ impl AudioNodeProcessor for LowPassProcessor {
 
         let seconds = proc_info.clock_seconds;
         for sample in 0..inputs[0].len() {
-            let seconds = seconds
-                + firewheel::clock::ClockSeconds(sample as f64 * proc_info.sample_rate_recip);
-            self.params.tick(seconds);
-            let frequency = self.params.frequency.get();
+            if sample % 32 == 0 {
+                let seconds = seconds
+                    + firewheel::clock::ClockSeconds(sample as f64 * proc_info.sample_rate_recip);
+                self.params.tick(seconds);
+                let frequency = self.params.frequency.get();
+
+                for channel in self.channels.iter_mut() {
+                    channel.set_frequency(frequency);
+                }
+            }
 
             for (i, channel) in self.channels.iter_mut().enumerate() {
-                channel.set_frequency(frequency);
                 outputs[i][sample] = channel.process(inputs[i][sample]);
             }
         }

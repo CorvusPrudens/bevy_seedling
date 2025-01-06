@@ -14,9 +14,9 @@ categories = ["game-development", "multimedia::audio"]
 exclude = ["/assets"]
 
 [features]
-profiling = []
 mp3 = ["symphonia/mp3"]
 ogg = ["symphonia/ogg"]
+profiling = []
 
 [dependencies]
 bevy_reflect = { version = "0.15" }
