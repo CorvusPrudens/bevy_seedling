@@ -1,5 +1,5 @@
 //! This example demonstrates how to set up a
-//! custom bus and route nodes to it.
+//! custom sample pool, a custom bus, and the routing in-between.
 
 use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::{

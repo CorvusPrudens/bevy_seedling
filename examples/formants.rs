@@ -8,11 +8,9 @@ use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::{
     bpf::BandPassNode,
     firewheel::{basic_nodes::VolumeNode, clock::ClockSeconds},
-    node::NodeMap,
     saw::SawNode,
     AudioContext, ConnectNode, MainBus, NodeLabel, SeedlingPlugin,
 };
-use firewheel::{basic_nodes::MixNode, ChannelConfig, ChannelCount};
 use std::time::Duration;
 
 #[derive(NodeLabel, PartialEq, Eq, Debug, Hash, Clone)]
@@ -42,38 +40,35 @@ fn main() {
             AssetPlugin::default(),
             SeedlingPlugin::default(),
         ))
-        .add_systems(
-            Startup,
-            |server: Res<AssetServer>, mut commands: Commands| {
-                let filters: Vec<_> = TENOR[0]
-                    .iter()
-                    .enumerate()
-                    .map(|(i, f)| {
-                        let vol = commands
-                            .spawn(VolumeNode::new(db(f.amplitude)))
-                            .connect_with(MainBus, &[(0, 0), (0, 1)])
-                            .id();
+        .add_systems(Startup, |mut commands: Commands| {
+            let filters: Vec<_> = TENOR[0]
+                .iter()
+                .enumerate()
+                .map(|(_, f)| {
+                    let vol = commands
+                        .spawn(VolumeNode::new(db(f.amplitude)))
+                        .connect_with(MainBus, &[(0, 0), (0, 1)])
+                        .id();
 
-                        let filter = commands
-                            .spawn(BandPassNode::new(f.frequency, f.frequency / f.bandwidth))
-                            .connect_with(vol, &[(0, 0)])
-                            .id();
+                    let filter = commands
+                        .spawn(BandPassNode::new(f.frequency, f.frequency / f.bandwidth))
+                        .connect_with(vol, &[(0, 0)])
+                        .id();
 
-                        (vol, filter)
-                    })
-                    .collect();
+                    (vol, filter)
+                })
+                .collect();
 
-                let mut bus = commands.spawn((VolumeNode::new(0.05), EffectsBus));
+            let mut bus = commands.spawn((VolumeNode::new(0.05), EffectsBus));
 
-                for filter in &filters {
-                    bus.connect(filter.1);
-                }
+            for filter in &filters {
+                bus.connect(filter.1);
+            }
 
-                commands.spawn(FormantGroup(filters));
+            commands.spawn(FormantGroup(filters));
 
-                commands.spawn(SawNode::new(50.)).connect(EffectsBus);
-            },
-        )
+            commands.spawn(SawNode::new(50.)).connect(EffectsBus);
+        })
         .insert_resource(VowelSwitch(Timer::new(
             Duration::from_millis(250),
             TimerMode::Repeating,
@@ -108,26 +103,35 @@ fn switch_formant(
                 {
                     let data = &TENOR[*step][i];
 
-                    formant.frequency.push_curve(
-                        data.frequency,
-                        now,
-                        now + ClockSeconds(0.05),
-                        EaseFunction::Linear,
-                    );
+                    formant
+                        .frequency
+                        .push_curve(
+                            data.frequency,
+                            now,
+                            now + ClockSeconds(0.05),
+                            EaseFunction::Linear,
+                        )
+                        .unwrap();
 
-                    formant.q.push_curve(
-                        data.frequency / data.bandwidth,
-                        now,
-                        now + ClockSeconds(0.05),
-                        EaseFunction::Linear,
-                    );
+                    formant
+                        .q
+                        .push_curve(
+                            data.frequency / data.bandwidth,
+                            now,
+                            now + ClockSeconds(0.05),
+                            EaseFunction::Linear,
+                        )
+                        .unwrap();
 
-                    volume.0.push_curve(
-                        db(data.amplitude),
-                        now,
-                        now + ClockSeconds(0.05),
-                        EaseFunction::Linear,
-                    );
+                    volume
+                        .0
+                        .push_curve(
+                            db(data.amplitude),
+                            now,
+                            now + ClockSeconds(0.05),
+                            EaseFunction::Linear,
+                        )
+                        .unwrap();
                 }
             }
         }

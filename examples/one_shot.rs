@@ -1,10 +1,7 @@
 //! This example demonstrates how to play a one-shot sample.
 
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_seedling::{
-    sample::{PlaybackSettings, SamplePlayer},
-    SeedlingPlugin,
-};
+use bevy_seedling::{sample::SamplePlayer, SeedlingPlugin};
 
 fn main() {
     App::new()

@@ -1,10 +1,13 @@
+//! NOTE: This appears to be non-functional for 0.2.
+//! This should at least demonstrate the intended API.
+//!
 //! This example demonstrates how to use `Pause`
 //! to manage audio node activity.
 
 use std::time::Duration;
 
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_seedling::{sample::SamplePlayer, Pause, SeedlingPlugin};
+use bevy_seedling::{sample::SamplePlayer, Pause, PlaybackSettings, SeedlingPlugin};
 
 #[derive(Resource)]
 struct Delay(Timer);

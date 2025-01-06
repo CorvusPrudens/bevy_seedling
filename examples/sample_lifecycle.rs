@@ -1,13 +1,12 @@
 //! This example demonstrates sample lifetimes.
 
-use std::time::Duration;
-
 use bevy::{log::LogPlugin, prelude::*};
 use bevy_ecs::{component::ComponentId, world::DeferredWorld};
 use bevy_seedling::{
     sample::{PlaybackSettings, SamplePlayer},
     SeedlingPlugin,
 };
+use std::time::Duration;
 
 #[derive(Component)]
 #[component(on_remove = on_remove)]

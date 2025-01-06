@@ -8,7 +8,6 @@ use firewheel::{
     node::NodeEventType,
     sampler::{SamplerConfig, SamplerNode},
 };
-use seedling_macros::NodeLabel;
 use std::sync::atomic::Ordering;
 
 pub(crate) struct SamplePoolPlugin;
@@ -68,6 +67,13 @@ pub trait SpawnPool {
         size: usize,
         volume: f32,
     ) -> EntityCommands<'_>;
+
+    /// Despawn a sample pool, cleaning up its resources
+    /// in the ECS and audio graph.
+    ///
+    /// Despawning the terminal volume node recursively
+    /// will produce the same effect.
+    fn despawn_pool<T: PoolLabel + Component>(&mut self);
 }
 
 impl SpawnPool for Commands<'_, '_> {
@@ -115,15 +121,26 @@ impl SpawnPool for Commands<'_, '_> {
 
         commands
     }
+
+    fn despawn_pool<T: PoolLabel + Component>(&mut self) {
+        self.queue(|world: &mut World| {
+            let mut roots = world
+                .query_filtered::<Entity, (With<T>, With<SamplePoolNode>, With<crate::VolumeNode>)>(
+                );
+
+            let roots: Vec<_> = roots.iter(&world).collect();
+
+            let mut commands = world.commands();
+
+            for root in roots {
+                commands.entity(root).despawn_recursive();
+            }
+        });
+    }
 }
 
 #[derive(Component)]
 struct SamplePoolNode;
-
-/// The bus node that all nodes in the default sample
-/// pool are routed to.
-#[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SamplePoolBus;
 
 #[derive(Default, Component)]
 struct NodeRank(Vec<(Entity, u64)>);
