@@ -1,29 +1,18 @@
-use bevy_ecs::prelude::*;
 use core::cell::RefCell;
-use firewheel::{clock::ClockSeconds, FirewheelConfig, FirewheelContext};
+use firewheel::{FirewheelConfig, FirewheelContext};
 
 #[cfg(target_arch = "wasm32")]
 thread_local! {
     static CONTEXT: RefCell<FirewheelContext> = panic!("audio context should be initialized");
 }
 
-/// A thread-safe wrapper around the underlying Firewheel audio context.
-///
-/// When the seedling plugin is initialized, this can be accessed as a resource.
-/// ```
-/// # use bevy::prelude::*;
-/// # use bevy_seedling::AudioContext;
-/// fn system(mut context: ResMut<AudioContext>) {
-///     context.with(|c| {
-///         // ...
-///     });
-/// }
-/// ```
-#[derive(Debug, Resource)]
-pub struct AudioContext(());
+/// A simple, single-threaded context wrapper.
+#[derive(Debug)]
+pub struct InnerContext(());
 
-impl AudioContext {
+impl InnerContext {
     /// Spawn the audio process and control thread.
+    #[inline(always)]
     pub fn new(settings: FirewheelConfig) -> Self {
         let mut context = FirewheelContext::new(settings);
         context
@@ -35,25 +24,8 @@ impl AudioContext {
         Self(())
     }
 
-    /// Send `f` to the underlying control thread to operate on the audio context.
-    ///
-    /// This call will block until `f` returns.
-    ///
-    /// ```
-    /// # use bevy::prelude::*;
-    /// # use bevy_seedling::AudioContext;
-    /// fn system(mut context: ResMut<AudioContext>) {
-    ///     let input_devices = context.with(|context| {
-    ///         context.available_input_devices()
-    ///     });
-    /// }
-    /// ```
-    ///
-    /// This method takes a mutable reference to `self` to prevent trivial deadlocks.
-    /// This API can't completely prevent them in the general case: calling
-    /// [AudioContext::with] within itself will deadlock.
-    ///
-    /// This API is based on [this PR](https://github.com/bevyengine/bevy/pull/9122).
+    /// Operate on the underlying context.
+    #[inline(always)]
     pub fn with<F, O>(&mut self, f: F) -> O
     where
         F: FnOnce(&mut FirewheelContext) -> O + Send,
