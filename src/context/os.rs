@@ -1,8 +1,5 @@
-//! Glue code for interfacing with the underlying audio context.
-
 use bevy_ecs::prelude::*;
-use bevy_log::error;
-use firewheel::{clock::ClockSeconds, FirewheelConfig, FirewheelContext};
+use firewheel::{FirewheelConfig, FirewheelContext};
 use std::sync::mpsc;
 
 /// A thread-safe wrapper around the underlying Firewheel audio context.
@@ -20,6 +17,8 @@ use std::sync::mpsc;
 #[derive(Debug, Resource)]
 pub struct AudioContext(mpsc::Sender<ThreadLocalCall>);
 
+type ThreadLocalCall = Box<dyn FnOnce(&mut FirewheelContext) + Send + 'static>;
+
 impl AudioContext {
     /// Spawn the audio process and control thread.
     pub fn new(settings: FirewheelConfig) -> Self {
@@ -36,36 +35,6 @@ impl AudioContext {
         });
 
         AudioContext(bev_to_audio_tx)
-    }
-}
-
-type ThreadLocalCall = Box<dyn FnOnce(&mut FirewheelContext) + Send + 'static>;
-
-impl AudioContext {
-    /// Get an absolute timestamp from the audio thread of the current time.
-    ///
-    /// This can be used to generate precisely-timed events.
-    /// ```
-    /// # use bevy::prelude::*;
-    /// # use bevy_seedling::{AudioContext, lpf::LowPassNode};
-    /// # use firewheel::clock::ClockSeconds;
-    /// fn mute_all(mut q: Query<&mut LowPassNode>, mut context: ResMut<AudioContext>) {
-    ///     let now = context.now();
-    ///     for mut filter in q.iter_mut() {
-    ///         filter.
-    ///             frequency
-    ///             .push_curve(
-    ///                 0.,
-    ///                 now,
-    ///                 now + ClockSeconds(1.),
-    ///                 EaseFunction::ExponentialOut,
-    ///             )
-    ///             .unwrap();
-    ///     }
-    /// }
-    /// ```
-    pub fn now(&mut self) -> ClockSeconds {
-        self.with(|c| c.clock_now())
     }
 
     /// Send `f` to the underlying control thread to operate on the audio context.
@@ -115,12 +84,4 @@ impl AudioContext {
         self.0.send(func).unwrap();
         receive.recv().unwrap()
     }
-}
-
-pub(crate) fn update_context(mut context: ResMut<AudioContext>) {
-    context.with(|context| {
-        if let Err(e) = context.update() {
-            error!("graph error: {:?}", e);
-        }
-    });
 }
