@@ -74,11 +74,6 @@ if necessary.
   Firewheel graph API. In particular, the ability to disconnect nodes will
   need to be added.
 
-- Platform support
-
-  Both Firewheel and this crate have some work to do in
-  order to support `wasm` targets.
-
 #### License
 
 <sup>

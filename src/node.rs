@@ -1,18 +1,21 @@
 //! Audio node connections and management.
 
 use crate::node_label::NodeLabels;
-use crate::SamplePlayer;
 use crate::{node_label::InternedNodeLabel, AudioContext, MainBus, NodeLabel, SeedlingSystems};
 use bevy_app::Last;
 use bevy_ecs::{prelude::*, world::DeferredWorld};
 use bevy_log::{error, error_once, warn_once};
 use bevy_utils::HashMap;
+use firewheel::diff::PathBuilder;
 use firewheel::{
     diff::{Diff, Patch},
     event::{NodeEvent, NodeEventType},
     node::{AudioNode, NodeID},
 };
 
+/// A node's baseline instance.
+///
+/// This is used as the baseline for diffing.
 #[derive(Component)]
 struct Baseline<T>(pub(crate) T);
 
@@ -48,7 +51,7 @@ impl Events {
 }
 
 fn generate_param_events<T: Diff + Patch + Component + Clone>(
-    mut nodes: Query<(&mut T, &mut Baseline<T>, &mut Events), Without<SamplePlayer>>,
+    mut nodes: Query<(&T, &mut Baseline<T>, &mut Events), (Changed<T>, Without<ExcludeNode>)>,
 ) {
     for (params, mut baseline, mut events) in nodes.iter_mut() {
         params.diff(&baseline.0, Default::default(), &mut events.0);
@@ -63,7 +66,7 @@ fn generate_param_events<T: Diff + Patch + Component + Clone>(
 fn acquire_id<T>(
     q: Query<
         (Entity, &T, Option<&T::Configuration>, Option<&NodeLabels>),
-        (Without<Node>, Without<SamplePlayer>),
+        (Without<Node>, Without<ExcludeNode>),
     >,
     mut context: ResMut<AudioContext>,
     mut commands: Commands,
@@ -125,10 +128,7 @@ impl RegisterNode for bevy_app::App {
             Last,
             (
                 acquire_id::<T>.in_set(SeedlingSystems::Acquire),
-                (
-                    super::sample::pool::param_follower::<T>,
-                    generate_param_events::<T>,
-                )
+                (param_follower::<T>, generate_param_events::<T>)
                     .chain()
                     .in_set(SeedlingSystems::Queue),
             ),
@@ -437,4 +437,66 @@ pub(crate) fn flush_events(
             }
         }
     });
+}
+
+/// Exclude a node from the audio graph.
+///
+/// This component prevents audio node components
+/// like [`VolumeNode`][crate::VolumeNode] from
+/// automatically inserting themselves into the audio graph.
+/// This allows you to treat nodes as plain old data,
+/// facilitating the [`ParamFollower`] pattern.
+///
+/// ```
+/// # use bevy_ecs::prelude::*;
+/// # use bevy_seedling::{VolumeNode, node::{ExcludeNode, ParamFollower}};
+/// fn system(mut commands: Commands) {
+///     let pod = commands.spawn((
+///         VolumeNode { normalized_volume: 1.0 },
+///         ExcludeNode,
+///     )).id();
+///
+///     // This node will be inserted into the graph,
+///     // and the volume will track any changes
+///     // made to the `pod` entity.
+///     commands.spawn((
+///         VolumeNode { normalized_volume: 1.0 },
+///         ParamFollower(pod),
+///     ));
+/// }
+/// ```
+#[derive(Debug, Default, Component)]
+pub struct ExcludeNode;
+
+/// A component that allows one entity's parameters to track another's.
+///
+/// This can only support a single rank; cascading
+/// is not allowed.
+#[derive(Debug, Component)]
+pub struct ParamFollower(pub Entity);
+
+/// Apply diffing and patching between two sets of parameters
+/// in the ECS. This allows the engine-connected parameters
+/// to follow another set of parameters that may be
+/// closer to user code.
+///
+/// For example, it's much easier for users to set parameters
+/// on a sample player entity directly rather than drilling
+/// into the sample pool and node the sample is assigned to.
+pub(crate) fn param_follower<T: Diff + Patch + Component>(
+    sources: Query<&T, (Changed<T>, Without<ParamFollower>)>,
+    mut followers: Query<(&ParamFollower, &mut T)>,
+) {
+    let mut event_queue = Vec::new();
+    for (follower, mut params) in followers.iter_mut() {
+        let Ok(source) = sources.get(follower.0) else {
+            continue;
+        };
+
+        source.diff(&params, PathBuilder::default(), &mut event_queue);
+
+        for event in event_queue.drain(..) {
+            params.patch_event(&event);
+        }
+    }
 }

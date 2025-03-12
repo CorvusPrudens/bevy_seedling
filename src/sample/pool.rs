@@ -1,10 +1,10 @@
 use super::{label::PoolLabelContainer, PlaybackSettings, QueuedSample, Sample, SamplePlayer};
+use crate::node::ParamFollower;
 use crate::{node::Events, ConnectNode, DefaultPool, PoolLabel, SeedlingSystems};
 use bevy_app::{Last, Plugin};
 use bevy_asset::Assets;
 use bevy_ecs::{component::ComponentId, prelude::*, world::DeferredWorld};
 use bevy_hierarchy::{BuildChildren, DespawnRecursiveExt};
-use firewheel::diff::{Diff, Patch, PathBuilder};
 use firewheel::event::{NodeEventType, SequenceCommand};
 use firewheel::node::AudioNode;
 use firewheel::nodes::sampler::SamplerNode;
@@ -290,39 +290,6 @@ fn assign_work<T: Component>(
             sample_entity: sample,
             despawn: true,
         });
-    }
-}
-
-/// A component that allows one entity's parameters to track another's.
-///
-/// This can only support a single relationship; cascading
-/// is not allowed.
-#[derive(Component)]
-pub(crate) struct ParamFollower(Entity);
-
-/// Apply diffing and patching between two sets of parameters
-/// in the ECS. This allows the engine-connected parameters
-/// to follow another set of parameters that may be
-/// closer to user code.
-///
-/// For example, it's much easier for users to set parameters
-/// on a sample player entity directly rather than drilling
-/// into the sample pool and node the sample is assigned to.
-pub(crate) fn param_follower<T: Diff + Patch + Component>(
-    sources: Query<&T, Without<ParamFollower>>,
-    mut followers: Query<(&ParamFollower, &mut T)>,
-) {
-    let mut event_queue = Vec::new();
-    for (follower, mut params) in followers.iter_mut() {
-        let Ok(source) = sources.get(follower.0) else {
-            continue;
-        };
-
-        source.diff(&params, PathBuilder::default(), &mut event_queue);
-
-        for event in event_queue.drain(..) {
-            params.patch_event(&event);
-        }
     }
 }
 

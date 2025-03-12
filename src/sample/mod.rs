@@ -1,5 +1,6 @@
 //! Audio sample components.
 
+use crate::node::ExcludeNode;
 use bevy_asset::Handle;
 use bevy_ecs::prelude::*;
 
@@ -16,7 +17,7 @@ use firewheel::nodes::sampler::RepeatMode;
 /// the playback to the best fitting node in the default
 /// sample pool.
 #[derive(Debug, Component, Clone)]
-#[require(PlaybackSettings, QueuedSample)]
+#[require(PlaybackSettings, QueuedSample, ExcludeNode)]
 pub struct SamplePlayer(pub(crate) Handle<Sample>);
 
 impl SamplePlayer {
