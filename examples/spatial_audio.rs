@@ -37,16 +37,14 @@ fn startup(server: Res<AssetServer>, mut commands: Commands) {
     // To play a sound in this pool, we can simply spawn a sample
     // player with the pool label, making sure the entity
     // has a transform.
-    commands
-        .spawn((
-            MyPool,
-            SamplePlayer::new(server.load("snd_wobbler.wav")),
-            PlaybackSettings::LOOP,
-            // Both the emitter and listener need transforms
-            // for spatial information to propagate.
-            Transform::default(),
-        ))
-        .log_components();
+    commands.spawn((
+        MyPool,
+        SamplePlayer::new(server.load("snd_wobbler.wav")),
+        PlaybackSettings::LOOP,
+        // Both the emitter and listener need transforms
+        // for spatial information to propagate.
+        Transform::default(),
+    ));
 
     // Finally, we'll spawn a simple listener that just circles the emitter.
     commands.spawn((SpatialListener2D, Spinner(0.0), Transform::default()));

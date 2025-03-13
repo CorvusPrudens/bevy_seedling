@@ -28,12 +28,6 @@ fn main() {
         .add_systems(
             Startup,
             |server: Res<AssetServer>, mut commands: Commands| {
-                // Any arbitrary effects chain can go here, but
-                // let's just insert a low-pass filter.
-                //
-                // This node is implicitly connected to the `MainBus`.
-                let effects = commands.spawn(LowPassNode::new(10000.)).id();
-
                 // Here we create a volume node that acts as the entry to
                 // our effects bus and we connect it to the effects.
                 //
@@ -47,14 +41,14 @@ fn main() {
                         },
                         EffectsBus,
                     ))
-                    .connect(effects);
+                    // Any arbitrary effects chain can go here, but
+                    // let's just insert a low-pass filter.
+                    //
+                    // This node is implicitly connected to the `MainBus`.
+                    .chain_node(LowPassNode::new(10000.));
 
                 // Let's create a new sample player pool and route it to our effects bus.
                 Pool::new(EffectsPool, 4)
-                    .effect(bevy_seedling::bpf::BandPassNode {
-                        frequency: Timeline::new(1000.0),
-                        q: Timeline::new(5.0),
-                    })
                     .spawn(&mut commands)
                     .connect(EffectsBus);
 
