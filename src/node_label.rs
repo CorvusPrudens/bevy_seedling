@@ -8,7 +8,7 @@
 //! will be automatically connected to [MainBus].
 use crate::node::NodeMap;
 use bevy_ecs::{component::ComponentId, intern::Interned, prelude::*, world::DeferredWorld};
-use firewheel::nodes::volume::VolumeNode;
+use firewheel::{nodes::volume::VolumeNode, Volume};
 use smallvec::SmallVec;
 
 use crate::{AudioContext, ConnectNode};
@@ -68,7 +68,7 @@ pub(crate) fn insert_main_bus(mut commands: Commands, mut context: ResMut<AudioC
     commands
         .spawn((
             VolumeNode {
-                normalized_volume: 1.,
+                volume: Volume::Linear(1.),
             },
             MainBus,
         ))

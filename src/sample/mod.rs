@@ -1,6 +1,6 @@
 //! Audio sample components.
 
-use crate::node::ExcludeNode;
+use crate::{node::ExcludeNode, Volume};
 use bevy_asset::Handle;
 use bevy_ecs::prelude::*;
 
@@ -26,19 +26,10 @@ impl SamplePlayer {
     }
 }
 
-#[derive(Debug, Component, Clone)]
+#[derive(Debug, Component, Clone, Default)]
 pub struct PlaybackSettings {
     pub mode: RepeatMode,
-    pub volume: f32,
-}
-
-impl Default for PlaybackSettings {
-    fn default() -> Self {
-        Self {
-            mode: Default::default(),
-            volume: 1.0,
-        }
-    }
+    pub volume: Volume,
 }
 
 impl PlaybackSettings {
@@ -46,14 +37,14 @@ impl PlaybackSettings {
     /// this entity when complete or interrupted.
     pub const ONCE: Self = Self {
         mode: RepeatMode::RepeatEndlessly,
-        volume: 1.0,
+        volume: Volume::Linear(1.0),
     };
 
     /// Repeatedly loop the audio source until
     /// this entity is despawned.
     pub const LOOP: Self = Self {
         mode: RepeatMode::RepeatEndlessly,
-        volume: 1.0,
+        volume: Volume::Linear(1.0),
     };
 }
 

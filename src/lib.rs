@@ -94,7 +94,7 @@ pub use firewheel::{
         volume_pan::{VolumePanNode, VolumePanNodeConfig},
         StereoToMonoNode,
     },
-    FirewheelConfig,
+    FirewheelConfig, Volume,
 };
 
 #[cfg(feature = "stream")]

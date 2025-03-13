@@ -1,5 +1,7 @@
 //! A simple band-pass filter.
 
+use std::any::Any;
+
 use crate::timeline::Timeline;
 use bevy_ecs::prelude::*;
 use firewheel::{
@@ -7,7 +9,7 @@ use firewheel::{
     core::{channel_config::NonZeroChannelCount, clock::ClockSeconds, node::ProcInfo, StreamInfo},
     diff::{Diff, Patch},
     event::NodeEventList,
-    node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ProcessStatus, NUM_SCRATCH_BUFFERS},
+    node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ProcBuffers, ProcessStatus},
 };
 
 /// A simple low-pass filter.
@@ -66,6 +68,7 @@ impl AudioNode for BandPassNode {
         &self,
         config: &Self::Configuration,
         stream_info: &StreamInfo,
+        _: &mut Option<Box<dyn Any>>,
     ) -> impl AudioNodeProcessor {
         BandPassProcessor {
             params: self.clone(),
@@ -140,11 +143,11 @@ struct BandPassProcessor {
 impl AudioNodeProcessor for BandPassProcessor {
     fn process(
         &mut self,
-        inputs: &[&[f32]],
-        outputs: &mut [&mut [f32]],
-        events: NodeEventList,
+        ProcBuffers {
+            inputs, outputs, ..
+        }: ProcBuffers,
         proc_info: &ProcInfo,
-        _: &mut [&mut [f32]; NUM_SCRATCH_BUFFERS],
+        events: NodeEventList,
     ) -> ProcessStatus {
         self.params.patch_list(events);
 

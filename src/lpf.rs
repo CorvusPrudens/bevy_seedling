@@ -1,5 +1,7 @@
 //! One-pole, low-pass filter.
 
+use std::any::Any;
+
 use crate::timeline::Timeline;
 use bevy_ecs::prelude::*;
 use firewheel::{
@@ -7,8 +9,7 @@ use firewheel::{
     clock::ClockSeconds,
     diff::{Diff, Patch},
     event::NodeEventList,
-    node::ProcInfo,
-    node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ProcessStatus, NUM_SCRATCH_BUFFERS},
+    node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ProcBuffers, ProcInfo, ProcessStatus},
     StreamInfo,
 };
 
@@ -66,6 +67,7 @@ impl AudioNode for LowPassNode {
         &self,
         config: &Self::Configuration,
         stream_info: &StreamInfo,
+        _: &mut Option<Box<dyn Any>>,
     ) -> impl AudioNodeProcessor {
         LowPassProcessor {
             params: self.clone(),
@@ -127,11 +129,11 @@ struct LowPassProcessor {
 impl AudioNodeProcessor for LowPassProcessor {
     fn process(
         &mut self,
-        inputs: &[&[f32]],
-        outputs: &mut [&mut [f32]],
-        events: NodeEventList,
+        ProcBuffers {
+            inputs, outputs, ..
+        }: ProcBuffers,
         proc_info: &ProcInfo,
-        _: &mut [&mut [f32]; NUM_SCRATCH_BUFFERS],
+        events: NodeEventList,
     ) -> ProcessStatus {
         self.params.patch_list(events);
 

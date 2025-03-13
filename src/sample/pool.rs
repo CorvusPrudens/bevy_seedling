@@ -1,13 +1,18 @@
 use super::{label::PoolLabelContainer, PlaybackSettings, QueuedSample, Sample, SamplePlayer};
 use crate::node::ParamFollower;
 use crate::{node::Events, ConnectNode, DefaultPool, PoolLabel, SeedlingSystems};
+use crate::{AudioContext, Node};
 use bevy_app::{Last, Plugin};
 use bevy_asset::Assets;
 use bevy_ecs::{component::ComponentId, prelude::*, world::DeferredWorld};
 use bevy_hierarchy::{BuildChildren, DespawnRecursiveExt};
-use firewheel::event::{NodeEventType, SequenceCommand};
-use firewheel::node::AudioNode;
-use firewheel::nodes::sampler::SamplerNode;
+use firewheel::nodes::sampler::SamplerState;
+use firewheel::{
+    event::{NodeEventType, SequenceCommand},
+    node::AudioNode,
+    nodes::sampler::SamplerNode,
+    Volume,
+};
 
 pub(crate) struct SamplePoolPlugin;
 
@@ -107,7 +112,7 @@ macro_rules! spawn_impl {
                 let bus = commands
                     .spawn((
                         crate::VolumeNode {
-                            normalized_volume: 1.0,
+                            volume: Volume::Linear(1.0),
                         },
                         SamplePoolNode,
                         label.clone(),
@@ -179,8 +184,9 @@ struct SamplePoolDefaults(Box<dyn Fn(&mut EntityCommands) + Send + Sync + 'stati
 struct NodeRank(Vec<(Entity, u64)>);
 
 fn rank_nodes<T: Component>(
-    q: Query<(Entity, &SamplerNode), (With<SamplePoolNode>, With<T>)>,
+    q: Query<(Entity, &SamplerNode, &Node), (With<SamplePoolNode>, With<T>)>,
     mut rank: Query<&mut NodeRank, With<T>>,
+    mut context: ResMut<AudioContext>,
 ) {
     let Ok(mut rank) = rank.get_single_mut() else {
         return;
@@ -188,11 +194,17 @@ fn rank_nodes<T: Component>(
 
     rank.0.clear();
 
-    for (e, params) in q.iter() {
-        let score = params.worker_score();
+    context.with(|c| {
+        for (e, params, node) in q.iter() {
+            let Some(state) = c.node_state::<SamplerState>(node.0) else {
+                continue;
+            };
 
-        rank.0.push((e, score));
-    }
+            let score = state.worker_score(params);
+
+            rank.0.push((e, score));
+        }
+    });
 
     rank.0
         .sort_unstable_by_key(|pair| std::cmp::Reverse(pair.1));
@@ -218,28 +230,35 @@ fn on_remove_active(mut world: DeferredWorld, entity: Entity, _: ComponentId) {
 /// Automatically remove or despawn sampler players when their
 /// sample has finished playing.
 fn remove_finished(
-    nodes: Query<(Entity, &SamplerNode, &EffectsChain), With<ActiveSample>>,
+    nodes: Query<(Entity, &EffectsChain, &Node), (With<ActiveSample>, With<SamplerNode>)>,
     mut commands: Commands,
+    mut context: ResMut<AudioContext>,
 ) {
-    for (entity, sampler, effects_chain) in nodes.iter() {
-        let state = sampler.playback_state();
+    context.with(|context| {
+        for (entity, effects_chain, node) in nodes.iter() {
+            let Some(state) = context.node_state::<SamplerState>(node.0) else {
+                continue;
+            };
 
-        // TODO: this will remove samples when paused
-        if !state.is_playing() {
-            commands.entity(entity).remove::<ActiveSample>();
+            let state = state.playback_state();
 
-            for effect in effects_chain.0.iter() {
-                commands.entity(*effect).remove::<ParamFollower>();
+            // TODO: this will remove samples when paused
+            if !state.is_playing() {
+                commands.entity(entity).remove::<ActiveSample>();
+
+                for effect in effects_chain.0.iter() {
+                    commands.entity(*effect).remove::<ParamFollower>();
+                }
             }
         }
-    }
+    });
 }
 
 /// Scan through the set of pending sample players
 /// and assign work to the most appropriate sampler node.
 fn assign_work<T: Component>(
     mut nodes: Query<
-        (Entity, &mut SamplerNode, &mut Events, &EffectsChain),
+        (Entity, &mut SamplerNode, &mut Events, &EffectsChain, &Node),
         (With<SamplePoolNode>, With<T>),
     >,
     queued_samples: Query<
@@ -250,47 +269,55 @@ fn assign_work<T: Component>(
     defaults: Query<&SamplePoolDefaults, With<T>>,
     assets: Res<Assets<Sample>>,
     mut commands: Commands,
+    mut context: ResMut<AudioContext>,
 ) {
     let Ok(mut rank) = rank.get_single_mut() else {
         return;
     };
 
-    for (sample, player, settings) in queued_samples.iter() {
-        let Some(asset) = assets.get(&player.0) else {
-            continue;
-        };
+    context.with(|context| {
+        for (sample, player, settings) in queued_samples.iter() {
+            let Some(asset) = assets.get(&player.0) else {
+                continue;
+            };
 
-        // get the best candidate
-        let Some((node_entity, _)) = rank.0.first() else {
-            continue;
-        };
+            // get the best candidate
+            let Some((node_entity, _)) = rank.0.first() else {
+                continue;
+            };
 
-        let Ok((node_entity, mut params, mut events, effects_chain)) = nodes.get_mut(*node_entity)
-        else {
-            continue;
-        };
+            let Ok((node_entity, mut params, mut events, effects_chain, sampler_id)) =
+                nodes.get_mut(*node_entity)
+            else {
+                continue;
+            };
 
-        params.set_sample(asset.get(), settings.volume, settings.mode);
-        let event = params.sync_params_event(true);
-        events.push(event);
+            let Some(sampler_state) = context.node_state::<SamplerState>(sampler_id.0) else {
+                continue;
+            };
 
-        // redirect all parameters to follow the sample source
-        for effect in effects_chain.0.iter() {
-            commands.entity(*effect).insert(ParamFollower(sample));
+            params.set_sample(asset.get(), settings.volume, settings.mode);
+            let event = sampler_state.sync_params_event(&params, true);
+            events.push(event);
+
+            // redirect all parameters to follow the sample source
+            for effect in effects_chain.0.iter() {
+                commands.entity(*effect).insert(ParamFollower(sample));
+            }
+
+            // Insert default pool parameters if not present.
+            if let Ok(defaults) = defaults.get_single() {
+                (defaults.0)(&mut commands.entity(sample));
+            }
+
+            rank.0.remove(0);
+            commands.entity(sample).remove::<QueuedSample>();
+            commands.entity(node_entity).insert(ActiveSample {
+                sample_entity: sample,
+                despawn: true,
+            });
         }
-
-        // Insert default pool parameters if not present.
-        if let Ok(defaults) = defaults.get_single() {
-            (defaults.0)(&mut commands.entity(sample));
-        }
-
-        rank.0.remove(0);
-        commands.entity(sample).remove::<QueuedSample>();
-        commands.entity(node_entity).insert(ActiveSample {
-            sample_entity: sample,
-            despawn: true,
-        });
-    }
+    });
 }
 
 // Stop playback if the source entity no longer exists.
