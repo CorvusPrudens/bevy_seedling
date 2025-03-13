@@ -63,6 +63,7 @@ use bevy_asset::AssetApp;
 use bevy_ecs::prelude::*;
 
 pub mod bpf;
+pub mod connect;
 pub mod context;
 pub mod fixed_vec;
 pub mod lpf;
@@ -75,9 +76,10 @@ pub mod timeline;
 #[cfg(feature = "profiling")]
 pub mod profiling;
 
+pub use connect::{ConnectNode, ConnectTarget};
 pub use context::AudioContext;
+pub use node::Node;
 pub use node::RegisterNode;
-pub use node::{ConnectNode, ConnectTarget, Node};
 pub use node_label::{MainBus, NodeLabel};
 use sample::pool::Pool;
 pub use sample::{
@@ -224,10 +226,10 @@ impl Plugin for SeedlingPlugin {
             (
                 (spatial::update_2d_emitters, spatial::update_3d_emitters)
                     .before(SeedlingSystems::Acquire),
-                node::auto_connect
+                connect::auto_connect
                     .before(SeedlingSystems::Connect)
                     .after(SeedlingSystems::Acquire),
-                node::process_connections.in_set(SeedlingSystems::Connect),
+                connect::process_connections.in_set(SeedlingSystems::Connect),
                 (
                     node::process_removals,
                     node::flush_events,
