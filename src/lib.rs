@@ -76,7 +76,7 @@ pub mod timeline;
 #[cfg(feature = "profiling")]
 pub mod profiling;
 
-pub use connect::{ConnectNode, ConnectTarget};
+pub use connect::{Connect, ConnectTarget};
 pub use context::AudioContext;
 pub use node::Node;
 pub use node::RegisterNode;
@@ -89,6 +89,7 @@ pub use sample::{
 pub use seedling_macros::PoolLabel;
 
 pub use firewheel::{
+    clock::{ClockSamples, ClockSeconds},
     nodes::{
         sampler::SamplerNode,
         spatial_basic::{SpatialBasicConfig, SpatialBasicNode},
@@ -112,13 +113,13 @@ pub use firewheel::nodes::stream::{
 ///
 /// ```
 /// # use bevy::prelude::*;
-/// # use bevy_seedling::{NodeLabel, VolumeNode, ConnectNode,
-/// # sample::SamplePlayer};
+/// # use bevy_seedling::{NodeLabel, VolumeNode, Connect,
+/// # sample::SamplePlayer, Volume};
 /// #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
 /// struct EffectsChain;
 ///
 /// fn system(server: Res<AssetServer>, mut commands: Commands) {
-///     commands.spawn((VolumeNode { normalized_volume: 0.25 }, EffectsChain));
+///     commands.spawn((VolumeNode { volume: Volume::Linear(0.25) }, EffectsChain));
 ///
 ///     // Now, any node can simply use `EffectsChain`
 ///     // as a connection target.
@@ -194,7 +195,7 @@ impl Plugin for SeedlingPlugin {
         let sample_pool_size = self.sample_pool_size;
 
         app.insert_resource(context)
-            .init_resource::<node::NodeMap>()
+            .init_resource::<connect::NodeMap>()
             .init_resource::<node::PendingRemovals>()
             .init_asset::<sample::Sample>()
             .register_asset_loader(sample::SampleLoader { sample_rate })
@@ -220,7 +221,6 @@ impl Plugin for SeedlingPlugin {
                     .after(SeedlingSystems::Queue),
             ),
         )
-        .add_systems(PreStartup, node_label::insert_main_bus)
         .add_systems(
             Last,
             (
@@ -239,11 +239,17 @@ impl Plugin for SeedlingPlugin {
                     .in_set(SeedlingSystems::Flush),
             ),
         )
-        .add_systems(PreStartup, move |mut commands: Commands| {
-            if let Some(size) = sample_pool_size {
-                Pool::new(DefaultPool, size).spawn(&mut commands);
-            }
-        });
+        .add_systems(
+            PreStartup,
+            (
+                node_label::insert_main_bus,
+                move |mut commands: Commands| {
+                    if let Some(size) = sample_pool_size {
+                        Pool::new(DefaultPool, size).spawn(&mut commands);
+                    }
+                },
+            ),
+        );
 
         app.add_plugins(sample::pool::SamplePoolPlugin);
     }

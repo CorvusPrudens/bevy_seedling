@@ -1,6 +1,6 @@
 use super::{label::PoolLabelContainer, PlaybackSettings, QueuedSample, Sample, SamplePlayer};
 use crate::node::ParamFollower;
-use crate::{node::Events, ConnectNode, DefaultPool, PoolLabel, SeedlingSystems};
+use crate::{node::Events, Connect, DefaultPool, PoolLabel, SeedlingSystems};
 use crate::{AudioContext, Node};
 use bevy_app::{Last, Plugin};
 use bevy_asset::Assets;

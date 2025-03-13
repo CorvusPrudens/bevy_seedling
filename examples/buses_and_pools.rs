@@ -6,7 +6,8 @@ use bevy_seedling::{
     lpf::LowPassNode,
     sample::{pool::Pool, SamplePlayer},
     timeline::Timeline,
-    AudioContext, ConnectNode, NodeLabel, PlaybackSettings, PoolLabel, SeedlingPlugin, VolumeNode,
+    AudioContext, Connect, NodeLabel, PlaybackSettings, PoolLabel, SeedlingPlugin, Volume,
+    VolumeNode,
 };
 use firewheel::clock::ClockSeconds;
 
@@ -42,7 +43,7 @@ fn main() {
                 commands
                     .spawn((
                         VolumeNode {
-                            normalized_volume: 1.0,
+                            volume: Volume::UNITY_GAIN,
                         },
                         EffectsBus,
                     ))

@@ -10,7 +10,7 @@ use firewheel::node::NodeID;
 /// A target for node connections.
 ///
 /// [`ConnectTarget`] can be constructed manually or
-/// used as a part of the [`ConnectNode`] API.
+/// used as a part of the [`Connect`] API.
 #[derive(Debug, Clone)]
 pub enum ConnectTarget {
     /// A global label such as [`MainBus`].
@@ -76,56 +76,67 @@ impl PendingConnections {
 /// is the receiver and the sink is the provided target.
 ///
 /// [`EntityCommands`]: bevy_ecs::prelude::EntityCommands
-pub trait ConnectNode {
+pub trait Connect<'a>: Sized {
     /// Queue a connection from this entity to the target.
     ///
     /// ```
     /// # use bevy::prelude::*;
-    /// # use bevy_seedling::{MainBus, VolumeNode, ConnectNode};
+    /// # use bevy_seedling::{MainBus, VolumeNode, Connect, Volume};
     /// # fn system(mut commands: Commands) {
     /// // Connect a node to the MainBus.
-    /// let node = commands.spawn(VolumeNode { normalized_volume: 0.5 }).connect(MainBus).id();
+    /// let node = commands
+    ///     .spawn(VolumeNode { volume: Volume::Linear(0.5) })
+    ///     .connect(MainBus)
+    ///     .head();
     ///
     /// // Connect another node to the one we just spawned.
-    /// commands.spawn(VolumeNode { normalized_volume: 0.25 }).connect(node);
+    /// commands
+    ///     .spawn(VolumeNode { volume: Volume::Linear(0.25) })
+    ///     .connect(node);
     /// # }
     /// ```
     ///
     /// By default, this provides a port connection of `[(0, 0), (1, 1)]`,
     /// which represents a simple stereo connection.
-    /// To provide a specific port mapping, use [`connect_with`][ConnectNode::connect_with].
+    /// To provide a specific port mapping, use [`connect_with`][Connect::connect_with].
     ///
     /// The connection is deferred, finalizing in the [`SeedlingSystems::Connect`] set.
-    fn connect(&mut self, target: impl Into<ConnectTarget>) -> &mut Self;
+    fn connect(self, target: impl Into<ConnectTarget>) -> ConnectCommands<'a> {
+        self.connect_with(target, DEFAULT_CONNECTION)
+    }
 
     /// Queue a connection from this entity to the target with the provided port mappings.
     ///
     /// The connection is deferred, finalizing in the [`SeedlingSystems::Connect`] set.
-    fn connect_with(&mut self, target: impl Into<ConnectTarget>, ports: &[(u32, u32)])
-        -> &mut Self;
-}
-
-impl ConnectNode for EntityCommands<'_> {
-    fn connect(&mut self, target: impl Into<ConnectTarget>) -> &mut Self {
-        let target = target.into();
-
-        self.entry::<PendingConnections>()
-            .or_default()
-            .and_modify(|mut pending| {
-                pending.push(PendingConnection {
-                    target,
-                    ports: None,
-                });
-            });
-
-        self
-    }
-
     fn connect_with(
-        &mut self,
+        self,
         target: impl Into<ConnectTarget>,
         ports: &[(u32, u32)],
-    ) -> &mut Self {
+    ) -> ConnectCommands<'a>;
+
+    fn chain_node<B: Bundle>(self, node: B) -> ConnectCommands<'a> {
+        self.chain_node_with(node, DEFAULT_CONNECTION)
+    }
+
+    fn chain_node_with<B: Bundle>(self, node: B, ports: &[(u32, u32)]) -> ConnectCommands<'a>;
+
+    /// Get the head of this chain.
+    fn head(&self) -> Entity;
+
+    /// Get the tail of this chain.
+    ///
+    /// This will be produce the same value
+    /// as [`ConnectCommands::head`] if only one
+    /// node has been spawned.
+    fn tail(&self) -> Entity;
+}
+
+impl<'a> Connect<'a> for EntityCommands<'a> {
+    fn connect_with(
+        mut self,
+        target: impl Into<ConnectTarget>,
+        ports: &[(u32, u32)],
+    ) -> ConnectCommands<'a> {
         let target = target.into();
         let ports = ports.to_vec();
 
@@ -138,7 +149,108 @@ impl ConnectNode for EntityCommands<'_> {
                 });
             });
 
+        ConnectCommands::new(self)
+    }
+
+    fn chain_node_with<B: Bundle>(mut self, node: B, ports: &[(u32, u32)]) -> ConnectCommands<'a> {
+        let new_id = self.commands().spawn(node).id();
+
+        let mut new_connection = self.connect_with(new_id, ports);
+        new_connection.head = new_id;
+
+        new_connection
+    }
+
+    fn head(&self) -> Entity {
+        self.id()
+    }
+
+    fn tail(&self) -> Entity {
+        self.id()
+    }
+}
+
+impl<'a> Connect<'a> for ConnectCommands<'a> {
+    fn connect_with(
+        mut self,
+        target: impl Into<ConnectTarget>,
+        ports: &[(u32, u32)],
+    ) -> ConnectCommands<'a> {
+        let tail = self.tail();
+
+        let mut commands = self.commands.commands();
+        let mut commands = commands.entity(tail);
+
+        let target = target.into();
+        let ports = ports.to_vec();
+
+        commands
+            .entry::<PendingConnections>()
+            .or_default()
+            .and_modify(|mut pending| {
+                pending.push(PendingConnection {
+                    target,
+                    ports: Some(ports),
+                });
+            });
+
         self
+    }
+
+    fn chain_node_with<B: Bundle>(mut self, node: B, ports: &[(u32, u32)]) -> ConnectCommands<'a> {
+        let new_id = self.commands.commands().spawn(node).id();
+
+        let mut new_connection = self.connect_with(new_id, ports);
+        new_connection.tail = Some(new_id);
+
+        new_connection
+    }
+
+    fn head(&self) -> Entity {
+        <Self>::head(self)
+    }
+
+    fn tail(&self) -> Entity {
+        <Self>::tail(self)
+    }
+}
+
+/// A set of commands for connecting nodes and chaining effects.
+pub struct ConnectCommands<'a> {
+    commands: EntityCommands<'a>,
+    head: Entity,
+    tail: Option<Entity>,
+}
+
+impl<'a> ConnectCommands<'a> {
+    pub(crate) fn new(commands: EntityCommands<'a>) -> Self {
+        Self {
+            head: commands.id(),
+            tail: None,
+            commands,
+        }
+    }
+
+    /// Get the head of this chain.
+    fn head(&self) -> Entity {
+        self.head
+    }
+
+    /// Get the tail of this chain.
+    ///
+    /// This will be produce the same value
+    /// as [`ConnectCommands::head`] if only one
+    /// node has been spawned.
+    fn tail(&self) -> Entity {
+        self.tail.unwrap_or(self.head)
+    }
+}
+
+impl core::fmt::Debug for ConnectCommands<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ChainConnection")
+            .field("entity", &self.head)
+            .finish_non_exhaustive()
     }
 }
 
@@ -229,3 +341,127 @@ pub(crate) fn auto_connect(
     }
 }
 
+#[cfg(test)]
+mod test {
+    use crate::SeedlingPlugin;
+
+    use super::*;
+    use bevy::prelude::*;
+    use bevy_ecs::system::RunSystemOnce;
+    use firewheel::nodes::volume::VolumeNode;
+
+    #[derive(Component)]
+    struct One;
+    #[derive(Component)]
+    struct Two;
+    #[derive(Component)]
+    struct Three;
+
+    fn prepare_app<F: IntoSystem<(), (), M>, M>(startup: F) -> App {
+        let mut app = App::new();
+
+        app.add_plugins((
+            MinimalPlugins,
+            AssetPlugin::default(),
+            SeedlingPlugin {
+                sample_pool_size: None,
+                ..Default::default()
+            },
+        ))
+        .add_systems(Startup, startup);
+
+        app.finish();
+        app.cleanup();
+        app.update();
+
+        app
+    }
+
+    #[test]
+    fn test_chain() {
+        let mut app = prepare_app(|mut commands: Commands| {
+            commands
+                .spawn((VolumeNode::default(), One))
+                .chain_node((VolumeNode::default(), Two))
+                .connect(MainBus);
+        });
+
+        app.world_mut()
+            .run_system_once(
+                |mut context: ResMut<AudioContext>,
+                 one: Single<&Node, With<One>>,
+                 two: Single<&Node, With<Two>>,
+                 main: Single<&Node, With<MainBus>>| {
+                    let one = one.into_inner();
+                    let two = two.into_inner();
+                    let main = main.into_inner();
+
+                    context.with(|context| {
+                        // input node, output node, One, Two, and MainBus
+                        assert_eq!(context.nodes().count(), 5);
+
+                        let outgoing_edges_one: Vec<_> =
+                            context.edges().filter(|e| e.src_node == one.0).collect();
+                        let outgoing_edges_two: Vec<_> =
+                            context.edges().filter(|e| e.src_node == two.0).collect();
+
+                        assert_eq!(outgoing_edges_one.len(), 2);
+                        assert_eq!(outgoing_edges_two.len(), 2);
+
+                        assert!(outgoing_edges_one.iter().all(|e| e.dst_node == two.0));
+                        assert!(outgoing_edges_two.iter().all(|e| e.dst_node == main.0));
+                    });
+                },
+            )
+            .unwrap();
+    }
+
+    #[test]
+    fn test_fanout() {
+        let mut app = prepare_app(|mut commands: Commands| {
+            let a = commands.spawn((VolumeNode::default(), One)).head();
+            let b = commands.spawn((VolumeNode::default(), Two)).head();
+
+            commands
+                .spawn((VolumeNode::default(), Three))
+                .connect(a)
+                .connect(b);
+        });
+
+        app.world_mut()
+            .run_system_once(
+                |mut context: ResMut<AudioContext>,
+                 one: Single<&Node, With<One>>,
+                 two: Single<&Node, With<Two>>,
+                 three: Single<&Node, With<Three>>| {
+                    let one = one.into_inner();
+                    let two = two.into_inner();
+                    let three = three.into_inner();
+
+                    context.with(|context| {
+                        // input node, output node, One, Two, Three, and MainBus
+                        assert_eq!(context.nodes().count(), 6);
+
+                        let outgoing_edges_three: Vec<_> =
+                            context.edges().filter(|e| e.src_node == three.0).collect();
+
+                        assert_eq!(
+                            outgoing_edges_three
+                                .iter()
+                                .filter(|e| e.dst_node == one.0)
+                                .count(),
+                            2
+                        );
+                        assert_eq!(
+                            outgoing_edges_three
+                                .iter()
+                                .filter(|e| e.dst_node == two.0)
+                                .count(),
+                            2
+                        );
+                    });
+                },
+            )
+            .unwrap();
+    }
+}

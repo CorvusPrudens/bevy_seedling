@@ -6,12 +6,12 @@
 //!
 //! Any node that doesn't provide an explicit connection when spawned
 //! will be automatically connected to [MainBus].
-use crate::node::NodeMap;
+use crate::connect::NodeMap;
 use bevy_ecs::{component::ComponentId, intern::Interned, prelude::*, world::DeferredWorld};
 use firewheel::{nodes::volume::VolumeNode, Volume};
 use smallvec::SmallVec;
 
-use crate::{AudioContext, ConnectNode};
+use crate::{AudioContext, Connect};
 
 bevy_ecs::define_label!(
     /// A label for addressing audio nodes.
@@ -20,12 +20,12 @@ bevy_ecs::define_label!(
     /// for audio node connections.
     /// ```
     /// # use bevy::prelude::*;
-    /// # use bevy_seedling::{NodeLabel, VolumeNode, sample::SamplePlayer, ConnectNode};
+    /// # use bevy_seedling::{NodeLabel, VolumeNode, sample::SamplePlayer, Connect, Volume};
     /// #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
     /// struct EffectsChain;
     ///
     /// fn system(server: Res<AssetServer>, mut commands: Commands) {
-    ///     commands.spawn((VolumeNode { normalized_volume: 0.25 }, EffectsChain));
+    ///     commands.spawn((VolumeNode { volume: Volume::Linear(0.25) }, EffectsChain));
     ///
     ///     commands
     ///         .spawn(SamplePlayer::new(server.load("sound.wav")))
@@ -50,10 +50,10 @@ bevy_ecs::define_label!(
 /// filtered on this label.
 /// ```
 /// # use bevy::prelude::*;
-/// # use bevy_seedling::{MainBus, VolumeNode};
+/// # use bevy_seedling::{MainBus, VolumeNode, Volume};
 /// fn mute(mut q: Single<&mut VolumeNode, With<MainBus>>) {
 ///     let mut params = q.into_inner();
-///     params.normalized_volume = 0.0;
+///     params.volume = Volume::Linear(0.0);
 /// }
 /// ```
 #[derive(crate::NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
@@ -81,12 +81,12 @@ pub(crate) fn insert_main_bus(mut commands: Commands, mut context: ResMut<AudioC
 /// the node entity should be spawned with the label.
 /// ```
 /// # use bevy::prelude::*;
-/// # use bevy_seedling::{NodeLabel, VolumeNode};
+/// # use bevy_seedling::{NodeLabel, VolumeNode, Volume};
+/// # fn system(mut commands: Commands) {
 /// #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
 /// struct MyLabel;
-/// # fn system(mut commands: Commands) {
 ///
-/// commands.spawn((VolumeNode { normalized_volume: 0.25 }, MyLabel));
+/// commands.spawn((VolumeNode { volume: Volume::Linear(0.25) }, MyLabel));
 /// # }
 #[derive(Debug, Default, Component)]
 #[component(on_remove = on_remove)]

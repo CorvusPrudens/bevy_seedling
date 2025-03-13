@@ -1,11 +1,11 @@
 //! Audio node connections and management.
 
+use crate::connect::NodeMap;
 use crate::node_label::NodeLabels;
-use crate::{node_label::InternedNodeLabel, AudioContext, SeedlingSystems};
+use crate::{AudioContext, SeedlingSystems};
 use bevy_app::Last;
 use bevy_ecs::{prelude::*, world::DeferredWorld};
 use bevy_log::error;
-use bevy_utils::HashMap;
 use firewheel::diff::PathBuilder;
 use firewheel::{
     diff::{Diff, Patch},
@@ -79,7 +79,7 @@ fn acquire_id<T>(
             let node = context.add_node(container.clone(), config.cloned());
 
             for label in labels.iter().flat_map(|l| l.iter()) {
-                node_map.0.insert(*label, entity);
+                node_map.insert(*label, entity);
             }
 
             commands.entity(entity).insert(Node(node));
@@ -188,28 +188,6 @@ impl PendingRemovals {
     }
 }
 
-/// A map that associates [`NodeLabel`]s with audio
-/// graph nodes.
-///
-/// This will be automatically synchronized for
-/// entities with both a [`Node`] and [`NodeLabel`].
-#[derive(Default, Debug, Resource)]
-pub struct NodeMap(HashMap<InternedNodeLabel, Entity>);
-
-impl core::ops::Deref for NodeMap {
-    type Target = HashMap<InternedNodeLabel, Entity>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl core::ops::DerefMut for NodeMap {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 pub(crate) fn process_removals(
     mut removals: ResMut<PendingRemovals>,
     mut context: ResMut<AudioContext>,
@@ -249,18 +227,20 @@ pub(crate) fn flush_events(
 ///
 /// ```
 /// # use bevy_ecs::prelude::*;
-/// # use bevy_seedling::{VolumeNode, node::{ExcludeNode, ParamFollower}};
+/// # use bevy_seedling::{VolumeNode,
+/// # node::{ExcludeNode, ParamFollower}, Volume,
+/// # connect::Connect};
 /// fn system(mut commands: Commands) {
 ///     let pod = commands.spawn((
-///         VolumeNode { normalized_volume: 1.0 },
+///         VolumeNode { volume: Volume::UNITY_GAIN },
 ///         ExcludeNode,
-///     )).id();
+///     )).head();
 ///
 ///     // This node will be inserted into the graph,
 ///     // and the volume will track any changes
 ///     // made to the `pod` entity.
 ///     commands.spawn((
-///         VolumeNode { normalized_volume: 1.0 },
+///         VolumeNode { volume: Volume::UNITY_GAIN },
 ///         ParamFollower(pod),
 ///     ));
 /// }
