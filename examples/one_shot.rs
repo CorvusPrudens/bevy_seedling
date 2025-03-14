@@ -1,7 +1,7 @@
 //! This example demonstrates how to play a one-shot sample.
 
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_seedling::{sample::SamplePlayer, SeedlingPlugin};
+use bevy_seedling::prelude::*;
 
 fn main() {
     App::new()
@@ -15,10 +15,9 @@ fn main() {
             Startup,
             |server: Res<AssetServer>, mut commands: Commands| {
                 // Spawning a `SamplePlayer` component will play a sample
-                // once as soon as it's loaded.
-                //
-                // The sample will be assigned to one of the playback nodes
-                // connected to the `SamplePoolBus`.
+                // once as soon as it's loaded. If no pool is specified
+                // like in this example, teh sample will be played in
+                // the `DefaultPool`.
                 commands.spawn(SamplePlayer::new(server.load("snd_wobbler.wav")));
             },
         )

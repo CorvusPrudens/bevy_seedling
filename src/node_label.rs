@@ -7,11 +7,41 @@
 //! Any node that doesn't provide an explicit connection when spawned
 //! will be automatically connected to [MainBus].
 use crate::connect::NodeMap;
+use crate::prelude::{AudioContext, Connect};
 use bevy_ecs::{component::ComponentId, intern::Interned, prelude::*, world::DeferredWorld};
 use firewheel::{nodes::volume::VolumeNode, Volume};
 use smallvec::SmallVec;
 
-use crate::{AudioContext, Connect};
+/// Node label derive macro.
+///
+/// Node labels provide a convenient way to manage
+/// connections with frequently used nodes.
+///
+/// ```
+/// # use bevy::prelude::*;
+/// # use bevy_seedling::prelude::*;
+/// #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+/// struct EffectsChain;
+///
+/// fn system(server: Res<AssetServer>, mut commands: Commands) {
+///     commands.spawn((VolumeNode { volume: Volume::Linear(0.25) }, EffectsChain));
+///
+///     // Now, any node can simply use `EffectsChain`
+///     // as a connection target.
+///     commands
+///         .spawn(SamplePlayer::new(server.load("sound.wav")))
+///         .connect(EffectsChain);
+/// }
+/// ```
+///
+/// [`NodeLabel`] also implements [`Component`] with the
+/// required machinery to automatically synchronize itself
+/// when inserted and removed. If you want custom component
+/// behavior for your node labels, you'll need to derive
+/// [`NodeLabel`] manually.
+///
+/// [`Component`]: bevy_ecs::component::Component
+pub use seedling_macros::NodeLabel;
 
 bevy_ecs::define_label!(
     /// A label for addressing audio nodes.
@@ -20,7 +50,7 @@ bevy_ecs::define_label!(
     /// for audio node connections.
     /// ```
     /// # use bevy::prelude::*;
-    /// # use bevy_seedling::{NodeLabel, VolumeNode, sample::SamplePlayer, Connect, Volume};
+    /// # use bevy_seedling::prelude::*;
     /// #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
     /// struct EffectsChain;
     ///
@@ -42,7 +72,7 @@ bevy_ecs::define_label!(
 /// reach the output.
 ///
 /// If no connections are specified for an entity
-/// with a [Node][crate::Node] component, the
+/// with a [Node][crate::prelude::Node] component, the
 /// node will automatically be routed to this bus.
 ///
 /// [MainBus] is a stereo volume node. To adjust the
@@ -50,13 +80,13 @@ bevy_ecs::define_label!(
 /// filtered on this label.
 /// ```
 /// # use bevy::prelude::*;
-/// # use bevy_seedling::{MainBus, VolumeNode, Volume};
+/// # use bevy_seedling::prelude::*;
 /// fn mute(mut q: Single<&mut VolumeNode, With<MainBus>>) {
 ///     let mut params = q.into_inner();
 ///     params.volume = Volume::Linear(0.0);
 /// }
 /// ```
-#[derive(crate::NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MainBus;
 
 /// A type-erased node label.
@@ -81,7 +111,7 @@ pub(crate) fn insert_main_bus(mut commands: Commands, mut context: ResMut<AudioC
 /// the node entity should be spawned with the label.
 /// ```
 /// # use bevy::prelude::*;
-/// # use bevy_seedling::{NodeLabel, VolumeNode, Volume};
+/// # use bevy_seedling::prelude::*;
 /// # fn system(mut commands: Commands) {
 /// #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
 /// struct MyLabel;

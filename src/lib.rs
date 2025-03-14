@@ -7,17 +7,24 @@
 //! ## Getting started
 //!
 //! First, you'll need to add the dependency to your `Cargo.toml`.
-//!
+//! Note that you'll need to disable Bevy's "bevy_audio" feature,
+//! meaning you'll need to specify quite a few features
+//! manually!
 //! ```toml
 //! [dependencies]
 //! bevy_seedling = "0.3"
+//! bevy = { version = "0.15", default-features = false, features = [
+//!   "bevy_asset",
+//!   "bevy_state",
+//!   # ...
+//! ] }
 //! ```
 //!
 //! Then, you'll need to add the [`SeedlingPlugin`] to your app.
 //!
 //! ```no_run
 //! use bevy::prelude::*;
-//! use bevy_seedling::SeedlingPlugin;
+//! use bevy_seedling::prelude::*;
 //!
 //! fn main() {
 //!     App::default()
@@ -31,11 +38,108 @@
 //!
 //! ## Overview
 //!
+//! Once you've registered the plugin, playing a sample is easy!
+//!
+//! ```
+//! # use bevy::prelude::*;
+//! # use bevy_seedling::prelude::*;
+//! fn play(mut commands: Commands, server: Res<AssetServer>) {
+//!     commands.spawn(SamplePlayer::new(server.load("my_sample.wav")));
+//! }
+//! ```
+//!
+//! [`PlaybackSettings`][prelude::PlaybackSettings] gives you some
+//! control over how your samples are played.
+//!
+//! ```
+//! # use bevy::prelude::*;
+//! # use bevy_seedling::prelude::*;
+//! fn play_with_settings(mut commands: Commands, server: Res<AssetServer>) {
+//!     commands.spawn((
+//!         SamplePlayer::new(server.load("my_sample.wav")),
+//!         PlaybackSettings::LOOP,
+//!     ));
+//! }
+//! ```
+//!
+//! By default, sample players are queued up in the default sample pool,
+//! [`DefaultPool`][prelude::DefaultPool]. If you'd like to apply effects to your
+//! samples, you can define a new pool with per-sampler effects.
+//!
+//! ```
+//! # use bevy::prelude::*;
+//! # use bevy_seedling::prelude::*;
+//! fn custom_pool(mut commands: Commands, server: Res<AssetServer>) {
+//!     // First, you'll need a label.
+//!     #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
+//!     struct MyPool;
+//!
+//!     // Let's spawn a pool with spatial audio and four samplers.
+//!     Pool::new(MyPool, 4)
+//!         .effect(SpatialBasicNode::default())
+//!         .spawn(&mut commands);
+//!
+//!     // To play a sample in this pool, just spawn a sample
+//!     // player with its label.
+//!     commands.spawn((
+//!         MyPool,
+//!         SamplePlayer::new(server.load("my_sample.wav")),
+//!     ));
+//! }
+//! ```
+//!
+//! You can also define free-standing effects chains and
+//! connect multiple pools to it.
+//!
+//! ```
+//! # use bevy::prelude::*;
+//! # use bevy_seedling::prelude::*;
+//! fn chains(mut commands: Commands, server: Res<AssetServer>) {
+//!     // We can also define labels for individual nodes.
+//!     #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+//!     struct UnderwaterEffects;
+//!
+//!     commands.spawn((
+//!         UnderwaterEffects,
+//!         // We'll use a low-pass filter to simulate sounds underwater
+//!         LowPassNode::new(1000.0),
+//!     ))
+//!     // Let's chain it into a volume node so everything's
+//!     // a little quieter.
+//!     .chain_node(VolumeNode {
+//!         volume: Volume::Linear(0.5),
+//!     });
+//!
+//!     // Finally, we'll create a couple sample pools and connect
+//!     // them to our water effects.
+//!     #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
+//!     struct MusicPool;
+//!
+//!     Pool::new(MusicPool, 1)
+//!         .spawn(&mut commands)
+//!         .connect(UnderwaterEffects);
+//!
+//!     #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
+//!     struct SfxPool;
+//!
+//!     Pool::new(SfxPool, 16)
+//!         .spawn(&mut commands)
+//!         .connect(UnderwaterEffects);
+//! }
+//! ```
+//!
+//! So far this has been fairly high-level, but
+//! `bevy_seedling` still allows you to drop down very close
+//! to Firewheel when needed. See [`Connect::connect_with`][prelude::Connect::connect_with]
+//! for how to manage nodes with different channel shapes.
+//!
+//! ## Design
+//!
 //! `bevy_seedling` provides a thin ECS wrapper over `Firewheel`.
 //!
 //! A `Firewheel` audio node is typically represented in the ECS as
-//! an entity with a [`Node`] and a component that can generate
-//! `Firewheel` events, such as [`VolumeNode`].
+//! an entity with a [`Node`][prelude::Node] and a component that can generate
+//! `Firewheel` events, such as [`VolumeNode`][prelude::VolumeNode].
 //!
 //! Interactions with the audio engine are buffered.
 //! This includes inserting nodes into the audio graph,
@@ -76,67 +180,39 @@ pub mod timeline;
 #[cfg(feature = "profiling")]
 pub mod profiling;
 
-pub use connect::{Connect, ConnectTarget};
-pub use context::AudioContext;
-pub use node::Node;
-pub use node::RegisterNode;
-pub use node_label::{MainBus, NodeLabel};
-use sample::pool::Pool;
-pub use sample::{
-    label::{DefaultPool, PoolLabel},
-    PlaybackSettings, SamplePlayer,
-};
-pub use seedling_macros::PoolLabel;
+pub mod prelude {
+    pub use crate::bpf::BandPassNode;
+    pub use crate::connect::{Connect, ConnectTarget};
+    pub use crate::context::AudioContext;
+    pub use crate::lpf::LowPassNode;
+    pub use crate::node::{Node, RegisterNode};
+    pub use crate::node_label::{MainBus, NodeLabel};
+    pub use crate::sample::{
+        label::{DefaultPool, PoolLabel},
+        pool::{Pool, PoolCommands, PoolDespawn},
+        PlaybackSettings, SamplePlayer,
+    };
+    pub use crate::spatial::{SpatialListener2D, SpatialListener3D};
+    pub use crate::SeedlingPlugin;
 
-pub use firewheel::{
-    clock::{ClockSamples, ClockSeconds},
-    nodes::{
-        sampler::SamplerNode,
-        spatial_basic::{SpatialBasicConfig, SpatialBasicNode},
-        volume::{VolumeNode, VolumeNodeConfig},
-        volume_pan::{VolumePanNode, VolumePanNodeConfig},
-        StereoToMonoNode,
-    },
-    FirewheelConfig, Volume,
-};
+    pub use firewheel::{
+        clock::{ClockSamples, ClockSeconds},
+        nodes::{
+            sampler::SamplerNode,
+            spatial_basic::{SpatialBasicConfig, SpatialBasicNode},
+            volume::{VolumeNode, VolumeNodeConfig},
+            volume_pan::{VolumePanNode, VolumePanNodeConfig},
+            StereoToMonoNode,
+        },
+        FirewheelConfig, Volume,
+    };
 
-#[cfg(feature = "stream")]
-pub use firewheel::nodes::stream::{
-    reader::{StreamReaderConfig, StreamReaderNode},
-    writer::{StreamWriterConfig, StreamWriterNode},
-};
-
-/// Node label derive macro.
-///
-/// Node labels provide a convenient way to manage
-/// connections with frequently used nodes.
-///
-/// ```
-/// # use bevy::prelude::*;
-/// # use bevy_seedling::{NodeLabel, VolumeNode, Connect,
-/// # sample::SamplePlayer, Volume};
-/// #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
-/// struct EffectsChain;
-///
-/// fn system(server: Res<AssetServer>, mut commands: Commands) {
-///     commands.spawn((VolumeNode { volume: Volume::Linear(0.25) }, EffectsChain));
-///
-///     // Now, any node can simply use `EffectsChain`
-///     // as a connection target.
-///     commands
-///         .spawn(SamplePlayer::new(server.load("sound.wav")))
-///         .connect(EffectsChain);
-/// }
-/// ```
-///
-/// [`NodeLabel`] also implements [`Component`] with the
-/// required machinery to automatically synchronize itself
-/// when inserted and removed. If you want custom component
-/// behavior for your node labels, you'll need to derive
-/// [`NodeLabel`] manually.
-///
-/// [`Component`]: bevy_ecs::component::Component
-pub use seedling_macros::NodeLabel;
+    #[cfg(feature = "stream")]
+    pub use firewheel::nodes::stream::{
+        reader::{StreamReaderConfig, StreamReaderNode},
+        writer::{StreamWriterConfig, StreamWriterNode},
+    };
+}
 
 /// Sets for all `bevy_seedling` systems.
 ///
@@ -170,7 +246,7 @@ pub struct SeedlingPlugin {
     /// the engine.
     ///
     /// [`firewheel`]: firewheel
-    pub config: FirewheelConfig,
+    pub config: prelude::FirewheelConfig,
 
     /// The number of sampler nodes for the default
     /// sampler pool. If `None` is provided,
@@ -190,6 +266,8 @@ impl Default for SeedlingPlugin {
 
 impl Plugin for SeedlingPlugin {
     fn build(&self, app: &mut bevy_app::App) {
+        use prelude::*;
+
         let mut context = AudioContext::new(self.config);
         let sample_rate = context.with(|ctx| ctx.stream_info().unwrap().sample_rate);
         let sample_pool_size = self.sample_pool_size;

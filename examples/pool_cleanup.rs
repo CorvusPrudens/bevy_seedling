@@ -2,13 +2,7 @@
 //! create and remove a custom pool.
 
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_seedling::{
-    sample::{
-        pool::{Pool, PoolCommands},
-        PlaybackSettings, SamplePlayer,
-    },
-    PoolLabel, SeedlingPlugin,
-};
+use bevy_seedling::prelude::*;
 use std::time::Duration;
 
 #[derive(PoolLabel, PartialEq, Eq, Debug, Hash, Clone)]

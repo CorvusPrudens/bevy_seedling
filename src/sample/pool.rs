@@ -1,7 +1,7 @@
 use super::{label::PoolLabelContainer, PlaybackSettings, QueuedSample, Sample, SamplePlayer};
 use crate::node::ParamFollower;
-use crate::{node::Events, Connect, DefaultPool, PoolLabel, SeedlingSystems};
-use crate::{AudioContext, Node};
+use crate::prelude::{AudioContext, Connect, DefaultPool, Node, PoolLabel, VolumeNode};
+use crate::{node::Events, SeedlingSystems};
 use bevy_app::{Last, Plugin};
 use bevy_asset::Assets;
 use bevy_ecs::{component::ComponentId, prelude::*, world::DeferredWorld};
@@ -111,7 +111,7 @@ macro_rules! spawn_impl {
 
                 let bus = commands
                     .spawn((
-                        crate::VolumeNode {
+                        VolumeNode {
                             volume: Volume::Linear(1.0),
                         },
                         SamplePoolNode,
@@ -361,7 +361,7 @@ fn assign_default(
 ///
 /// ```
 /// # use bevy_ecs::prelude::*;
-/// # use bevy_seedling::{PoolLabel, sample::pool::PoolDespawn};
+/// # use bevy_seedling::prelude::*;
 /// #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
 /// struct MyLabel;
 ///
@@ -380,8 +380,8 @@ impl<T: PoolLabel + Component> PoolDespawn<T> {
 
 impl<T: PoolLabel + Component> Command for PoolDespawn<T> {
     fn apply(self, world: &mut World) {
-        let mut roots = world
-            .query_filtered::<Entity, (With<T>, With<SamplePoolNode>, With<crate::VolumeNode>)>();
+        let mut roots =
+            world.query_filtered::<Entity, (With<T>, With<SamplePoolNode>, With<VolumeNode>)>();
 
         let roots: Vec<_> = roots.iter(world).collect();
 

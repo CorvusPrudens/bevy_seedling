@@ -1,7 +1,7 @@
 //! Node connection utilities.
 
-use crate::{node_label::InternedNodeLabel, AudioContext};
-use crate::{MainBus, Node, NodeLabel};
+use crate::node_label::InternedNodeLabel;
+use crate::prelude::{AudioContext, MainBus, Node, NodeLabel};
 use bevy_ecs::prelude::*;
 use bevy_log::{error_once, warn_once};
 use bevy_utils::HashMap;
@@ -59,7 +59,8 @@ impl From<Entity> for ConnectTarget {
 /// The set of all [`PendingConnection`]s for an entity.
 ///
 /// These connections are drained and synchronized with the
-/// audio graph in the [SeedlingSystems::Connect] set.
+/// audio graph in the [`SeedlingSystems::Connect`][crate::SeedlingSystems::Connect]
+/// set.
 #[derive(Debug, Default, Component)]
 pub struct PendingConnections(Vec<PendingConnection>);
 
@@ -81,7 +82,7 @@ pub trait Connect<'a>: Sized {
     ///
     /// ```
     /// # use bevy::prelude::*;
-    /// # use bevy_seedling::{MainBus, VolumeNode, Connect, Volume};
+    /// # use bevy_seedling::prelude::*;
     /// # fn system(mut commands: Commands) {
     /// // Connect a node to the MainBus.
     /// let node = commands
@@ -100,14 +101,16 @@ pub trait Connect<'a>: Sized {
     /// which represents a simple stereo connection.
     /// To provide a specific port mapping, use [`connect_with`][Connect::connect_with].
     ///
-    /// The connection is deferred, finalizing in the [`SeedlingSystems::Connect`] set.
+    /// The connection is deferred, finalizing in the
+    /// [`SeedlingSystems::Connect`][crate::SeedlingSystems::Connect] set.
     fn connect(self, target: impl Into<ConnectTarget>) -> ConnectCommands<'a> {
         self.connect_with(target, DEFAULT_CONNECTION)
     }
 
     /// Queue a connection from this entity to the target with the provided port mappings.
     ///
-    /// The connection is deferred, finalizing in the [`SeedlingSystems::Connect`] set.
+    /// The connection is deferred, finalizing in the
+    /// [`SeedlingSystems::Connect`][crate::SeedlingSystems::Connect] set.
     fn connect_with(
         self,
         target: impl Into<ConnectTarget>,
@@ -120,14 +123,14 @@ pub trait Connect<'a>: Sized {
 
     fn chain_node_with<B: Bundle>(self, node: B, ports: &[(u32, u32)]) -> ConnectCommands<'a>;
 
-    /// Get the head of this chain.
+    // Get the head of this chain.
     fn head(&self) -> Entity;
 
-    /// Get the tail of this chain.
-    ///
-    /// This will be produce the same value
-    /// as [`ConnectCommands::head`] if only one
-    /// node has been spawned.
+    // Get the tail of this chain.
+    //
+    // This will be produce the same value
+    // as [`ConnectCommands::head`] if only one
+    // node has been spawned.
     fn tail(&self) -> Entity;
 }
 

@@ -1,8 +1,8 @@
-//! Audio node connections and management.
+//! Audio node registration and management.
 
 use crate::connect::NodeMap;
 use crate::node_label::NodeLabels;
-use crate::{AudioContext, SeedlingSystems};
+use crate::{prelude::AudioContext, SeedlingSystems};
 use bevy_app::Last;
 use bevy_ecs::{prelude::*, world::DeferredWorld};
 use bevy_log::error;
@@ -220,16 +220,14 @@ pub(crate) fn flush_events(
 /// Exclude a node from the audio graph.
 ///
 /// This component prevents audio node components
-/// like [`VolumeNode`][crate::VolumeNode] from
+/// like [`VolumeNode`][crate::prelude::VolumeNode] from
 /// automatically inserting themselves into the audio graph.
 /// This allows you to treat nodes as plain old data,
 /// facilitating the [`ParamFollower`] pattern.
 ///
 /// ```
 /// # use bevy_ecs::prelude::*;
-/// # use bevy_seedling::{VolumeNode,
-/// # node::{ExcludeNode, ParamFollower}, Volume,
-/// # connect::Connect};
+/// # use bevy_seedling::{prelude::*, node::{ExcludeNode, ParamFollower}};
 /// fn system(mut commands: Commands) {
 ///     let pod = commands.spawn((
 ///         VolumeNode { volume: Volume::UNITY_GAIN },

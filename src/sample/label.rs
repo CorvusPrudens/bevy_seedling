@@ -1,4 +1,4 @@
-//! Type-base sample pool labelling.
+//! Type-based sample pool labeling.
 //!
 //! `bevy_seedling` provides a single pool label, [`DefaultPool`].
 //! Any node that doesn't provide an explicit pool when spawned
@@ -9,11 +9,7 @@
 //!
 //! ```no_run
 //! use bevy::prelude::*;
-//! use bevy_seedling::{
-//!     SeedlingPlugin,
-//!     SpatialBasicNode,
-//!     sample::{label::DefaultPool, pool::Pool},
-//! };
+//! use bevy_seedling::prelude::*;
 //!
 //! fn main() {
 //!     App::default()
@@ -36,7 +32,10 @@
 //!         .run();
 //! }
 //! ```
+
 use bevy_ecs::{intern::Interned, prelude::*};
+
+pub use seedling_macros::PoolLabel;
 
 bevy_ecs::define_label!(
     /// A label for differentiating sample pools.
@@ -50,7 +49,7 @@ bevy_ecs::define_label!(
 /// [`SamplePlayer`], this label will be inserted.
 ///
 /// [`SamplePlayer`]: crate::sample::SamplePlayer
-#[derive(crate::PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DefaultPool;
 
 /// A type-erased node label.

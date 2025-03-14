@@ -45,12 +45,12 @@ firewheel = { path = "firewheel", features = ["wasm-bindgen"] }
 bevy = { version = "0.15", default-features = false, features = [
   "bevy_debug_stepping",
   "bevy_asset",
-  "bevy_audio",
   "bevy_color",
   "bevy_state",
   "multi_threaded",
   "sysinfo_plugin",
 ] }
+
 criterion = "0.5"
 
 [[bench]]

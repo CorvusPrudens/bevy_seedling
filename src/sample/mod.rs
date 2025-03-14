@@ -1,6 +1,7 @@
 //! Audio sample components.
 
-use crate::{node::ExcludeNode, Volume};
+use crate::node::ExcludeNode;
+use crate::prelude::Volume;
 use bevy_asset::Handle;
 use bevy_ecs::prelude::*;
 

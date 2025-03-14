@@ -1,7 +1,5 @@
 //! One-pole, low-pass filter.
 
-use std::any::Any;
-
 use crate::timeline::Timeline;
 use bevy_ecs::prelude::*;
 use firewheel::{
@@ -12,12 +10,19 @@ use firewheel::{
     node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ProcBuffers, ProcInfo, ProcessStatus},
     StreamInfo,
 };
+use std::any::Any;
 
 /// A one-pole, low-pass filter.
 #[derive(Diff, Patch, Debug, Clone, Component)]
 pub struct LowPassNode {
     /// The cutoff frequency in hertz.
     pub frequency: Timeline<f32>,
+}
+
+impl Default for LowPassNode {
+    fn default() -> Self {
+        Self::new(24000.)
+    }
 }
 
 impl LowPassNode {

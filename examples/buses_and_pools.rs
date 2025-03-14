@@ -2,14 +2,7 @@
 //! custom sample pool, a custom bus, and the routing in-between.
 
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_seedling::{
-    lpf::LowPassNode,
-    sample::{pool::Pool, SamplePlayer},
-    timeline::Timeline,
-    AudioContext, Connect, NodeLabel, PlaybackSettings, PoolLabel, SeedlingPlugin, Volume,
-    VolumeNode,
-};
-use firewheel::clock::ClockSeconds;
+use bevy_seedling::prelude::*;
 
 #[derive(NodeLabel, PartialEq, Eq, Debug, Hash, Clone)]
 struct EffectsBus;

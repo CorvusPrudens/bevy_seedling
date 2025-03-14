@@ -8,7 +8,7 @@ pub struct InnerContext(mpsc::Sender<ThreadLocalCall>);
 type ThreadLocalCall = Box<dyn FnOnce(&mut FirewheelContext) + Send + 'static>;
 
 impl InnerContext {
-    /// Spawn the audio process and control thread.
+    // Spawn the audio process and control thread.
     #[inline(always)]
     pub fn new(settings: FirewheelConfig) -> Self {
         let (bev_to_audio_tx, bev_to_audio_rx) = mpsc::channel::<ThreadLocalCall>();
@@ -26,15 +26,15 @@ impl InnerContext {
         InnerContext(bev_to_audio_tx)
     }
 
-    /// Send `f` to the underlying control thread to operate on the audio context.
-    ///
-    /// This call will block until `f` returns.
-    ///
-    /// This method takes a mutable reference to `self` to prevent trivial deadlocks.
-    /// This API can't completely prevent them in the general case: calling
-    /// [AudioContext::with] within itself will deadlock.
-    ///
-    /// This API is based on [this PR](https://github.com/bevyengine/bevy/pull/9122).
+    // Send `f` to the underlying control thread to operate on the audio context.
+    //
+    // This call will block until `f` returns.
+    //
+    // This method takes a mutable reference to `self` to prevent trivial deadlocks.
+    // This API can't completely prevent them in the general case: calling
+    // [AudioContext::with] within itself will deadlock.
+    //
+    // This API is based on [this PR](https://github.com/bevyengine/bevy/pull/9122).
     #[inline(always)]
     pub fn with<F, O>(&mut self, f: F) -> O
     where

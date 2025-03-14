@@ -1,7 +1,5 @@
 //! A simple band-pass filter.
 
-use std::any::Any;
-
 use crate::timeline::Timeline;
 use bevy_ecs::prelude::*;
 use firewheel::{
@@ -11,6 +9,7 @@ use firewheel::{
     event::NodeEventList,
     node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ProcBuffers, ProcessStatus},
 };
+use std::any::Any;
 
 /// A simple low-pass filter.
 #[derive(Diff, Patch, Debug, Clone, Component)]
