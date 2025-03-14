@@ -1,6 +1,6 @@
 //! Node connection utilities.
 
-use crate::node_label::InternedNodeLabel;
+use crate::node::label::InternedNodeLabel;
 use crate::prelude::{AudioContext, MainBus, Node, NodeLabel};
 use bevy_ecs::prelude::*;
 use bevy_log::{error_once, warn_once};

@@ -1,3 +1,47 @@
+//! Spatial audio components.
+//!
+//! To enable spatial audio, three conditions are required:
+//!
+//! 1. The spatial audio node, [`SpatialBasicNode`], must have
+//!    a transform.
+//! 2. The spatial listener entity must have a [`SpatialListener2D`]
+//!    or [`SpatialListener3D`].
+//! 3. The spatial listener entity must have a transform.
+//!
+//! There should only be one [`SpatialListener2D`] or [`SpatialListener3D`]
+//! present in the world at a time. If more than one is present, spatial
+//! audio will not be calculated.
+//!
+//! Typically, you'll want to include a [`SpatialBasicNode`] as an
+//! effect in a sampler pool.
+//!
+//! ```
+//! # use bevy_seedling::prelude::*;
+//! # use bevy::prelude::*;
+//! fn spawn_spatial(mut commands: Commands, server: Res<AssetServer>) {
+//!     #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
+//!     struct SpatialPool;
+//!
+//!     Pool::new(SpatialPool, 4)
+//!         .effect(SpatialBasicNode::default())
+//!         .spawn(&mut commands);
+//!
+//!     // spawn a listener with a transform (2, 3)
+//!     commands.spawn((SpatialListener2D, Transform::default()));
+//!
+//!     // then, spawn a player with a transform (1)
+//!     commands.spawn((
+//!         SpatialPool,
+//!         SamplePlayer::new(server.load("my_sample.wav")),
+//!         Transform::default(),
+//!     ));
+//! }
+//! ```
+//!
+//! Since the pool will automatically insert an [excluded][crate::node::ExcludeNode]
+//! [`SpatialBasicNode`] on any [`SamplePlayer`][crate::prelude::SamplePlayer]
+//! entity, (1) will be satisfied.
+
 use bevy_ecs::prelude::*;
 use bevy_transform::components::GlobalTransform;
 use firewheel::nodes::spatial_basic::SpatialBasicNode;

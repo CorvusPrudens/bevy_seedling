@@ -1,3 +1,5 @@
+//! Sampler pools, which represent primary sampler player mechanism.
+
 use super::{label::PoolLabelContainer, PlaybackSettings, QueuedSample, Sample, SamplePlayer};
 use crate::node::ParamFollower;
 use crate::prelude::{AudioContext, Connect, DefaultPool, Node, PoolLabel, VolumeNode};

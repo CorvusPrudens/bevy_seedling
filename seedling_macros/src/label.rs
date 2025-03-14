@@ -8,7 +8,7 @@ pub fn derive_node_label_inner(input: TokenStream) -> syn::Result<TokenStream2> 
     let input: syn::DeriveInput = syn::parse(input)?;
 
     let bevy_ecs = BevyManifest::default().get_path("bevy_ecs");
-    let label_path = syn::parse2(quote! { ::bevy_seedling::node_label::NodeLabel }).unwrap();
+    let label_path = syn::parse2(quote! { ::bevy_seedling::prelude::NodeLabel }).unwrap();
 
     let ident = &input.ident;
     let component_derive = quote! {
@@ -24,7 +24,7 @@ pub fn derive_node_label_inner(input: TokenStream) -> syn::Result<TokenStream2> 
                     world
                         .commands()
                         .entity(entity)
-                        .entry::<::bevy_seedling::node_label::NodeLabels>()
+                        .entry::<::bevy_seedling::node::label::NodeLabels>()
                         .or_insert(::core::default::Default::default())
                         .and_modify(move |mut labels| {
                             labels.insert(interned);
@@ -51,7 +51,7 @@ pub fn derive_pool_label_inner(input: TokenStream) -> syn::Result<TokenStream2> 
     let input: syn::DeriveInput = syn::parse(input)?;
 
     let bevy_ecs = BevyManifest::default().get_path("bevy_ecs");
-    let label_path = syn::parse2(quote! { ::bevy_seedling::sample::label::PoolLabel }).unwrap();
+    let label_path = syn::parse2(quote! { ::bevy_seedling::prelude::PoolLabel }).unwrap();
 
     let ident = &input.ident;
     let component_derive = quote! {

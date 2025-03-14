@@ -19,6 +19,8 @@
 //!   # ...
 //! ] }
 //! ```
+//! [See here](https://docs.rs/crate/bevy/latest/features) for a list
+//! of Bevy's default features.
 //!
 //! Then, you'll need to add the [`SeedlingPlugin`] to your app.
 //!
@@ -172,7 +174,6 @@ pub mod context;
 pub mod fixed_vec;
 pub mod lpf;
 pub mod node;
-pub mod node_label;
 pub mod sample;
 pub mod spatial;
 pub mod timeline;
@@ -181,12 +182,16 @@ pub mod timeline;
 pub mod profiling;
 
 pub mod prelude {
+    //! All `bevy_seedlings`'s important types and traits.
+
     pub use crate::bpf::BandPassNode;
     pub use crate::connect::{Connect, ConnectTarget};
     pub use crate::context::AudioContext;
     pub use crate::lpf::LowPassNode;
-    pub use crate::node::{Node, RegisterNode};
-    pub use crate::node_label::{MainBus, NodeLabel};
+    pub use crate::node::{
+        label::{MainBus, NodeLabel},
+        Node, RegisterNode,
+    };
     pub use crate::sample::{
         label::{DefaultPool, PoolLabel},
         pool::{Pool, PoolCommands, PoolDespawn},
@@ -320,7 +325,7 @@ impl Plugin for SeedlingPlugin {
         .add_systems(
             PreStartup,
             (
-                node_label::insert_main_bus,
+                node::label::insert_main_bus,
                 move |mut commands: Commands| {
                     if let Some(size) = sample_pool_size {
                         Pool::new(DefaultPool, size).spawn(&mut commands);

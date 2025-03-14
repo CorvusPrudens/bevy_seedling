@@ -1,10 +1,16 @@
+//! A wrapper around `std::Vec` to ease realtime safety.
+
 // A `Vec` was chosen over a `VecDeque` for ease-of-use.
 //
 // In any case, we expect these sequences to be fairly short,
 // so shifting all elements when we run out of capacity
 // should be quite fast.
 
-/// A wrapper around `std::Vec<T>` with a fixed capacity.
+/// A wrapper around `std::Vec` with a fixed capacity.
+///
+/// This preserves the capacity on clone, making it easy
+/// to ensure no unexpected allocations are made after
+/// construction.
 ///
 /// The default capacity is 16 elements.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]

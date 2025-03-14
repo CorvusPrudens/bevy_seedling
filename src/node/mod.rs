@@ -1,7 +1,6 @@
 //! Audio node registration and management.
 
 use crate::connect::NodeMap;
-use crate::node_label::NodeLabels;
 use crate::{prelude::AudioContext, SeedlingSystems};
 use bevy_app::Last;
 use bevy_ecs::{prelude::*, world::DeferredWorld};
@@ -12,6 +11,10 @@ use firewheel::{
     event::{NodeEvent, NodeEventType},
     node::{AudioNode, NodeID},
 };
+
+pub mod label;
+
+use label::NodeLabels;
 
 /// A node's baseline instance.
 ///
@@ -250,6 +253,32 @@ pub struct ExcludeNode;
 ///
 /// This can only support a single rank; cascading
 /// is not allowed.
+///
+/// Within `bevy_seedling`, this is used primarily by sampler
+/// pools. When you define a pool with a set of effects,
+/// those nodes will be automatically inserted on
+/// [`SamplePlayer`][crate::prelude::SamplePlayer] entities
+/// queued for that pool. Then, each effect node will
+/// have a [`ParamFollower`] component inserted that
+/// tracks the [`SamplePlayer`][crate::prelude::SamplePlayer].
+///
+/// ```
+/// # use bevy::prelude::*;
+/// # use bevy_seedling::prelude::*;
+/// # #[derive(PoolLabel, Clone, Debug, PartialEq, Eq, Hash)]
+/// # struct MyLabel;
+/// # fn system(mut commands: Commands, server: Res<AssetServer>) {
+/// Pool::new(MyLabel, 1)
+///     .effect(SpatialBasicNode::default())
+///     .spawn(&mut commands);
+///
+/// commands.spawn((MyLabel, SamplePlayer::new(server.load("my_sample.wav"))));
+///
+/// // Once spawned, these will look something like
+/// // Pool: (SamplePlayer) -> (SpatialBasicNode, ParamFollower) -> (VolumeNode) -> (MainBus)
+/// // SamplePlayer: (SamplePlayer, SpatialBasicNode, ExcludeNode)
+/// # }
+/// ```
 #[derive(Debug, Component)]
 pub struct ParamFollower(pub Entity);
 

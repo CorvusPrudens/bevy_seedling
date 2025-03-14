@@ -16,7 +16,7 @@ use os::InnerContext;
 
 /// A thread-safe wrapper around the underlying Firewheel audio context.
 ///
-/// When the seedling plugin is initialized, this can be accessed as a resource.
+/// After the seedling plugin is initialized, this can be accessed as a resource.
 ///
 /// ```
 /// # use bevy::prelude::*;
