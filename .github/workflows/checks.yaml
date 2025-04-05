@@ -1,8 +1,6 @@
 name: CI Checks
 
 on:
-  push:
-    branches: [master]
   pull_request:
     branches: [master]
 
@@ -18,11 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
         run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
@@ -45,9 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -75,9 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -92,11 +83,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
         run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
@@ -109,22 +97,45 @@ jobs:
       - name: Check documentation
         run: cargo doc --locked --workspace --all-features --document-private-items --no-deps
 
-  # semver:
-  #   runs-on: ubuntu-latest
-  #   name: SemVer checks
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
+  # Test Wasm builds
+  wasm:
+    name: Wasm build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
 
-  #     - name: Install Rust toolchain
-  #       uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
-  #     - name: Install dependencies
-  #       run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+      - name: Install dependencies
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
 
-  #     - name: Populate target directory from cache
-  #       uses: Leafwing-Studios/cargo-cache@v2
-  #       with:
-  #         sweep-cache: true
+      - name: Populate target directory from cache
+        uses: Leafwing-Studios/cargo-cache@v2
+        with:
+          sweep-cache: true
 
-  #     - uses: obi1kenobi/cargo-semver-checks-action@v2
+      - name: Build examples
+        run: |
+          cargo build --examples --target="wasm32-unknown-unknown" --features=ogg,stream,bevy/bevy_asset
+
+  # Verify semver compliance
+  semver:
+    runs-on: ubuntu-latest
+    name: SemVer checks
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+
+      - name: Populate target directory from cache
+        uses: Leafwing-Studios/cargo-cache@v2
+        with:
+          sweep-cache: true
+
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
