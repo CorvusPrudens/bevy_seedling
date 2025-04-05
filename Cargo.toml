@@ -54,6 +54,8 @@ bevy_seedling_macros = { path = "./seedling_macros", version = "0.3.0" }
 firewheel = { version = "0.3", features = ["wasm-bindgen"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
+# keep the version in sync with [firewheel-cpal](https://github.com/BillyDM/Firewheel/blob/main/crates/firewheel-cpal/Cargo.toml) 
+# to have no impact on the binary size (except the feature impact)
 cpal = { version = "0.15", default-features = false, features = [
   # bevy_seedling can't operate without the C++ shared stdlib on Android
   "oboe-shared-stdcxx",
