@@ -53,11 +53,11 @@ bevy_seedling_macros = { path = "./seedling_macros", version = "0.3.0" }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 firewheel = { version = "0.3", features = ["wasm-bindgen"] }
 
-[target."cfg(target_os = \"android\")".dependencies.bevy]
-features = [
+[target.'cfg(target_os = "android")'.dependencies]
+cpal = { version = "0.15", default-features = false, features = [
   # bevy_seedling can't operate without the C++ shared stdlib on Android
-  "android_shared_stdcxx",
-]
+  "oboe-shared-stdcxx",
+]}
 
 [dev-dependencies]
 bevy = { version = "0.15", default-features = false, features = [
