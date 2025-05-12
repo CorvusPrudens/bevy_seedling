@@ -1,5 +1,5 @@
 //! This example demonstrates how to define and use a custom
-//! Firehwel node.
+//! Firewheel node.
 
 use bevy::prelude::*;
 use bevy_seedling::{pool::sample_effects::SampleEffects, prelude::*};
