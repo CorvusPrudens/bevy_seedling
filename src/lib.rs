@@ -126,6 +126,18 @@
 //!
 //! ## Frequently asked questions
 //!
+//! ### How do I dynamically change player's volume?
+//! The first thing to note is that `PlaybackSettings` only defines 
+//! what should happen when the audio starts playing. That being said, 
+//! the volume defined in it would be referred to as the maximum volume for this player.
+//! However, the volume can be changed during the player's lifetime using a `VolumeNote`, for example:
+//! ```ignore
+//! sample_effects!(VolumeNode { volume: Volume::SILENT })
+//! ```
+//! These can then be queried and manipulated directly.
+//! Note that, like other nodes, 
+//! the node points to the sample player through `EffectOf(sample_player_entity)`.
+//! 
 //! ### Why aren't my mp3 samples making any sound?
 //!
 //! `bevy_seedling` enables a few formats and encodings by default.
