@@ -34,23 +34,23 @@ profiling = []
 
 [dependencies]
 bevy = { version = "0.16", default-features = false, features = [
-  "bevy_asset",
-  "bevy_log",
-  "std",
+    "bevy_asset",
+    "bevy_log",
+    "std",
 ] }
 bevy_math = { version = "0.16", default-features = false, features = ["curve"] }
 firewheel = { version = "0.4.0", features = ["bevy", "spatial_basic_node"] }
 symphonium = { version = "0.4", default-features = false, features = [
-  "opt-simd",
-  "fft-resampler",
+    "opt-simd",
+    "fft-resampler",
 ] }
 symphonia = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 smallvec = "1.13"
 bevy_seedling_macros = { path = "./seedling_macros", version = "0.4.0" }
 rand = { version = "0.8", default-features = false, features = [
-  "small_rng",
-  "getrandom",
+    "small_rng",
+    "getrandom",
 ], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -58,17 +58,26 @@ firewheel = { version = "0.4.0", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
 bevy = { version = "0.16", default-features = false, features = [
-  "bevy_debug_stepping",
-  "bevy_asset",
-  "bevy_color",
-  "bevy_state",
-  "multi_threaded",
-  "sysinfo_plugin",
-  "std",
+    "bevy_debug_stepping",
+    "bevy_asset",
+    "bevy_state",
+    "multi_threaded",
+    "sysinfo_plugin",
+    "std",
+    # for examples with ui
+    "bevy_text",
+    "default_font",
+    "bevy_ui",
+    "bevy_picking",
+    "bevy_ui_picking_backend",
+    "bevy_window",
+    "bevy_render",
+    "wayland",
+    "x11",
 ] }
 criterion = { version = "0.5", default-features = false, features = [
-  "plotters",
-  "cargo_bench_support",
+    "plotters",
+    "cargo_bench_support",
 ] }
 
 [[bench]]
