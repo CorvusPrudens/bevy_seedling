@@ -3,6 +3,7 @@
 //!
 //! This example set's up the following structure:
 //!
+//! ```text
 //! ┌─────┐┌───┐┌───────┐
 //! │Music││Sfx││General│
 //! └┬────┘└┬──┘└┬──────┘
@@ -12,6 +13,7 @@
 //! ┌▽───────────▽┐
 //! │MainBus      │
 //! └─────────────┘
+//! ```
 //!
 //! A "bus" is really just a node that we've given a label, usually a VolumeNode
 //! The default pool is already connected to the MainBus,
@@ -247,20 +249,10 @@ fn core_grid() -> impl Bundle {
 }
 fn general_volume() -> impl Bundle {
     (
-        Node {
-            justify_self: JustifySelf::Start,
-            ..Default::default()
-        },
+        knobs_container(),
         children![
             btn("-".into(), lower_general),
-            (
-                Node {
-                    padding: UiRect::horizontal(Px(10.0)),
-                    justify_content: JustifyContent::Center,
-                    ..Default::default()
-                },
-                children![(text("".into()), GeneralVolumeLabel)],
-            ),
+            knob_label(GeneralVolumeLabel),
             btn("+".into(), raise_general),
         ],
     )
@@ -275,14 +267,7 @@ fn music_volume() -> impl Bundle {
         knobs_container(),
         children![
             btn("-".into(), lower_music),
-            (
-                Node {
-                    padding: UiRect::horizontal(Px(10.0)),
-                    justify_content: JustifyContent::Center,
-                    ..Default::default()
-                },
-                children![(text("".into()), MusicVolumeLabel)],
-            ),
+            knob_label(MusicVolumeLabel),
             btn("+".into(), raise_music),
         ],
     )
@@ -297,14 +282,7 @@ fn sfx_volume() -> impl Bundle {
         knobs_container(),
         children![
             btn("-".into(), lower_sfx),
-            (
-                Node {
-                    padding: UiRect::horizontal(Px(10.0)),
-                    justify_content: JustifyContent::Center,
-                    ..Default::default()
-                },
-                children![(text("".into()), SfxVolumeLabel)],
-            ),
+            knob_label(SfxVolumeLabel),
             btn("+".into(), raise_sfx),
         ],
     )
@@ -345,11 +323,22 @@ pub fn text(t: String) -> impl Bundle {
     )
 }
 
-pub fn knobs_container() -> impl Bundle {
+fn knobs_container() -> impl Bundle {
     Node {
         justify_self: JustifySelf::Center,
         align_content: AlignContent::SpaceEvenly,
         min_width: Px(100.0),
         ..Default::default()
     }
+}
+
+fn knob_label(label: impl Component) -> impl Bundle {
+    (
+        Node {
+            padding: UiRect::horizontal(Px(10.0)),
+            justify_content: JustifyContent::Center,
+            ..Default::default()
+        },
+        children![(text("".into()), label)],
+    )
 }
