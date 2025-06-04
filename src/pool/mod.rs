@@ -747,8 +747,8 @@ mod test {
         });
 
         run(&mut app, |pool_nodes: Query<&FirewheelNode>| {
-            // 2 * 4 (sampler and low pass nodes) + (pool volume) + 1 (global volume)
-            assert_eq!(pool_nodes.iter().count(), 10);
+            // 2 * 4 (sampler and low pass nodes) + (pool volume) + 1 (global volume) + 1 (input)
+            assert_eq!(pool_nodes.iter().count(), 11);
         });
 
         run(&mut app, |mut commands: Commands| {
