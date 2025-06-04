@@ -22,7 +22,7 @@ pub use disconnect::*;
 ///
 /// ```
 /// # use bevy::prelude::*;
-/// # use bevy_seedling::prelude::*;
+/// # use bevy_seedling::{prelude::*, edge::AudioGraphInput};
 /// fn route_input(input: Single<Entity, With<AudioGraphInput>>, mut commands: Commands) {
 ///     let my_node = commands.spawn(VolumeNode::default()).id();
 ///
