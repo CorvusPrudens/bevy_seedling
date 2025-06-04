@@ -1,4 +1,4 @@
-use super::{EdgeTarget, NodeMap, PendingEdge, DEFAULT_CONNECTION};
+use super::{DEFAULT_CONNECTION, EdgeTarget, NodeMap, PendingEdge};
 use crate::{context::AudioContext, node::FirewheelNode};
 use bevy::prelude::*;
 

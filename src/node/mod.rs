@@ -3,7 +3,7 @@
 use crate::edge::NodeMap;
 use crate::error::SeedlingError;
 use crate::pool::sample_effects::EffectOf;
-use crate::{prelude::AudioContext, SeedlingSystems};
+use crate::{SeedlingSystems, prelude::AudioContext};
 use bevy::ecs::component::{ComponentId, HookContext, Mutable};
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;

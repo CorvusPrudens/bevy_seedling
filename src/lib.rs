@@ -140,7 +140,9 @@
 //! # fn dynamic(mut commands: Commands, server: Res<AssetServer>) {
 //! commands.spawn((
 //!     SamplePlayer::new(server.load("my_sample.wav")),
-//!     sample_effects![VolumeNode { volume: Volume::Decibels(-6.0) }],
+//!     sample_effects![VolumeNode {
+//!         volume: Volume::Decibels(-6.0)
+//!     }],
 //! ));
 //! # }
 //! ```
@@ -162,15 +164,10 @@
 //!
 //! commands.spawn(SamplerPool(MusicPool));
 //!
-//! commands.spawn((
-//!     MusicPool,
-//!     SamplePlayer::new(server.load("my_music.wav")),
-//! ));
+//! commands.spawn((MusicPool, SamplePlayer::new(server.load("my_music.wav"))));
 //!
 //! // Update the volume of all music at once
-//! fn update_music_volume(
-//!     mut music: Single<&mut VolumeNode, With<SamplerPool<MusicPool>>>,
-//! ) {
+//! fn update_music_volume(mut music: Single<&mut VolumeNode, With<SamplerPool<MusicPool>>>) {
 //!     music.volume = Volume::Decibels(-6.0);
 //! }
 //! # }
@@ -268,7 +265,7 @@ extern crate self as bevy_seedling;
 
 use bevy::prelude::*;
 use core::ops::RangeInclusive;
-use firewheel::{backend::AudioBackend, CpalBackend};
+use firewheel::{CpalBackend, backend::AudioBackend};
 
 pub mod context;
 pub mod edge;
@@ -287,11 +284,12 @@ pub mod profiling;
 pub mod prelude {
     //! All `bevy_seedlings`'s important types and traits.
 
+    pub use crate::SeedlingPlugin;
     pub use crate::context::AudioContext;
     pub use crate::edge::{Connect, Disconnect, EdgeTarget};
     pub use crate::node::{
-        label::{MainBus, NodeLabel},
         FirewheelNode, RegisterNode,
+        label::{MainBus, NodeLabel},
     };
     pub use crate::nodes::{
         bpf::{BandPassConfig, BandPassNode},
@@ -300,29 +298,28 @@ pub mod prelude {
         send::{SendConfig, SendNode},
     };
     pub use crate::pool::{
+        DefaultPoolSize, PlaybackCompletionEvent, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
         label::{DefaultPool, PoolLabel},
         sample_effects::{EffectOf, EffectsQuery, SampleEffects},
-        DefaultPoolSize, PlaybackCompletionEvent, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
     };
     pub use crate::sample::{OnComplete, PlaybackSettings, SamplePlayer, SamplePriority};
     pub use crate::sample_effects;
     pub use crate::spatial::{
         DefaultSpatialScale, SpatialListener2D, SpatialListener3D, SpatialScale,
     };
-    pub use crate::SeedlingPlugin;
 
     pub use firewheel::{
+        FirewheelConfig, Volume,
         channel_config::ChannelCount,
         clock::{ClockSamples, ClockSeconds},
         diff::{Memo, Notify},
         nodes::{
+            StereoToMonoNode,
             sampler::{PlaybackSpeedQuality, PlaybackState, Playhead, RepeatMode, SamplerNode},
             spatial_basic::{SpatialBasicConfig, SpatialBasicNode},
             volume::{VolumeNode, VolumeNodeConfig},
             volume_pan::{VolumePanNode, VolumePanNodeConfig},
-            StereoToMonoNode,
         },
-        FirewheelConfig, Volume,
     };
 
     #[cfg(feature = "stream")]

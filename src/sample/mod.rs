@@ -78,7 +78,10 @@ pub use assets::{Sample, SampleLoader, SampleLoaderError};
 /// fn play_with_effects(mut commands: Commands, server: Res<AssetServer>) {
 ///     commands.spawn((
 ///         SamplePlayer::new(server.load("my_sample.wav")),
-///         sample_effects![SpatialBasicNode::default(), LowPassNode { frequency: 500.0 }],
+///         sample_effects![
+///             SpatialBasicNode::default(),
+///             LowPassNode { frequency: 500.0 }
+///         ],
 ///     ));
 /// }
 /// ```
