@@ -3,7 +3,7 @@
 use crate::edge::NodeMap;
 use crate::error::SeedlingError;
 use crate::pool::sample_effects::EffectOf;
-use crate::{SeedlingSystems, prelude::AudioContext};
+use crate::{prelude::AudioContext, SeedlingSystems};
 use bevy::ecs::component::{ComponentId, HookContext, Mutable};
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
@@ -268,16 +268,18 @@ impl RegisterNode for App {
 /// When this component is removed, the underlying
 /// audio node is removed from the graph.
 #[derive(Debug, Clone, Copy, Component)]
-#[component(on_remove = on_remove_node, immutable)]
+#[component(on_remove = Self::on_remove_hook, immutable)]
 pub struct FirewheelNode(pub NodeID);
 
-fn on_remove_node(mut world: DeferredWorld, context: HookContext) {
-    let Some(node) = world.get::<FirewheelNode>(context.entity).copied() else {
-        return;
-    };
+impl FirewheelNode {
+    fn on_remove_hook(mut world: DeferredWorld, context: HookContext) {
+        let Some(node) = world.get::<FirewheelNode>(context.entity).copied() else {
+            return;
+        };
 
-    let mut removals = world.resource_mut::<PendingRemovals>();
-    removals.push(node.0);
+        let mut removals = world.resource_mut::<PendingRemovals>();
+        removals.push(node.0);
+    }
 }
 
 /// Queued audio node removals.

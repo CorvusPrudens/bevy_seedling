@@ -268,7 +268,7 @@ extern crate self as bevy_seedling;
 
 use bevy::prelude::*;
 use core::ops::RangeInclusive;
-use firewheel::{CpalBackend, backend::AudioBackend};
+use firewheel::{backend::AudioBackend, CpalBackend};
 
 pub mod context;
 pub mod edge;
@@ -287,12 +287,11 @@ pub mod profiling;
 pub mod prelude {
     //! All `bevy_seedlings`'s important types and traits.
 
-    pub use crate::SeedlingPlugin;
     pub use crate::context::AudioContext;
     pub use crate::edge::{Connect, Disconnect, EdgeTarget};
     pub use crate::node::{
-        FirewheelNode, RegisterNode,
         label::{MainBus, NodeLabel},
+        FirewheelNode, RegisterNode,
     };
     pub use crate::nodes::{
         bpf::{BandPassConfig, BandPassNode},
@@ -301,27 +300,28 @@ pub mod prelude {
         send::{SendConfig, SendNode},
     };
     pub use crate::pool::{
-        DefaultPoolSize, PlaybackCompletionEvent, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
         label::{DefaultPool, PoolLabel},
         sample_effects::{EffectOf, EffectsQuery, SampleEffects},
+        DefaultPoolSize, PlaybackCompletionEvent, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
     };
     pub use crate::sample::{OnComplete, PlaybackSettings, SamplePlayer, SamplePriority};
     pub use crate::sample_effects;
     pub use crate::spatial::{
         DefaultSpatialScale, SpatialListener2D, SpatialListener3D, SpatialScale,
     };
+    pub use crate::SeedlingPlugin;
 
     pub use firewheel::{
-        FirewheelConfig, Volume,
         clock::{ClockSamples, ClockSeconds},
         diff::{Memo, Notify},
         nodes::{
-            StereoToMonoNode,
             sampler::{PlaybackSpeedQuality, PlaybackState, Playhead, RepeatMode, SamplerNode},
             spatial_basic::{SpatialBasicConfig, SpatialBasicNode},
             volume::{VolumeNode, VolumeNodeConfig},
             volume_pan::{VolumePanNode, VolumePanNodeConfig},
+            StereoToMonoNode,
         },
+        FirewheelConfig, Volume,
     };
 
     #[cfg(feature = "stream")]
@@ -460,6 +460,7 @@ where
             PreStartup,
             (
                 node::label::insert_main_bus,
+                edge::insert_input,
                 move |mut commands: Commands| {
                     if spawn_default {
                         commands.spawn(SamplerPool(DefaultPool));

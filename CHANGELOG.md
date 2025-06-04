@@ -1,3 +1,10 @@
+# 0.4.1
+
+## Features
+
+- Added an `AudioGraphInput` component, making input connections
+  easier to manage
+
 # 0.4.0
 
 ## Features
