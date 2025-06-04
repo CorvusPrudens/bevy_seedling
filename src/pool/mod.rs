@@ -758,8 +758,8 @@ mod test {
         app.update();
 
         run(&mut app, |pool_nodes: Query<&FirewheelNode>| {
-            // 1 (global volume)
-            assert_eq!(pool_nodes.iter().count(), 1);
+            // 1 (global volume) + 1 (input)
+            assert_eq!(pool_nodes.iter().count(), 2);
         });
     }
 
