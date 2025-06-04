@@ -312,6 +312,7 @@ pub mod prelude {
     pub use crate::SeedlingPlugin;
 
     pub use firewheel::{
+        channel_config::ChannelCount,
         clock::{ClockSamples, ClockSeconds},
         diff::{Memo, Notify},
         nodes::{
