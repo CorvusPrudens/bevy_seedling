@@ -264,7 +264,7 @@ impl<'a> Connect<'a> for EntityCommands<'a> {
         let new_id = self.commands().spawn(node).id();
 
         let mut new_connection = self.connect_with(new_id, ports);
-        new_connection.head = new_id;
+        new_connection.tail = Some(new_id);
 
         new_connection
     }
