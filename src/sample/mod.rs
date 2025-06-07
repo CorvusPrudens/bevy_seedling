@@ -429,7 +429,7 @@ impl Default for PlaybackSettings {
             playback: Notify::new(PlaybackState::Play { delay: None }),
             playhead: Notify::default(),
             speed: 1.0,
-            on_complete: OnComplete::Remove,
+            on_complete: OnComplete::Despawn,
         }
     }
 }

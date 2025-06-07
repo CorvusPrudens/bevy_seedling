@@ -311,7 +311,7 @@ impl SamplerOf {
 /// this data is checked, you may notice jitter in the playhead.
 #[derive(Component)]
 #[relationship_target(relationship = SamplerOf)]
-#[component(on_remove = Self::on_insert_hook)]
+#[component(on_insert = Self::on_insert_hook)]
 pub struct Sampler {
     #[relationship]
     sampler: Entity,
@@ -364,8 +364,8 @@ impl Sampler {
     fn on_insert_hook(mut world: DeferredWorld, context: HookContext) {
         let sampler = world.get::<Sampler>(context.entity).unwrap().sampler;
 
-        // We'll attempt to eagerly fill the state here, otherwise falling back when
-        // it's not ready.
+        // We'll attempt to eagerly fill the state here, otherwise falling
+        // back to `retrieve_State` when it's not ready.
         if let Some(state) = world.get::<SamplerStateWrapper>(sampler).cloned() {
             world.get_mut::<Sampler>(context.entity).unwrap().state = Some(state.0);
         }
@@ -397,24 +397,38 @@ fn fetch_effect_ids(
 }
 
 fn retrieve_state(
-    q: Query<(Entity, &FirewheelNode), (With<SamplerNode>, Without<SamplerStateWrapper>)>,
+    q: Query<
+        (Entity, &FirewheelNode, Option<&SamplerOf>),
+        (With<SamplerNode>, Without<SamplerStateWrapper>),
+    >,
+    mut samples: Query<&mut Sampler>,
     mut commands: Commands,
     mut context: ResMut<AudioContext>,
-) {
+) -> Result {
     if q.iter().len() == 0 {
-        return;
+        return Ok(());
     }
 
     context.with(|ctx| {
-        for (entity, node_id) in q.iter() {
+        for (entity, node_id, sampler_of) in q.iter() {
             let Some(state) = ctx.node_state::<SamplerState>(node_id.0) else {
                 continue;
             };
             commands
                 .entity(entity)
                 .insert(SamplerStateWrapper(state.clone()));
+
+            // If the sampler already has an assignment, we'll need to
+            // provide the state here since it couldn't have been eagerly
+            // fetched.
+            if let Some(sampler_of) = sampler_of {
+                let mut source = samples.get_mut(sampler_of.0)?;
+                source.state = Some(state.clone());
+            }
         }
-    });
+
+        Ok(())
+    })
 }
 
 /// A kind of specialization of [`FollowerOf`][crate::node::follower::FollowerOf] for
