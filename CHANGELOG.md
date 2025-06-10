@@ -1,3 +1,11 @@
+# 0.4.2
+
+## Fixes
+
+- The default `OnComplete` behavior in `PlaybackSettings` is now `OnComplete::Despawn`, matching the documentation
+- The `Sampler` component now properly fetches the `SamplerNode` state
+- The `head` and `tail` methods on `ConnectCommands` now return the correct entities following a `chain_node` call on `EntityCommands`
+
 # 0.4.1
 
 ## Features
