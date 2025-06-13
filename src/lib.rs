@@ -13,8 +13,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_seedling = "0.3"
-//! bevy = { version = "0.15", default-features = false, features = [
+//! bevy_seedling = "0.4"
+//! bevy = { version = "0.16", default-features = false, features = [
 //!   "animation",
 //!   "bevy_asset",
 //!   "bevy_color",
@@ -140,7 +140,9 @@
 //! # fn dynamic(mut commands: Commands, server: Res<AssetServer>) {
 //! commands.spawn((
 //!     SamplePlayer::new(server.load("my_sample.wav")),
-//!     sample_effects![VolumeNode { volume: Volume::Decibels(-6.0) }],
+//!     sample_effects![VolumeNode {
+//!         volume: Volume::Decibels(-6.0)
+//!     }],
 //! ));
 //! # }
 //! ```
@@ -162,15 +164,10 @@
 //!
 //! commands.spawn(SamplerPool(MusicPool));
 //!
-//! commands.spawn((
-//!     MusicPool,
-//!     SamplePlayer::new(server.load("my_music.wav")),
-//! ));
+//! commands.spawn((MusicPool, SamplePlayer::new(server.load("my_music.wav"))));
 //!
 //! // Update the volume of all music at once
-//! fn update_music_volume(
-//!     mut music: Single<&mut VolumeNode, With<SamplerPool<MusicPool>>>,
-//! ) {
+//! fn update_music_volume(mut music: Single<&mut VolumeNode, With<SamplerPool<MusicPool>>>) {
 //!     music.volume = Volume::Decibels(-6.0);
 //! }
 //! # }
@@ -313,6 +310,7 @@ pub mod prelude {
 
     pub use firewheel::{
         FirewheelConfig, Volume,
+        channel_config::ChannelCount,
         clock::{ClockSamples, ClockSeconds},
         diff::{Memo, Notify},
         nodes::{
@@ -460,6 +458,7 @@ where
             PreStartup,
             (
                 node::label::insert_main_bus,
+                edge::insert_input,
                 move |mut commands: Commands| {
                     if spawn_default {
                         commands.spawn(SamplerPool(DefaultPool));

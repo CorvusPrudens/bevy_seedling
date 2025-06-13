@@ -13,8 +13,8 @@ manually!
 
 ```toml
 [dependencies]
-bevy_seedling = "0.3"
-bevy = { version = "0.15", default-features = false, features = [
+bevy_seedling = "0.4"
+bevy = { version = "0.16", default-features = false, features = [
   "animation",
   "bevy_asset",
   "bevy_color",

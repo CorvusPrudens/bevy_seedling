@@ -78,7 +78,10 @@ pub use assets::{Sample, SampleLoader, SampleLoaderError};
 /// fn play_with_effects(mut commands: Commands, server: Res<AssetServer>) {
 ///     commands.spawn((
 ///         SamplePlayer::new(server.load("my_sample.wav")),
-///         sample_effects![SpatialBasicNode::default(), LowPassNode { frequency: 500.0 }],
+///         sample_effects![
+///             SpatialBasicNode::default(),
+///             LowPassNode { frequency: 500.0 }
+///         ],
 ///     ));
 /// }
 /// ```
@@ -426,7 +429,7 @@ impl Default for PlaybackSettings {
             playback: Notify::new(PlaybackState::Play { delay: None }),
             playhead: Notify::default(),
             speed: 1.0,
-            on_complete: OnComplete::Remove,
+            on_complete: OnComplete::Despawn,
         }
     }
 }
