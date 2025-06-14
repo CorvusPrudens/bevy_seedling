@@ -1,3 +1,9 @@
+# 0.4.3
+
+## Fixes
+
+- Update `symphonium` to match `firewheel` due to a breaking change in the former
+
 # 0.4.2
 
 ## Fixes
