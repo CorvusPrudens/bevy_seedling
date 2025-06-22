@@ -474,6 +474,25 @@ mod random {
     pub struct PitchRange(pub core::ops::Range<f64>);
 
     impl PitchRange {
+        /// Create a new [`PitchRange`] with deviation about 1.0.
+        ///
+        /// ```
+        /// # use bevy::prelude::*;
+        /// # use bevy_seedling::prelude::*;
+        /// # fn deviation(mut commands: Commands, server: Res<AssetServer>) {
+        /// commands.spawn((
+        ///     SamplePlayer::new(server.load("my_sample.wav")),
+        ///     PitchRange::new(0.05),
+        /// ));
+        /// # }
+        /// ```
+        pub fn new(deviation: f64) -> Self {
+            let minimum = (1.0 - deviation).clamp(0.0, f64::MAX);
+            let maximum = (1.0 + deviation).clamp(0.0, f64::MAX);
+
+            Self(minimum..maximum)
+        }
+
         fn on_add_hook(mut world: DeferredWorld, context: HookContext) {
             let range = world
                 .get::<PitchRange>(context.entity)
