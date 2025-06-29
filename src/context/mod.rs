@@ -1,7 +1,9 @@
 //! Glue code for interfacing with the underlying audio context.
 
+use std::num::NonZeroU32;
+
 use bevy::prelude::*;
-use firewheel::{FirewheelConfig, backend::AudioBackend, clock::ClockSeconds};
+use firewheel::{FirewheelConfig, FirewheelCtx, backend::AudioBackend, clock::ClockSeconds};
 
 #[cfg(target_arch = "wasm32")]
 mod web;
@@ -92,4 +94,100 @@ impl AudioContext {
     {
         self.0.with(f)
     }
+}
+
+use bevy::platform::sync;
+
+/// Provides the current audio sample rate.
+///
+/// This resource becomes available after [`SeedlingStartupSystems::StreamInitialization`]
+/// in [`PostStartup`]. Internally, the resource is atomically synchronized,
+/// so this can't be used for detecting changes in the sample rate.
+///
+/// [`SeedlingStartupSystems::StreamInitialization`]:
+/// crate::startup::SeedlingStartupSystems::StreamInitialization
+/// [`PostStartup`]: bevy::prelude::PostStartup
+#[derive(Resource, Debug, Clone)]
+pub struct SampleRate(sync::Arc<sync::atomic::AtomicU32>);
+
+impl SampleRate {
+    /// Get the current sample rate.
+    pub fn get(&self) -> NonZeroU32 {
+        self.0
+            .load(sync::atomic::Ordering::Relaxed)
+            .try_into()
+            .unwrap()
+    }
+}
+
+/// A [`Resource`] containing the audio context's stream configuration.
+///
+/// Mutating this resource will cause the audio stream to stop
+/// and restart to apply the latest changes.
+#[derive(Resource, Debug)]
+pub struct AudioStreamConfig<B: AudioBackend = firewheel::CpalBackend>(pub B::Config);
+
+pub(crate) fn initialize_context<B>(
+    firewheel_config: crate::prelude::FirewheelConfig,
+    stream_config: B::Config,
+    commands: &mut Commands,
+    server: &AssetServer,
+) where
+    B: AudioBackend + 'static,
+    B::Config: Clone + Send + Sync + 'static,
+    B::StreamError: Send + Sync + 'static,
+{
+    let mut context = AudioContext::new::<B>(firewheel_config, stream_config.clone());
+    let sample_rate = context.with(|ctx| ctx.stream_info().unwrap().sample_rate);
+    let sample_rate = SampleRate(sync::Arc::new(sync::atomic::AtomicU32::new(
+        sample_rate.get(),
+    )));
+
+    commands.insert_resource(context);
+    commands.insert_resource(sample_rate.clone());
+    server.register_loader(crate::sample::SampleLoader { sample_rate });
+}
+
+/// An event triggered when the audio stream restarts.
+#[derive(Event, Debug)]
+pub struct StreamRestartEvent {
+    /// The sample rate before the restart, which may or may not match.
+    pub previous_rate: NonZeroU32,
+    /// The current sample rate following the restart.
+    pub current_rate: NonZeroU32,
+}
+
+pub(crate) fn restart_context<B>(
+    stream_config: Res<AudioStreamConfig<B>>,
+    mut commands: Commands,
+    mut audio_context: ResMut<AudioContext>,
+    sample_rate: Res<SampleRate>,
+) where
+    B: AudioBackend + 'static,
+    B::Config: Clone + Send + Sync + 'static,
+    B::StreamError: Send + Sync + 'static,
+{
+    warn!("REASTARTING AHHH!!!");
+    audio_context.with(|context| {
+        let context: &mut FirewheelCtx<B> = context
+            .downcast_mut()
+            .expect("only one audio context should exist");
+
+        context.stop_stream();
+        context
+            .start_stream(stream_config.0.clone())
+            .expect("failed to restart the audio context");
+
+        let previous_rate = sample_rate.get();
+
+        let current_rate = context.stream_info().unwrap().sample_rate;
+        sample_rate
+            .0
+            .store(current_rate.get(), sync::atomic::Ordering::Relaxed);
+
+        commands.trigger(StreamRestartEvent {
+            previous_rate,
+            current_rate,
+        });
+    });
 }

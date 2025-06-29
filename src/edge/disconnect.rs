@@ -193,7 +193,7 @@ pub(crate) fn process_disconnections(
 mod test {
     use crate::{
         context::AudioContext,
-        edge::Connect,
+        edge::{AudioGraphOutput, Connect},
         prelude::MainBus,
         test::{prepare_app, run},
     };
@@ -211,8 +211,11 @@ mod test {
         let mut app = prepare_app(|mut commands: Commands| {
             commands
                 .spawn((VolumeNode::default(), One))
-                .chain_node((VolumeNode::default(), Two))
-                .connect(MainBus);
+                .chain_node((VolumeNode::default(), Two));
+
+            commands
+                .spawn((VolumeNode::default(), MainBus))
+                .connect(AudioGraphOutput);
         });
 
         // first, verify they're all connected

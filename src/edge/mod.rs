@@ -16,7 +16,7 @@ mod disconnect;
 pub use connect::*;
 pub use disconnect::*;
 
-/// A marker component for Firewheel's audio graph input.
+/// A node label for Firewheel's audio graph input.
 ///
 /// To route the graph's input, you'll need to query for this entity.
 ///
@@ -33,21 +33,22 @@ pub use disconnect::*;
 /// By default, Firewheel's graph will have no inputs. Make sure your
 /// selected backend and [`FirewheelConfig`][firewheel::FirewheelConfig] are
 /// configured for input.
-#[derive(Debug, Component)]
+#[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AudioGraphInput;
 
-pub(crate) fn insert_input(
-    mut commands: Commands,
-    mut context: ResMut<crate::prelude::AudioContext>,
-) {
-    context.with(|ctx| {
-        commands.spawn((
-            AudioGraphInput,
-            FirewheelNode(ctx.graph_in_node_id()),
-            PendingConnections::default(),
-        ));
-    });
-}
+/// A node label for Firewheel's audio graph output.
+///
+/// To route to the graph's output, simply call [connect][connect::Connect::connect]!
+///
+/// ```
+/// # use bevy::prelude::*;
+/// # use bevy_seedling::{prelude::*, edge::AudioGraphOutput};
+/// fn route_output(mut commands: Commands) {
+///     commands.spawn(VolumeNode::default()).connect(AudioGraphOutput);
+/// }
+/// ```
+#[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AudioGraphOutput;
 
 /// A target for node connections.
 ///

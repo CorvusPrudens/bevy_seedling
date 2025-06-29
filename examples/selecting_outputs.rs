@@ -1,0 +1,103 @@
+//! This example demonstrates how to play a one-shot sample.
+
+use bevy::prelude::*;
+use bevy_seedling::{context::AudioStreamConfig, prelude::*, startup::OutputDeviceInfo};
+
+#[derive(Component)]
+struct SelectedOutput;
+
+fn main() {
+    App::new()
+        .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
+        .add_systems(Startup, (startup, set_up_ui))
+        .add_systems(Update, select_output)
+        .add_observer(observe_selection)
+        .run();
+}
+
+fn startup(
+    outputs: Query<(Entity, &OutputDeviceInfo)>,
+    server: Res<AssetServer>,
+    mut commands: Commands,
+) {
+    for (entity, device) in &outputs {
+        info!(
+            "device: {}, default: {}",
+            device.name(),
+            device.is_default()
+        );
+
+        if device.is_default() {
+            commands.entity(entity).insert(SelectedOutput);
+        }
+    }
+
+    commands.spawn(SamplePlayer::new(server.load("caw.ogg")));
+}
+
+fn select_output(
+    keys: Res<ButtonInput<KeyCode>>,
+    outputs: Query<(Entity, &OutputDeviceInfo, Has<SelectedOutput>)>,
+    mut commands: Commands,
+) -> Result {
+    let mut devices = outputs.iter().collect::<Vec<_>>();
+    devices.sort_unstable_by_key(|(_, device, _)| device.name());
+
+    let mut selected_index = devices
+        .iter()
+        .position(|(.., has_selected)| *has_selected)
+        .ok_or("no selected device")?;
+
+    info!("devices: {devices:#?}");
+    info!("selected: {selected_index}");
+
+    if keys.just_pressed(KeyCode::ArrowRight) {
+        commands
+            .entity(devices[selected_index].0)
+            .remove::<SelectedOutput>();
+        selected_index = (selected_index + 1) % devices.len();
+        commands
+            .entity(devices[selected_index].0)
+            .insert(SelectedOutput);
+    } else if keys.just_pressed(KeyCode::ArrowLeft) {
+        commands
+            .entity(devices[selected_index].0)
+            .remove::<SelectedOutput>();
+        if selected_index == 0 {
+            selected_index = devices.len() - 1;
+        } else {
+            selected_index -= 1;
+        }
+        commands
+            .entity(devices[selected_index].0)
+            .insert(SelectedOutput);
+    }
+
+    Ok(())
+}
+
+fn observe_selection(
+    trigger: Trigger<OnAdd, SelectedOutput>,
+    outputs: Query<&OutputDeviceInfo>,
+    mut stream: ResMut<AudioStreamConfig>,
+) -> Result {
+    let output = outputs.get(trigger.target())?;
+    stream.0.output.device_name = Some(output.name().into());
+    Ok(())
+}
+
+// UI code //
+
+fn set_up_ui(mut commands: Commands) {
+    commands.spawn(Camera2d);
+
+    commands.spawn((
+        Node {
+            width: Val::Percent(80.0),
+            height: Val::Percent(80.0),
+            margin: UiRect::AUTO,
+            ..Default::default()
+        },
+        BackgroundColor(Color::srgb(0.2, 0.2, 0.2)),
+    ));
+}

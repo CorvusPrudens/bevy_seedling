@@ -1,6 +1,5 @@
 use bevy::{asset::AssetLoader, prelude::*};
 use firewheel::{collector::ArcGc, sample_resource::SampleResource};
-use std::num::NonZeroU32;
 use std::sync::Arc;
 
 /// A type-erased audio sample.
@@ -36,10 +35,7 @@ impl core::fmt::Debug for Sample {
 #[derive(Debug)]
 pub struct SampleLoader {
     /// The sampling rate of the audio engine.
-    ///
-    /// This must be kept in sync with the engine if
-    /// the sample rate changes.
-    pub sample_rate: NonZeroU32,
+    pub(crate) sample_rate: crate::context::SampleRate,
 }
 
 /// Errors produced while loading samples.
@@ -74,39 +70,8 @@ impl std::fmt::Display for SampleLoaderError {
     }
 }
 
-impl AssetLoader for SampleLoader {
-    type Asset = Sample;
-    type Settings = ();
-    type Error = SampleLoaderError;
-
-    async fn load(
-        &self,
-        reader: &mut dyn bevy::asset::io::Reader,
-        _settings: &Self::Settings,
-        load_context: &mut bevy::asset::LoadContext<'_>,
-    ) -> Result<Self::Asset, Self::Error> {
-        // Unfortunately, we need to bridge the gap between sync and async APIs here.
-        let mut bytes = Vec::new();
-        reader.read_to_end(&mut bytes).await?;
-
-        let mut hint = symphonia::core::probe::Hint::new();
-        hint.with_extension(&load_context.path().to_string_lossy());
-
-        let mut loader = symphonium::SymphoniumLoader::new();
-        let source = firewheel::load_audio_file_from_source(
-            &mut loader,
-            Box::new(std::io::Cursor::new(bytes)),
-            Some(hint),
-            self.sample_rate,
-            Default::default(),
-        )?;
-
-        Ok(Sample(ArcGc::new_unsized(|| {
-            Arc::new(source) as Arc<dyn SampleResource>
-        })))
-    }
-
-    fn extensions(&self) -> &[&str] {
+impl SampleLoader {
+    pub(crate) const fn extensions() -> &'static [&'static str] {
         &[
             #[cfg(feature = "wav")]
             "wav",
@@ -119,5 +84,41 @@ impl AssetLoader for SampleLoader {
             #[cfg(feature = "mkv")]
             "mkv",
         ]
+    }
+}
+
+impl AssetLoader for SampleLoader {
+    type Asset = Sample;
+    type Settings = ();
+    type Error = SampleLoaderError;
+
+    async fn load(
+        &self,
+        reader: &mut dyn bevy::asset::io::Reader,
+        _settings: &Self::Settings,
+        load_context: &mut bevy::asset::LoadContext<'_>,
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut bytes = Vec::new();
+        reader.read_to_end(&mut bytes).await?;
+
+        let mut hint = symphonia::core::probe::Hint::new();
+        hint.with_extension(&load_context.path().to_string_lossy());
+
+        let mut loader = symphonium::SymphoniumLoader::new();
+        let source = firewheel::load_audio_file_from_source(
+            &mut loader,
+            Box::new(std::io::Cursor::new(bytes)),
+            Some(hint),
+            self.sample_rate.get(),
+            Default::default(),
+        )?;
+
+        Ok(Sample(ArcGc::new_unsized(|| {
+            Arc::new(source) as Arc<dyn SampleResource>
+        })))
+    }
+
+    fn extensions(&self) -> &[&str] {
+        Self::extensions()
     }
 }
