@@ -7,12 +7,8 @@
 //! Any node that doesn't provide an explicit connection when spawned
 //! will be automatically connected to [MainBus].
 use crate::edge::NodeMap;
-use crate::prelude::{AudioContext, Connect};
-use bevy::ecs::component::HookContext;
 use bevy::ecs::intern::Interned;
-use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
-use firewheel::{Volume, nodes::volume::VolumeNode};
 use smallvec::SmallVec;
 
 /// Node label derive macro.
@@ -120,21 +116,8 @@ pub struct MainBus;
 /// A type-erased node label.
 pub type InternedNodeLabel = Interned<dyn NodeLabel>;
 
-pub(crate) fn insert_main_bus(mut commands: Commands, mut context: ResMut<AudioContext>) {
-    let terminal_node = context.with(|context| context.graph_out_node_id());
-
-    commands
-        .spawn((
-            VolumeNode {
-                volume: Volume::Linear(1.),
-            },
-            MainBus,
-        ))
-        .connect(terminal_node);
-}
-
 /// A collection of all node labels applied to an entity.
-///
+///<
 /// To associate a label with an audio node,
 /// the node entity should be spawned with the label.
 /// ```
@@ -146,25 +129,41 @@ pub(crate) fn insert_main_bus(mut commands: Commands, mut context: ResMut<AudioC
 ///
 /// commands.spawn((VolumeNode { volume: Volume::Linear(0.25) }, MyLabel));
 /// # }
-#[derive(Debug, Default, Component)]
-#[component(on_remove = on_remove)]
+#[derive(Debug, Default, Component, Clone)]
+#[component(immutable)]
 pub struct NodeLabels(SmallVec<[InternedNodeLabel; 1]>);
 
-fn on_remove(mut world: DeferredWorld, context: HookContext) {
-    let Some(labels) = world.get::<NodeLabels>(context.entity) else {
-        return;
-    };
+impl NodeLabels {
+    pub(crate) fn on_add_observer(
+        trigger: Trigger<OnInsert, NodeLabels>,
+        labels: Query<&NodeLabels>,
+        mut map: ResMut<NodeMap>,
+    ) -> Result {
+        let labels = labels.get(trigger.target())?;
 
-    if labels.0.len() == 1 {
-        let label = labels.0[0];
-        let mut node_map = world.resource_mut::<NodeMap>();
+        for label in labels.iter() {
+            if let Some(existing) = map.insert(*label, trigger.target()) {
+                if existing != trigger.target() {
+                    warn!("node label `{label:?}` has been applied to multiple entities");
+                }
+            }
+        }
 
-        node_map.remove(&label);
-    } else {
-        let labels = labels.0.to_vec();
-        let mut node_map = world.resource_mut::<NodeMap>();
+        Ok(())
+    }
 
-        node_map.retain(|key, _| !labels.contains(key));
+    pub(crate) fn on_replace_observer(
+        trigger: Trigger<OnReplace, NodeLabels>,
+        labels: Query<&NodeLabels>,
+        mut map: ResMut<NodeMap>,
+    ) -> Result {
+        let labels = labels.get(trigger.target())?;
+
+        for label in labels.iter() {
+            map.remove(label);
+        }
+
+        Ok(())
     }
 }
 
@@ -202,5 +201,68 @@ impl NodeLabels {
             }
             None => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        edge::NodeMap,
+        prelude::*,
+        test::{prepare_app, run},
+    };
+    use bevy::prelude::*;
+
+    #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+    struct TestLabel;
+
+    #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+    struct TestLabelTwo;
+
+    #[test]
+    fn test_label_management() {
+        let interned_one = TestLabel.intern();
+        let interned_two = TestLabelTwo.intern();
+
+        let mut app = prepare_app(|mut commands: Commands| {
+            commands.spawn(SamplerPool(DefaultPool));
+
+            commands
+                .spawn((MainBus, VolumeNode::default()))
+                .connect(AudioGraphOutput);
+
+            commands.spawn((TestLabel, VolumeNode::default()));
+        });
+
+        run(
+            &mut app,
+            move |node: Query<Entity, With<TestLabel>>,
+                  map: Res<NodeMap>,
+                  mut commands: Commands| {
+                let node = node.single().unwrap();
+                assert_eq!(map[&interned_one], node);
+
+                commands.entity(node).insert(TestLabelTwo);
+            },
+        );
+
+        run(
+            &mut app,
+            move |node: Query<Entity, With<TestLabel>>,
+                  map: Res<NodeMap>,
+                  mut commands: Commands| {
+                let node = node.single().unwrap();
+
+                assert_eq!(map[&interned_one], node);
+                assert_eq!(map[&interned_two], node);
+
+                commands.entity(node).despawn();
+            },
+        );
+
+        run(&mut app, move |map: Res<NodeMap>| {
+            assert!(!map.contains_key(&interned_one));
+            assert!(!map.contains_key(&interned_two));
+        });
     }
 }

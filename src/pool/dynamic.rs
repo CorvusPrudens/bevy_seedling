@@ -59,7 +59,7 @@ use bevy::{
     platform::collections::HashMap,
     prelude::*,
 };
-use bevy_seedling_macros::PoolLabel;
+use bevy_seedling_macros::{NodeLabel, PoolLabel};
 
 pub(super) struct DynamicPlugin;
 
@@ -69,6 +69,10 @@ impl Plugin for DynamicPlugin {
             .add_systems(PostUpdate, update_dynamic_pools);
     }
 }
+
+/// The destination for all dynamic pools.
+#[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DynamicBus;
 
 /// A label reserved for dynamic pools.
 #[derive(PoolLabel, Clone, Copy, PartialEq, Eq, Hash, Debug)]

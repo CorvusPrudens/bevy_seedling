@@ -38,6 +38,13 @@ impl core::ops::DerefMut for SeedlingContext {
 }
 
 impl SeedlingContext {
+    pub(crate) fn downcast_mut<T: core::any::Any>(&mut self) -> Option<&mut T> {
+        use core::any::Any;
+
+        let any: &mut dyn Any = self.0.as_mut() as &mut dyn Any;
+        any.downcast_mut()
+    }
+
     /// Construct a new [`SeedlingContext`].
     pub fn new<B>(context: FirewheelCtx<B>) -> Self
     where
@@ -78,7 +85,7 @@ impl SeedlingContext {
 ///
 /// This allows applications to treat all backend identically
 /// after construction.
-pub trait SeedlingContextWrapper {
+pub trait SeedlingContextWrapper: core::any::Any {
     /// Get a list of the available audio input devices.
     fn available_input_devices(&self) -> Vec<DeviceInfo>;
 
@@ -286,8 +293,9 @@ pub trait SeedlingContextWrapper {
     fn queue_event_for(&mut self, node_id: NodeID, event: NodeEventType);
 }
 
-impl<B: AudioBackend> SeedlingContextWrapper for FirewheelCtx<B>
+impl<B> SeedlingContextWrapper for FirewheelCtx<B>
 where
+    B: AudioBackend + core::any::Any,
     B::StreamError: core::error::Error + Send + Sync + 'static,
 {
     fn available_input_devices(&self) -> Vec<DeviceInfo> {

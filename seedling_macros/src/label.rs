@@ -22,14 +22,17 @@ pub fn derive_node_label_inner(input: TokenStream) -> syn::Result<TokenStream2> 
                     let value = world.get::<Self>(context.entity).unwrap();
                     let interned = <Self as #label_path>::intern(value);
 
+                    let mut labels = world
+                        .get::<::bevy_seedling::node::label::NodeLabels>(context.entity)
+                        .cloned()
+                        .unwrap_or_default();
+
+                    labels.insert(interned);
+
                     world
                         .commands()
                         .entity(context.entity)
-                        .entry::<::bevy_seedling::node::label::NodeLabels>()
-                        .or_insert(::core::default::Default::default())
-                        .and_modify(move |mut labels| {
-                            labels.insert(interned);
-                        });
+                        .insert(labels);
                 });
             }
         }

@@ -37,7 +37,7 @@ fn play_samples(
     if timer.tick(delta).just_finished() {
         commands.spawn((
             SamplePlayer::new(server.load("caw.ogg")),
-            PitchRange(0.9..1.1),
+            RandomPitch::new(0.1),
             Lifetime(Timer::from_seconds(0.4, TimerMode::Once)),
         ));
     }

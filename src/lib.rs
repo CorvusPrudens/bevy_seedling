@@ -264,6 +264,7 @@
 extern crate self as bevy_seedling;
 
 use bevy::prelude::*;
+use context::AudioStreamConfig;
 use core::ops::RangeInclusive;
 use firewheel::{CpalBackend, backend::AudioBackend};
 
@@ -276,6 +277,7 @@ pub mod nodes;
 pub mod pool;
 pub mod sample;
 pub mod spatial;
+pub mod startup;
 pub mod timeline;
 
 #[cfg(any(feature = "profiling", test))]
@@ -286,7 +288,7 @@ pub mod prelude {
 
     pub use crate::SeedlingPlugin;
     pub use crate::context::AudioContext;
-    pub use crate::edge::{Connect, Disconnect, EdgeTarget};
+    pub use crate::edge::{AudioGraphInput, AudioGraphOutput, Connect, Disconnect, EdgeTarget};
     pub use crate::node::{
         FirewheelNode, RegisterNode,
         label::{MainBus, NodeLabel},
@@ -309,8 +311,8 @@ pub mod prelude {
     };
 
     pub use firewheel::{
-        FirewheelConfig, Volume,
-        channel_config::ChannelCount,
+        CpalBackend, FirewheelConfig, Volume,
+        channel_config::{ChannelCount, NonZeroChannelCount},
         clock::{ClockSamples, ClockSeconds},
         diff::{Memo, Notify},
         nodes::{
@@ -329,7 +331,7 @@ pub mod prelude {
     };
 
     #[cfg(feature = "rand")]
-    pub use crate::sample::PitchRange;
+    pub use crate::sample::RandomPitch;
 }
 
 /// Sets for all `bevy_seedling` systems.
@@ -367,10 +369,8 @@ pub struct SeedlingPlugin<B: AudioBackend = CpalBackend> {
     /// The stream settings, forwarded directly to the backend.
     pub stream_config: B::Config,
 
-    /// Set whether to spawn the [`DefaultPool`][crate::prelude::DefaultPool].
-    ///
-    /// This allows you to define the default pool manually.
-    pub spawn_default_pool: bool,
+    /// The initial graph configuration.
+    pub graph_config: startup::GraphConfiguration,
 
     /// Sets the default size range for sample pools.
     pub pool_size: RangeInclusive<usize>,
@@ -391,7 +391,7 @@ where
         Self {
             config: Default::default(),
             stream_config: Default::default(),
-            spawn_default_pool: true,
+            graph_config: Default::default(),
             pool_size: 4..=32,
         }
     }
@@ -406,17 +406,13 @@ where
     fn build(&self, app: &mut App) {
         use prelude::*;
 
-        let mut context = AudioContext::new::<B>(self.config, self.stream_config.clone());
-        let sample_rate = context.with(|ctx| ctx.stream_info().unwrap().sample_rate);
-        let spawn_default = self.spawn_default_pool;
-
-        app.insert_resource(context)
+        app.insert_resource(context::AudioStreamConfig::<B>(self.stream_config.clone()))
+            .insert_resource(startup::ConfigResource(self.graph_config))
             .init_resource::<edge::NodeMap>()
             .init_resource::<node::PendingRemovals>()
             .init_resource::<spatial::DefaultSpatialScale>()
             .insert_resource(pool::DefaultPoolSize(4..=32))
             .init_asset::<sample::Sample>()
-            .register_asset_loader(sample::SampleLoader { sample_rate })
             .register_node::<VolumeNode>()
             .register_node::<VolumePanNode>()
             .register_node::<SpatialBasicNode>()
@@ -455,19 +451,33 @@ where
             ),
         )
         .add_systems(
-            PreStartup,
-            (
-                node::label::insert_main_bus,
-                edge::insert_input,
-                move |mut commands: Commands| {
-                    if spawn_default {
-                        commands.spawn(SamplerPool(DefaultPool));
-                    }
+            PostUpdate,
+            context::restart_context::<B>.run_if(
+                |res: Res<AudioStreamConfig<B>>, mut has_run: Local<bool>| {
+                    let changed = res.is_changed() && *has_run;
+                    *has_run = true;
+
+                    changed
                 },
             ),
-        );
+        )
+        .add_observer(node::label::NodeLabels::on_add_observer)
+        .add_observer(node::label::NodeLabels::on_replace_observer);
+        // .add_systems(
+        //     PreStartup,
+        //     (
+        //         node::label::insert_main_bus,
+        //         edge::insert_input,
+        //         move |mut commands: Commands| {
+        //             if spawn_default {
+        //                 commands.spawn(SamplerPool(DefaultPool));
+        //             }
+        //         },
+        //     ),
+        // );
 
         app.add_plugins((
+            startup::SeedlingStartup::<B>::new(self.config),
             pool::SamplePoolPlugin,
             nodes::SeedlingNodesPlugin,
             #[cfg(feature = "rand")]
@@ -488,7 +498,7 @@ mod test {
             MinimalPlugins,
             AssetPlugin::default(),
             SeedlingPlugin::<crate::profiling::ProfilingBackend> {
-                spawn_default_pool: false,
+                graph_config: crate::startup::GraphConfiguration::Empty,
                 ..SeedlingPlugin::<crate::profiling::ProfilingBackend>::new()
             },
         ))

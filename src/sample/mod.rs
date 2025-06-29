@@ -441,7 +441,7 @@ impl Default for PlaybackSettings {
 pub struct QueuedSample;
 
 #[cfg(feature = "rand")]
-pub use random::PitchRange;
+pub use random::RandomPitch;
 
 #[cfg(feature = "rand")]
 pub(crate) use random::RandomPlugin;
@@ -471,9 +471,9 @@ mod random {
     #[derive(Debug, Component, Default, Clone)]
     #[require(PlaybackSettings)]
     #[component(immutable, on_add = Self::on_add_hook)]
-    pub struct PitchRange(pub core::ops::Range<f64>);
+    pub struct RandomPitch(pub core::ops::Range<f64>);
 
-    impl PitchRange {
+    impl RandomPitch {
         /// Create a new [`PitchRange`] with deviation about 1.0.
         ///
         /// ```
@@ -495,7 +495,7 @@ mod random {
 
         fn on_add_hook(mut world: DeferredWorld, context: HookContext) {
             let range = world
-                .get::<PitchRange>(context.entity)
+                .get::<RandomPitch>(context.entity)
                 .expect("Entity should have a `PitchRange` component")
                 .0
                 .clone();

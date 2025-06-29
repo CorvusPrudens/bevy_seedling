@@ -162,12 +162,12 @@ pub(crate) fn update_2d_emitters(
 // TODO: is there a good way to consolidate this?
 pub(crate) fn update_2d_emitters_effects(
     listeners: Query<&GlobalTransform, With<SpatialListener2D>>,
-    mut emitters: Query<(&mut SpatialBasicNode, Option<&SpatialScale>, &EffectOf)>,
-    effect_parents: Query<&GlobalTransform>,
+    mut emitters: Query<(&mut SpatialBasicNode, &EffectOf)>,
+    effect_parents: Query<(&GlobalTransform, Option<&SpatialScale>)>,
     default_scale: Res<DefaultSpatialScale>,
 ) {
-    for (mut spatial, scale, effect_of) in emitters.iter_mut() {
-        let Ok(transform) = effect_parents.get(effect_of.0) else {
+    for (mut spatial, effect_of) in emitters.iter_mut() {
+        let Ok((transform, scale)) = effect_parents.get(effect_of.0) else {
             continue;
         };
 
@@ -219,12 +219,12 @@ pub(crate) fn update_3d_emitters(
 
 pub(crate) fn update_3d_emitters_effects(
     listeners: Query<&GlobalTransform, With<SpatialListener3D>>,
-    mut emitters: Query<(&mut SpatialBasicNode, Option<&SpatialScale>, &EffectOf)>,
-    effect_parents: Query<&GlobalTransform>,
+    mut emitters: Query<(&mut SpatialBasicNode, &EffectOf)>,
+    effect_parents: Query<(&GlobalTransform, Option<&SpatialScale>)>,
     default_scale: Res<DefaultSpatialScale>,
 ) {
-    for (mut spatial, scale, effect_of) in emitters.iter_mut() {
-        let Ok(transform) = effect_parents.get(effect_of.0) else {
+    for (mut spatial, effect_of) in emitters.iter_mut() {
+        let Ok((transform, scale)) = effect_parents.get(effect_of.0) else {
             continue;
         };
 
