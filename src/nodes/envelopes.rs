@@ -246,13 +246,14 @@ impl AhdsrVolumeProcessor {
             }
             Some(AhdsrState::Hold(val)) => {
                 if self.current.settle() {
+                    let cur_hold_amount = *val;
                     let current_smoothed = self.current.next_smoothed();
-                    let new_hold_time = *val + max_frames.0;
+                    let new_hold_time = cur_hold_amount + max_frames.0;
 
                     let count = if new_hold_time >= self.hold_samples.0 {
                         self.state = Some(AhdsrState::Decay);
 
-                        self.hold_samples.0 - new_hold_time
+                        self.hold_samples.0 - cur_hold_amount
                     } else {
                         *val = new_hold_time;
                         max_frames.0
