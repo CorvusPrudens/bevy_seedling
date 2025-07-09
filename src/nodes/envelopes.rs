@@ -154,13 +154,13 @@ impl AudioNode for AhdsrVolumeNode {
             lo,
             hi,
 
-            attack_rate: (attack.0 * cx.stream_info.sample_rate_recip) as _,
+            attack_rate: (cx.stream_info.sample_rate_recip / attack.0) as f32,
             hold_samples: ClockSamples::from_secs_f64(hold.0, cx.stream_info.sample_rate.get()),
             decay_rate: (1. - sustain_proportion)
-                * (decay.0 * cx.stream_info.sample_rate_recip) as f32,
+                * (cx.stream_info.sample_rate_recip / decay.0) as f32,
             sustain_proportion,
             release_rate: sustain_proportion
-                * (release.0 * cx.stream_info.sample_rate_recip) as f32,
+                * (cx.stream_info.sample_rate_recip / release.0) as f32,
 
             attack,
             hold,
@@ -380,7 +380,7 @@ impl AudioNodeProcessor for AhdsrVolumeProcessor {
             }
             AhdsrVolumeNodePatch::Attack(val) => {
                 self.attack = ClockSeconds(val);
-                self.attack_rate = (val * self.sample_rate_recip) as _;
+                self.attack_rate = (self.sample_rate_recip / val) as _;
             }
             AhdsrVolumeNodePatch::Hold(val) => {
                 self.hold = ClockSeconds(val);
@@ -390,18 +390,18 @@ impl AudioNodeProcessor for AhdsrVolumeProcessor {
             AhdsrVolumeNodePatch::Decay(val) => {
                 self.decay = ClockSeconds(val);
                 self.decay_rate =
-                    (1. - self.sustain_proportion) * (val * self.sample_rate_recip) as f32;
+                    (1. - self.sustain_proportion) * (self.sample_rate_recip / val) as f32;
             }
             AhdsrVolumeNodePatch::SustainProportion(sustain_proportion) => {
                 self.sustain_proportion = sustain_proportion;
                 self.decay_rate =
-                    (1. - self.sustain_proportion) * (self.decay.0 * self.sample_rate_recip) as f32;
+                    (1. - self.sustain_proportion) * (self.sample_rate_recip / self.decay.0) as f32;
                 self.release_rate = (1. - self.sustain_proportion)
-                    * (self.release.0 * self.sample_rate_recip) as f32;
+                    * (self.sample_rate_recip / self.release.0) as f32;
             }
             AhdsrVolumeNodePatch::Release(val) => {
                 self.release = ClockSeconds(val);
-                self.release_rate = self.sustain_proportion * (val * self.sample_rate_recip) as f32;
+                self.release_rate = self.sustain_proportion * (self.sample_rate_recip / val) as f32;
             }
             AhdsrVolumeNodePatch::TriggerMode(val) => {
                 self.off_state_transition = val.state_transition();
@@ -439,12 +439,12 @@ impl AudioNodeProcessor for AhdsrVolumeProcessor {
     }
 
     fn new_stream(&mut self, stream_info: &StreamInfo) {
-        self.attack_rate = (self.attack.0 * stream_info.sample_rate_recip) as _;
+        self.attack_rate = (stream_info.sample_rate_recip / self.attack.0) as _;
         self.hold_samples = ClockSamples::from_secs_f64(self.hold.0, stream_info.sample_rate.get());
         self.decay_rate =
-            (1. - self.sustain_proportion) * (self.decay.0 * stream_info.sample_rate_recip) as f32;
+            (1. - self.sustain_proportion) * (stream_info.sample_rate_recip / self.decay.0) as f32;
         self.release_rate =
-            self.sustain_proportion * (self.release.0 * stream_info.sample_rate_recip) as f32;
+            self.sustain_proportion * (stream_info.sample_rate_recip / self.release.0) as f32;
         self.sample_rate = stream_info.sample_rate;
         self.sample_rate_recip = stream_info.sample_rate_recip;
     }
