@@ -216,7 +216,7 @@ pub type DiscreteTimelineEvent<T> = TimelineEvent<T, Never>;
 
 /// A single timeline event.
 #[derive(Debug, Clone)]
-pub enum TimelineEvent<T, Curve> {
+pub enum TimelineEvent<T, Curve = EasingCurve<T>> {
     /// An immediate event, which also clears the timeline buffer.
     Immediate(T),
     /// A deferred event.
