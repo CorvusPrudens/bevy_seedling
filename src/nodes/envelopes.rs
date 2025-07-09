@@ -18,7 +18,7 @@ use std::{num::NonZeroU32, ops::Range};
 
 use crate::timeline::{DiscreteTimeline, TimelineEvent};
 
-/// How an envelope responds to receiving [`TriggerEvent::On`] if it is not at rest.
+/// How an envelope responds to receiving [`TriggerState::On`] if it is not at rest.
 #[derive(Diff, Patch, Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub enum RetriggerMode {
     /// Restart the cycle of the envelope from the `attack` section, but use the current value
@@ -27,7 +27,7 @@ pub enum RetriggerMode {
     Normal,
     /// Restart the envelope from `lo`.
     Restart,
-    /// Ignore any new [`TriggerEvent::On`] events unless the envelope is at rest.
+    /// Ignore any new [`TriggerState::On`] events unless the envelope is at rest.
     Ignore,
 }
 
@@ -44,10 +44,10 @@ impl RetriggerMode {
 /// Configuration for how an envelope reacts to "on" messages.
 #[derive(Diff, Patch, Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub enum TriggerMode {
-    /// Start the envelope on [`TriggerEvent::On`], holding at `sustain` until [`TriggerEvent::Off`] is received.
+    /// Start the envelope on [`TriggerState::On`], holding at `sustain` until [`TriggerState::Off`] is received.
     #[default]
     Normal,
-    /// Ignore [`TriggerEvent::Off`] events, simply go through the full cycle without further input.
+    /// Ignore [`TriggerState::Off`] events, simply go through the full cycle without further input.
     Once,
 }
 
@@ -94,9 +94,9 @@ pub struct AhdsrVolumeNode {
     pub sustain_proportion: f32,
     /// The amount of time to transition between `sustain` and `lo`, in seconds.
     pub release: f64,
-    /// How to respond to [`TriggerEvent`]s when the envelope is at rest.
+    /// How to respond to [`TriggerState`]s when the envelope is at rest.
     pub trigger_mode: TriggerMode,
-    /// How to respond to [`TriggerEvent`]s when the envelope is already triggered.
+    /// How to respond to [`TriggerState`]s when the envelope is already triggered.
     pub retrigger_mode: RetriggerMode,
     /// Whether the envelope is triggered.
     pub triggered: DiscreteTimeline<TriggerState>,
@@ -366,7 +366,7 @@ impl AudioNodeProcessor for AhdsrVolumeProcessor {
     ) -> ProcessStatus {
         let mut cur_index = ClockSamples(0);
 
-        // We check whether the inputs are silent in order to prevent unncessary processing.
+        // We check whether the inputs are silent in order to prevent unnecessary processing.
         let all_silent = proc_info
             .in_silence_mask
             .all_channels_silent(buffers.inputs.len());

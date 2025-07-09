@@ -12,30 +12,24 @@ use firewheel::{
     event::ParamData,
 };
 
-/// A parameter expressed as a timeline of events.
-///
-/// This allows parameters to vary smoothly at audio-rate
-/// with minimal cross-thread communication.
-pub type Timeline<T> = TimelineGeneric<T, EasingCurve<T>>;
-
 /// A discrete parameter expressed as a timeline of events.
 ///
 /// This allows parameters to be changed at audio rate, although does not allow smoothing.
-pub type DiscreteTimeline<T> = TimelineGeneric<T, Never>;
+pub type DiscreteTimeline<T> = Timeline<T, Never>;
 
 /// A parameter expressed as a timeline of events, either discrete or continuous.
 ///
 /// This allows parameters to vary smoothly at audio-rate
 /// with minimal cross-thread communication.
 #[derive(Debug, Clone)]
-pub struct TimelineGeneric<T, C> {
+pub struct Timeline<T, C = EasingCurve<T>> {
     value: T,
     events: FixedVec<TimelineEvent<T, C>>,
     /// The total number of events consumed.
     consumed: usize,
 }
 
-impl<T, C> Default for TimelineGeneric<T, C>
+impl<T, C> Default for Timeline<T, C>
 where
     T: Default,
 {
@@ -48,7 +42,7 @@ where
     }
 }
 
-impl<T, C> TimelineGeneric<T, C> {
+impl<T, C> Timeline<T, C> {
     /// Create a new instance of [`Timeline`] with an initial value.
     pub fn new(value: T) -> Self {
         Self {
@@ -88,7 +82,7 @@ pub enum TimelineError {
     OverlappingRanges,
 }
 
-impl<T, C> TimelineGeneric<T, C>
+impl<T, C> Timeline<T, C>
 where
     T: Clone,
     C: Curve<T>,
@@ -318,7 +312,7 @@ where
     }
 }
 
-impl<T, C> Diff for TimelineGeneric<T, C>
+impl<T, C> Diff for Timeline<T, C>
 where
     T: Clone + Send + Sync + 'static,
     C: Curve<T> + Clone + Send + Sync + 'static,
@@ -342,7 +336,7 @@ where
     }
 }
 
-impl<T, C> Patch for TimelineGeneric<T, C>
+impl<T, C> Patch for Timeline<T, C>
 where
     T: Clone + 'static,
     C: Curve<T> + Clone + 'static,
