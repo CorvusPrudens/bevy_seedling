@@ -397,8 +397,8 @@ impl AudioNodeProcessor for AhdsrVolumeProcessor {
                 self.sustain_proportion = sustain_proportion;
                 self.decay_rate =
                     (1. - self.sustain_proportion) * (self.sample_rate_recip / self.decay.0) as f32;
-                self.release_rate = self.sustain_proportion
-                    * (self.sample_rate_recip / self.release.0) as f32;
+                self.release_rate =
+                    self.sustain_proportion * (self.sample_rate_recip / self.release.0) as f32;
             }
             AhdsrVolumeNodePatch::Release(val) => {
                 self.release = ClockSeconds(val);
