@@ -3,27 +3,46 @@
 use crate::fixed_vec::FixedVec;
 use bevy::math::{
     Curve,
-    curve::{Ease, EaseFunction, EasingCurve},
+    curve::{EaseFunction, EasingCurve},
 };
+use bevy_math::curve::{Ease, Interval};
 use firewheel::{
     clock::ClockSeconds,
     diff::{Diff, EventQueue, Patch, PatchError, PathBuilder},
     event::ParamData,
 };
 
-/// A parameter expressed as a timeline of events.
+/// A discrete parameter expressed as a timeline of events.
+///
+/// This allows parameters to be changed at audio rate, although does not allow smoothing.
+pub type DiscreteTimeline<T> = Timeline<T, Never>;
+
+/// A parameter expressed as a timeline of events, either discrete or continuous.
 ///
 /// This allows parameters to vary smoothly at audio-rate
 /// with minimal cross-thread communication.
 #[derive(Debug, Clone)]
-pub struct Timeline<T> {
+pub struct Timeline<T, C = EasingCurve<T>> {
     value: T,
-    events: FixedVec<TimelineEvent<T>>,
+    events: FixedVec<TimelineEvent<T, C>>,
     /// The total number of events consumed.
     consumed: usize,
 }
 
-impl<T> Timeline<T> {
+impl<T, C> Default for Timeline<T, C>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        Self {
+            value: Default::default(),
+            events: Default::default(),
+            consumed: 0,
+        }
+    }
+}
+
+impl<T, C> Timeline<T, C> {
     /// Create a new instance of [`Timeline`] with an initial value.
     pub fn new(value: T) -> Self {
         Self {
@@ -63,10 +82,14 @@ pub enum TimelineError {
     OverlappingRanges,
 }
 
-impl<T: Ease + Clone> Timeline<T> {
+impl<T, C> Timeline<T, C>
+where
+    T: Clone,
+    C: Curve<T>,
+{
     /// Push an event to the timeline, popping off the oldest one if the
     /// queue is full.
-    pub fn push(&mut self, event: TimelineEvent<T>) -> Result<(), TimelineError> {
+    pub fn push(&mut self, event: TimelineEvent<T, C>) -> Result<(), TimelineError> {
         // scan the events to ensure the event doesn't overlap any ranges
         match &event {
             TimelineEvent::Deferred { time, .. } => {
@@ -99,20 +122,6 @@ impl<T: Ease + Clone> Timeline<T> {
     pub fn set(&mut self, value: T) {
         // This push cannot fail.
         self.push(TimelineEvent::Immediate(value)).unwrap();
-    }
-
-    /// Push a curve event with absolute timestamps.
-    pub fn push_curve(
-        &mut self,
-        end_value: T,
-        start: ClockSeconds,
-        end: ClockSeconds,
-        curve: EaseFunction,
-    ) -> Result<(), TimelineError> {
-        let start_value = self.value_at(start);
-        let curve = EasingCurve::new(start_value, end_value, curve);
-
-        self.push(TimelineEvent::Curve { curve, start, end })
     }
 
     /// Get the value at a point in time.
@@ -152,9 +161,56 @@ impl<T: Ease + Clone> Timeline<T> {
     }
 }
 
+impl<T> Timeline<T>
+where
+    T: Clone + Ease + 'static,
+{
+    /// Push a curve event with absolute timestamps.
+    pub fn push_curve(
+        &mut self,
+        end_value: T,
+        start: ClockSeconds,
+        end: ClockSeconds,
+        curve: EaseFunction,
+    ) -> Result<(), TimelineError> {
+        let start_value = self.value_at(start);
+        let curve = EasingCurve::new(start_value, end_value, curve);
+
+        self.push(TimelineEvent::Curve { curve, start, end })
+    }
+}
+
+/// A single timeline event for a parameter with a continuous domain.
+pub type ContinuousTimelineEvent<T> = TimelineEvent<T, EasingCurve<T>>;
+
+/// A type that cannot be instantiated.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Never {}
+
+impl<T> Curve<T> for Never {
+    fn domain(&self) -> Interval {
+        unreachable!()
+    }
+
+    fn sample(&self, _: f32) -> Option<T> {
+        unreachable!()
+    }
+
+    fn sample_clamped(&self, _: f32) -> T {
+        unreachable!()
+    }
+
+    fn sample_unchecked(&self, _: f32) -> T {
+        unreachable!()
+    }
+}
+
+/// A single timeline event for a parameter with a discrete domain.
+pub type DiscreteTimelineEvent<T> = TimelineEvent<T, Never>;
+
 /// A single timeline event.
 #[derive(Debug, Clone)]
-pub enum TimelineEvent<T> {
+pub enum TimelineEvent<T, Curve = EasingCurve<T>> {
     /// An immediate event, which also clears the timeline buffer.
     Immediate(T),
     /// A deferred event.
@@ -167,7 +223,7 @@ pub enum TimelineEvent<T> {
     /// An animation curve.
     Curve {
         /// The easing curve for this animation.
-        curve: EasingCurve<T>,
+        curve: Curve,
         /// The animation's start time.
         start: ClockSeconds,
         /// The animation's end time.
@@ -175,7 +231,7 @@ pub enum TimelineEvent<T> {
     },
 }
 
-impl<T> TimelineEvent<T> {
+impl<T, Curve> TimelineEvent<T, Curve> {
     /// This event's start time, if any.
     pub fn start_time(&self) -> Option<ClockSeconds> {
         match self {
@@ -215,7 +271,11 @@ impl<T> TimelineEvent<T> {
     }
 }
 
-impl<T: Ease + Clone> TimelineEvent<T> {
+impl<T, C> TimelineEvent<T, C>
+where
+    C: Curve<T>,
+    T: Clone,
+{
     /// Calculates the value at `time`.
     pub fn get(&self, time: ClockSeconds) -> T {
         match self {
@@ -252,7 +312,11 @@ impl<T: Ease + Clone> TimelineEvent<T> {
     }
 }
 
-impl<T: Clone + Send + Sync + 'static> Diff for Timeline<T> {
+impl<T, C> Diff for Timeline<T, C>
+where
+    T: Clone + Send + Sync + 'static,
+    C: Curve<T> + Clone + Send + Sync + 'static,
+{
     fn diff<E: EventQueue>(&self, baseline: &Self, path: PathBuilder, event_queue: &mut E) {
         let newly_consumed = self.consumed.saturating_sub(baseline.consumed);
         if newly_consumed == 0 {
@@ -272,11 +336,15 @@ impl<T: Clone + Send + Sync + 'static> Diff for Timeline<T> {
     }
 }
 
-impl<T: Ease + Clone + 'static> Patch for Timeline<T> {
-    type Patch = TimelineEvent<T>;
+impl<T, C> Patch for Timeline<T, C>
+where
+    T: Clone + 'static,
+    C: Curve<T> + Clone + 'static,
+{
+    type Patch = TimelineEvent<T, C>;
 
     fn patch(data: &ParamData, _: &[u32]) -> Result<Self::Patch, PatchError> {
-        let value: &TimelineEvent<T> = data.downcast_ref().ok_or(PatchError::InvalidData)?;
+        let value: &TimelineEvent<T, C> = data.downcast_ref().ok_or(PatchError::InvalidData)?;
 
         Ok(value.clone())
     }
