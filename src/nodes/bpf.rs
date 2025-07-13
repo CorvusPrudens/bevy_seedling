@@ -170,8 +170,9 @@ impl AudioNodeProcessor for BandPassProcessor {
             return ProcessStatus::ClearAllOutputs;
         }
 
-        let seconds = proc_info.clock_seconds.start;
-        let frame_time = (proc_info.clock_seconds.end.0 - proc_info.clock_seconds.start.0)
+        let seconds = proc_info.audio_clock_seconds.start;
+        let frame_time = (proc_info.audio_clock_seconds.end.0
+            - proc_info.audio_clock_seconds.start.0)
             / proc_info.frames as f64;
         for sample in 0..inputs[0].len() {
             if sample % 32 == 0 {

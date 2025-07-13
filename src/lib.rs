@@ -463,18 +463,6 @@ where
         )
         .add_observer(node::label::NodeLabels::on_add_observer)
         .add_observer(node::label::NodeLabels::on_replace_observer);
-        // .add_systems(
-        //     PreStartup,
-        //     (
-        //         node::label::insert_main_bus,
-        //         edge::insert_input,
-        //         move |mut commands: Commands| {
-        //             if spawn_default {
-        //                 commands.spawn(SamplerPool(DefaultPool));
-        //             }
-        //         },
-        //     ),
-        // );
 
         app.add_plugins((
             startup::SeedlingStartup::<B>::new(self.config),

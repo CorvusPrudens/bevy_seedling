@@ -4,7 +4,7 @@ use firewheel::{
     FirewheelCtx, StreamInfo,
     backend::{AudioBackend, DeviceInfo},
     channel_config::ChannelConfig,
-    clock::{ClockSamples, ClockSeconds, MusicalTime, MusicalTransport},
+    clock::{AudioClock, TransportState},
     error::{AddEdgeError, UpdateError},
     event::{NodeEvent, NodeEventType},
     graph::{Edge, EdgeID, NodeEntry, PortIdx},
@@ -97,59 +97,44 @@ pub trait SeedlingContextWrapper: core::any::Any {
     /// Returns `None` if no audio stream is currently running.
     fn stream_info(&self) -> Option<&StreamInfo>;
 
-    /// The current time of the clock in the number of seconds since the stream
-    /// was started.
+    /// Get the current time of the audio clock, without accounting for the delay
+    /// between when the clock was last updated and now.
     ///
-    /// Note, this clock is not perfectly accurate, but it is good enough for
-    /// most use cases. This clock also correctly accounts for any output
-    /// underflows that may occur.
-    fn clock_now(&self) -> ClockSeconds;
+    /// For most use cases you probably want to use [`FirewheelCtx::audio_clock_corrected`]
+    /// instead, but this method is provided if needed.
+    ///
+    /// Note, due to the nature of audio processing, this clock is is *NOT* synced with
+    /// the system's time [`Instant::now`]. (Instead it is based on the amount of data
+    /// that has been processed.) For applications where the timing of audio events is
+    /// critical (i.e. a rythm game), sync the game to this audio clock instead of the
+    /// OS's clock [`Instant::now`].
+    ///
+    /// Note, calling this method is not super cheap, so avoid calling it many
+    /// times within the same game loop iteration if possible.
+    fn audio_clock(&self) -> AudioClock;
 
-    /// The current time of the sample clock in the number of samples (of a single
-    /// channel of audio) that have been processed since the beginning of the
-    /// stream.
+    /// Get the current time of the audio clock.
     ///
-    /// This is more accurate than the seconds clock, and is ideal for syncing
-    /// events to a musical transport. Though note that this clock does not
-    /// account for any output underflows that may occur.
-    fn clock_samples(&self) -> ClockSamples;
+    /// Unlike, [`FirewheelCtx::audio_clock`], this method accounts for the delay
+    /// between when the audio clock was last updated and now, leading to a more
+    /// accurate result for games and other applications.
+    fn audio_clock_corrected(&self) -> AudioClock;
 
-    /// The current musical time of the transport.
+    /// Get the instant the audio clock was last updated.
     ///
-    /// If no transport is currently active, then this will have a value of `0`.
-    fn clock_musical(&self) -> MusicalTime;
+    /// This method accounts for the delay between when the audio clock was last
+    /// updated and now, leading to a more accurate result for games and other
+    /// applications.
+    fn audio_clock_instant(&self) -> Option<bevy::platform::time::Instant>;
 
-    /// Set the musical transport to use.
-    ///
-    /// If an existing musical transport is already running, then the new
-    /// transport will pick up where the old one left off. This allows you
-    /// to, for example, change the tempo dynamically at runtime.
-    ///
-    /// If the message channel is full, then this will return an error.
-    fn set_transport(
+    /// Get the current transport state.
+    fn transport(&self) -> &TransportState;
+
+    /// Sync the state of the musical transport.
+    fn sync_transport(
         &mut self,
-        transport: Option<MusicalTransport>,
+        transport: &TransportState,
     ) -> Result<(), UpdateError<SeedlingContextError>>;
-
-    /// Start or restart the musical transport.
-    ///
-    /// If the message channel is full, then this will return an error.
-    fn start_or_restart_transport(&mut self) -> Result<(), UpdateError<SeedlingContextError>>;
-
-    /// Pause the musical transport.
-    ///
-    /// If the message channel is full, then this will return an error.
-    fn pause_transport(&mut self) -> Result<(), UpdateError<SeedlingContextError>>;
-
-    /// Resume the musical transport.
-    ///
-    /// If the message channel is full, then this will return an error.
-    fn resume_transport(&mut self) -> Result<(), UpdateError<SeedlingContextError>>;
-
-    /// Stop the musical transport.
-    ///
-    /// If the message channel is full, then this will return an error.
-    fn stop_transport(&mut self) -> Result<(), UpdateError<SeedlingContextError>>;
 
     /// Whether or not outputs are being hard clipped at 0dB.
     fn hard_clip_outputs(&self) -> bool;
@@ -310,40 +295,28 @@ where
         <FirewheelCtx<B>>::stream_info(self)
     }
 
-    fn clock_now(&self) -> ClockSeconds {
-        <FirewheelCtx<B>>::clock_now(self)
+    fn audio_clock(&self) -> AudioClock {
+        <FirewheelCtx<B>>::audio_clock(self)
     }
 
-    fn clock_samples(&self) -> ClockSamples {
-        <FirewheelCtx<B>>::clock_samples(self)
+    fn audio_clock_corrected(&self) -> AudioClock {
+        <FirewheelCtx<B>>::audio_clock_corrected(self)
     }
 
-    fn clock_musical(&self) -> MusicalTime {
-        <FirewheelCtx<B>>::clock_musical(self)
+    fn audio_clock_instant(&self) -> Option<bevy::platform::time::Instant> {
+        <FirewheelCtx<B>>::audio_clock_instant(self)
     }
 
-    fn set_transport(
+    fn transport(&self) -> &TransportState {
+        <FirewheelCtx<B>>::transport(self)
+    }
+
+    /// Sync the state of the musical transport.
+    fn sync_transport(
         &mut self,
-        transport: Option<MusicalTransport>,
+        transport: &TransportState,
     ) -> Result<(), UpdateError<SeedlingContextError>> {
-        <FirewheelCtx<B>>::set_transport(self, transport).map_err(SeedlingContextError::map_update)
-    }
-
-    fn start_or_restart_transport(&mut self) -> Result<(), UpdateError<SeedlingContextError>> {
-        <FirewheelCtx<B>>::start_or_restart_transport(self)
-            .map_err(SeedlingContextError::map_update)
-    }
-
-    fn pause_transport(&mut self) -> Result<(), UpdateError<SeedlingContextError>> {
-        <FirewheelCtx<B>>::pause_transport(self).map_err(SeedlingContextError::map_update)
-    }
-
-    fn resume_transport(&mut self) -> Result<(), UpdateError<SeedlingContextError>> {
-        <FirewheelCtx<B>>::resume_transport(self).map_err(SeedlingContextError::map_update)
-    }
-
-    fn stop_transport(&mut self) -> Result<(), UpdateError<SeedlingContextError>> {
-        <FirewheelCtx<B>>::stop_transport(self).map_err(SeedlingContextError::map_update)
+        <FirewheelCtx<B>>::sync_transport(self, transport).map_err(SeedlingContextError::map_update)
     }
 
     fn hard_clip_outputs(&self) -> bool {

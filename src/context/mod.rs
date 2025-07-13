@@ -3,7 +3,7 @@
 use std::num::NonZeroU32;
 
 use bevy::prelude::*;
-use firewheel::{FirewheelConfig, FirewheelCtx, backend::AudioBackend, clock::ClockSeconds};
+use firewheel::{FirewheelConfig, FirewheelCtx, backend::AudioBackend, clock::AudioClock};
 
 #[cfg(target_arch = "wasm32")]
 mod web;
@@ -71,8 +71,8 @@ impl AudioContext {
     /// Depending on the target platform, this operation can
     /// have moderate overhead. It should not be called
     /// more than once per system.
-    pub fn now(&mut self) -> ClockSeconds {
-        self.with(|c| c.clock_now())
+    pub fn now(&mut self) -> AudioClock {
+        self.with(|c| c.audio_clock_corrected())
     }
 
     /// Operate on the underlying audio context.
@@ -167,7 +167,6 @@ pub(crate) fn restart_context<B>(
     B::Config: Clone + Send + Sync + 'static,
     B::StreamError: Send + Sync + 'static,
 {
-    warn!("REASTARTING AHHH!!!");
     audio_context.with(|context| {
         let context: &mut FirewheelCtx<B> = context
             .downcast_mut()
