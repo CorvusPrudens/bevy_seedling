@@ -14,9 +14,10 @@ categories = ["game-development", "multimedia::audio"]
 exclude = ["/assets"]
 
 [features]
-default = ["stream", "wav", "ogg", "rand"]
+default = ["stream", "wav", "ogg", "rand", "loudness"]
 stream = ["firewheel/stream_nodes"]
 rand = ["dep:rand"]
+loudness = ["dep:ebur128", "dep:portable-atomic"]
 
 # formats
 wav = ["symphonium/wav", "symphonium/pcm"]
@@ -41,6 +42,7 @@ bevy = { version = "0.16", default-features = false, features = [
 bevy_math = { version = "0.16", default-features = false, features = ["curve"] }
 firewheel = { version = "0.4.0", features = ["bevy", "spatial_basic_node"] }
 symphonium = { version = "0.5", default-features = false, features = [
+symphonium = { version = "0.6", default-features = false, features = [
   "opt-simd",
   "fft-resampler",
 ] }
@@ -52,6 +54,8 @@ rand = { version = "0.8", default-features = false, features = [
   "small_rng",
   "getrandom",
 ], optional = true }
+ebur128 = { version = "0.1.10", optional = true }
+portable-atomic = { version = "1.11", optional = true, features = ["float"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 firewheel = { version = "0.4.0", features = ["wasm-bindgen"] }

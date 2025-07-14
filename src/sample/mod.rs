@@ -167,8 +167,8 @@ pub use assets::{Sample, SampleLoader, SampleLoaderError};
 /// will be inserted, which provides information about the
 /// playhead position and playback status.
 #[derive(Debug, Component, Clone)]
-#[require(PlaybackSettings, SamplePriority, SampleQueueLifetime)]
-#[component(on_insert = on_insert_sample, immutable)]
+#[require(PlaybackSettings, SamplePriority, SampleQueueLifetime, QueuedSample)]
+#[component(immutable)]
 pub struct SamplePlayer {
     /// The sample to play.
     pub sample: Handle<Sample>,
@@ -200,10 +200,6 @@ impl Default for SamplePlayer {
             volume: Volume::UNITY_GAIN,
         }
     }
-}
-
-fn on_insert_sample(mut world: DeferredWorld, context: HookContext) {
-    world.commands().entity(context.entity).insert(QueuedSample);
 }
 
 impl SamplePlayer {

@@ -539,6 +539,8 @@ pub(super) fn tick_skipped(
 
     for (sample_entity, mut timer, lifetime) in &mut samples {
         if timer.0.tick(delta).elapsed() >= lifetime.0 {
+            debug!("skipping sample {:?} after {:?}", sample_entity, lifetime.0,);
+
             commands
                 .entity(sample_entity)
                 .trigger(PlaybackCompletionEvent);

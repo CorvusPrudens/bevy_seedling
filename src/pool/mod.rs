@@ -41,10 +41,10 @@ impl Plugin for SamplePoolPlugin {
             .add_systems(
                 Last,
                 (
-                    (populate_pool, queue::grow_pools)
+                    (populate_pool, queue::assign_default, queue::grow_pools)
                         .chain()
                         .before(SeedlingSystems::Acquire),
-                    (poll_finished, queue::assign_default, retrieve_state)
+                    (poll_finished, retrieve_state)
                         .before(SeedlingSystems::Pool)
                         .after(SeedlingSystems::Connect),
                     watch_sample_players

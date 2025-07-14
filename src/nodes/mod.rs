@@ -9,6 +9,9 @@ pub mod limiter;
 pub mod lpf;
 pub mod send;
 
+#[cfg(feature = "loudness")]
+pub mod loudness;
+
 /// Registration and logic for `bevy_seedling`'s audio nodes.
 pub(crate) struct SeedlingNodesPlugin;
 
@@ -23,5 +26,8 @@ impl Plugin for SeedlingNodesPlugin {
                 Last,
                 (send::connect_sends, send::update_remote_sends).before(SeedlingSystems::Acquire),
             );
+
+        #[cfg(feature = "loudness")]
+        app.register_simple_node::<loudness::LoudnessNode>();
     }
 }

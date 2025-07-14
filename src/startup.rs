@@ -4,6 +4,7 @@ use crate::{
     context::AudioStreamConfig,
     edge::{AudioGraphInput, AudioGraphOutput, PendingConnections},
     node::FirewheelNode,
+    nodes::limiter::LimiterNode,
 };
 use bevy::prelude::*;
 use bevy_seedling_macros::{NodeLabel, PoolLabel};
@@ -172,7 +173,10 @@ pub enum GraphConfiguration {
     /// └┬──────────────────────────┘          │
     /// ┌▽─────────────────────────────────────▽┐
     /// │MainBus                                │
-    /// └───────────────────────────────────────┘
+    /// └┬──────────────────────────────────────┘
+    /// ┌▽──────┐
+    /// │Limiter│
+    /// └───────┘
     /// ```
     ///
     /// Additionally, each sampler pool includes a [`VolumeNode`] effect
@@ -191,6 +195,7 @@ pub enum GraphConfiguration {
     ///    // Buses
     ///    commands
     ///        .spawn((MainBus, VolumeNode::default()))
+    ///        .chain_node(LimiterNode::new(0.003, 0.15))
     ///        .connect(AudioGraphOutput);
     ///
     ///    commands.spawn((SfxBus, VolumeNode::default()));
@@ -329,6 +334,7 @@ fn set_up_graph(mut commands: Commands, config: Res<ConfigResource>) {
             // Buses
             commands
                 .spawn((MainBus, VolumeNode::default()))
+                .chain_node(LimiterNode::new(0.003, 0.15))
                 .connect(AudioGraphOutput);
 
             commands.spawn((SfxBus, VolumeNode::default()));

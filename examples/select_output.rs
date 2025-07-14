@@ -10,7 +10,7 @@ fn main() {
     App::new()
         .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
         .add_systems(Startup, (startup, set_up_ui))
-        .add_systems(Update, select_output)
+        .add_systems(Update, (select_output, play_sound))
         .add_observer(observe_selection)
         .run();
 }
@@ -35,6 +35,12 @@ fn startup(
     commands.spawn(SamplePlayer::new(server.load("caw.ogg")));
 }
 
+fn play_sound(keys: Res<ButtonInput<KeyCode>>, mut commands: Commands, server: Res<AssetServer>) {
+    if keys.just_pressed(KeyCode::Space) {
+        commands.spawn(SamplePlayer::new(server.load("caw.ogg")));
+    }
+}
+
 fn select_output(
     keys: Res<ButtonInput<KeyCode>>,
     outputs: Query<(Entity, &OutputDeviceInfo, Has<SelectedOutput>)>,
@@ -48,8 +54,8 @@ fn select_output(
         .position(|(.., has_selected)| *has_selected)
         .ok_or("no selected device")?;
 
-    info!("devices: {devices:#?}");
-    info!("selected: {selected_index}");
+    // info!("devices: {devices:#?}");
+    // info!("selected: {selected_index}");
 
     if keys.just_pressed(KeyCode::ArrowRight) {
         commands
