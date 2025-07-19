@@ -1,3 +1,5 @@
+//! EBU R128 loudness measurement.
+
 use bevy::prelude::Component;
 use core::sync::atomic::Ordering;
 use ebur128::{Channel, EbuR128, Mode};
@@ -12,6 +14,7 @@ use portable_atomic::AtomicF64;
 #[derive(Debug, Default, Clone, Component)]
 pub struct LoudnessNode;
 
+/// Configuration for [`LoudnessNode`].
 #[derive(Debug, Default, Clone, Component)]
 pub struct LoudnessConfig {
     /// The EBU R128 channel map.

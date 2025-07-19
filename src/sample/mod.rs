@@ -1,10 +1,7 @@
 //! Audio sample components.
 
 use crate::prelude::Volume;
-use bevy::{
-    ecs::{component::HookContext, world::DeferredWorld},
-    prelude::*,
-};
+use bevy::prelude::*;
 use firewheel::{
     diff::Notify,
     nodes::sampler::{PlaybackState, Playhead, RepeatMode},
@@ -444,18 +441,18 @@ pub(crate) use random::RandomPlugin;
 
 #[cfg(feature = "rand")]
 mod random {
+    use crate::SeedlingSystems;
+
     use super::PlaybackSettings;
-    use bevy::{
-        ecs::{component::HookContext, world::DeferredWorld},
-        prelude::*,
-    };
+    use bevy::prelude::*;
     use rand::{Rng, SeedableRng, rngs::SmallRng};
 
     pub struct RandomPlugin;
 
     impl Plugin for RandomPlugin {
         fn build(&self, app: &mut App) {
-            app.insert_resource(PitchRng(SmallRng::from_entropy()));
+            app.insert_resource(PitchRng(SmallRng::from_entropy()))
+                .add_systems(Last, RandomPitch::apply.before(SeedlingSystems::Acquire));
         }
     }
 
@@ -466,7 +463,7 @@ mod random {
     /// to a sample player when spawned.
     #[derive(Debug, Component, Default, Clone)]
     #[require(PlaybackSettings)]
-    #[component(immutable, on_add = Self::on_add_hook)]
+    #[component(immutable)]
     pub struct RandomPitch(pub core::ops::Range<f64>);
 
     impl RandomPitch {
@@ -489,22 +486,15 @@ mod random {
             Self(minimum..maximum)
         }
 
-        fn on_add_hook(mut world: DeferredWorld, context: HookContext) {
-            let range = world
-                .get::<RandomPitch>(context.entity)
-                .expect("Entity should have a `PitchRange` component")
-                .0
-                .clone();
-
-            let mut rng = world.resource_mut::<PitchRng>();
-            let value = rng.0.gen_range(range);
-
-            world
-                .commands()
-                .entity(context.entity)
-                .entry::<PlaybackSettings>()
-                .or_default()
-                .and_modify(move |mut params| params.speed = value);
+        fn apply(
+            mut samples: Query<(Entity, &mut PlaybackSettings, &Self)>,
+            mut commands: Commands,
+            mut rng: ResMut<PitchRng>,
+        ) {
+            for (entity, mut settings, range) in samples.iter_mut() {
+                settings.speed = rng.0.gen_range(range.0.clone());
+                commands.entity(entity).remove::<Self>();
+            }
         }
     }
 }

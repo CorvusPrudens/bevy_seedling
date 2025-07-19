@@ -1,10 +1,6 @@
 //! This example demonstrates sample lifetimes.
 
-use bevy::{
-    ecs::{component::HookContext, world::DeferredWorld},
-    log::LogPlugin,
-    prelude::*,
-};
+use bevy::{log::LogPlugin, prelude::*, time::common_conditions::on_timer};
 use bevy_seedling::prelude::*;
 use std::time::Duration;
 
@@ -17,8 +13,8 @@ fn main() {
             SeedlingPlugin::default(),
         ))
         .add_systems(Startup, startup)
-        .add_systems(Update, (play_event, remove_looping))
-        .add_event::<PlayEvent>()
+        .add_systems(Update, remove_all.run_if(on_timer(Duration::from_secs(7))))
+        .add_observer(on_finished)
         .run();
 }
 
@@ -28,58 +24,22 @@ fn startup(server: Res<AssetServer>, mut commands: Commands) {
     commands.spawn((SamplePlayer::new(server.load("caw.ogg")), OnFinished));
 }
 
-fn play_event(
-    mut reader: EventReader<PlayEvent>,
-    server: Res<AssetServer>,
-    mut commands: Commands,
-) {
-    for _ in reader.read() {
-        // A looping sample, on the other hand, will continue
-        // playing indefinitely until the sample entity is despawned.
-        let sample = commands
-            .spawn(SamplePlayer::new(server.load("caw.ogg")).looping())
-            .id();
-
-        // Here we kick off a timer that will remove the looping sample, stopping playback.
-        commands.spawn(LoopingRemover {
-            timer: Timer::new(Duration::from_secs(3), TimerMode::Once),
-            sample,
-        });
-    }
-}
-
 #[derive(Component)]
-#[component(on_remove = on_remove)]
 struct OnFinished;
 
-fn on_remove(mut world: DeferredWorld, _ctx: HookContext) {
-    info!("One-shot sample finished!");
+// When the sample above completes, `OnRemove` will be triggered on all its
+// components when it gets despawned.
+fn on_finished(_: Trigger<OnRemove, OnFinished>, server: Res<AssetServer>, mut commands: Commands) {
+    info!("One-shot sample finished, playing looped sample!");
 
-    world.send_event(PlayEvent);
+    // A looping sample, on the other hand, will continue
+    // playing indefinitely until the sample entity is paused, stopped, or despawned.
+    commands.spawn(SamplePlayer::new(server.load("caw.ogg")).looping());
 }
 
-#[derive(Event)]
-struct PlayEvent;
-
-#[derive(Component)]
-struct LoopingRemover {
-    timer: Timer,
-    sample: Entity,
-}
-
-fn remove_looping(
-    mut q: Query<(Entity, &mut LoopingRemover)>,
-    time: Res<Time>,
-    mut commands: Commands,
-) {
-    for (e, mut remover) in q.iter_mut() {
-        remover.timer.tick(time.delta());
-
-        if remover.timer.just_finished() {
-            info!("Stopping looping sample...");
-
-            commands.entity(remover.sample).despawn();
-            commands.entity(e).despawn();
-        }
+fn remove_all(mut q: Query<Entity, With<SamplePlayer>>, mut commands: Commands) {
+    for sample in q.iter_mut() {
+        info!("Stopping all samples...");
+        commands.entity(sample).despawn();
     }
 }

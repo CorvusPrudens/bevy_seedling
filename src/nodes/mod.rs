@@ -5,6 +5,7 @@ use bevy::prelude::*;
 
 pub mod bpf;
 pub mod freeverb;
+pub mod itd;
 pub mod limiter;
 pub mod lpf;
 pub mod send;
@@ -22,6 +23,7 @@ impl Plugin for SeedlingNodesPlugin {
             .register_node::<send::SendNode>()
             .register_node::<freeverb::FreeverbNode>()
             .register_node::<limiter::LimiterNode>()
+            .register_node::<itd::ItdNode>()
             .add_systems(
                 Last,
                 (send::connect_sends, send::update_remote_sends).before(SeedlingSystems::Acquire),

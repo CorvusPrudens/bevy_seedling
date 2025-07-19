@@ -79,7 +79,7 @@ fn setup(mut master: Single<&mut VolumeNode, With<MainBus>>, mut commands: Comma
 
 fn play_music(
     _: Trigger<Pointer<Click>>,
-    playing: Query<Entity, (With<MusicPool>, With<SamplePlayer>)>,
+    playing: Query<(), (With<MusicPool>, With<SamplePlayer>)>,
     mut commands: Commands,
     server: Res<AssetServer>,
 ) {
@@ -90,7 +90,7 @@ fn play_music(
 
     let source = server.load("selfless_courage.ogg");
     commands.spawn((
-        // Including the `MusicPool` marker queues this sample in the `MusicPool`
+        // Including the `MusicPool` marker queues this sample in the `MusicPool`.
         MusicPool,
         SamplePlayer::new(source).with_volume(Volume::Decibels(-6.0)),
     ));

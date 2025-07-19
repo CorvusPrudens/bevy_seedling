@@ -54,9 +54,6 @@ fn select_output(
         .position(|(.., has_selected)| *has_selected)
         .ok_or("no selected device")?;
 
-    // info!("devices: {devices:#?}");
-    // info!("selected: {selected_index}");
-
     if keys.just_pressed(KeyCode::ArrowRight) {
         commands
             .entity(devices[selected_index].0)

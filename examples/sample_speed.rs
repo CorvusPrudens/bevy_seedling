@@ -1,4 +1,5 @@
-//! This example demonstrates how to adjust a sample's speed during playback.
+//! This example demonstrates how to adjust a sample's speed
+//! (and therefore pitch) during playback.
 
 use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::prelude::*;

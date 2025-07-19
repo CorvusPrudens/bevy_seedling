@@ -5,7 +5,7 @@ use std::num::NonZeroU32;
 
 use bevy::ecs::component::Component;
 use firewheel::{
-    SilenceMask, Volume,
+    Volume,
     channel_config::{ChannelConfig, NonZeroChannelCount},
     diff::{Diff, Patch},
     dsp::filter::smoothing_filter::{SmoothingFilter, SmoothingFilterCoeff},
@@ -370,15 +370,12 @@ impl AudioNodeProcessor for Limiter {
             self.advance();
         }
 
-        ProcessStatus::OutputsModified {
-            out_silence_mask: SilenceMask::NONE_SILENT,
-        }
+        ProcessStatus::outputs_not_silent()
     }
 
     fn new_stream(&mut self, stream_info: &firewheel::StreamInfo) {
         self.index = 0;
         self.sample_rate = stream_info.sample_rate;
-        self.num_channels = stream_info.num_stream_in_channels;
         self.max_buffer_length = stream_info.max_block_frames;
 
         self.reducer =

@@ -1,4 +1,4 @@
-//! Audio stream initialization.
+//! Audio graph and I/O initialization.
 
 use crate::{
     context::AudioStreamConfig,
@@ -161,7 +161,7 @@ pub struct SfxBus;
 pub enum GraphConfiguration {
     /// The default game template, suitable for smaller projects.
     ///
-    /// After [`SeedlingInitSystems::Devices`] in [`PreStartup`], the graph will
+    /// After [`SeedlingStartupSystems::GraphSetup`] in [`PreStartup`], the graph will
     /// have the following shape:
     ///
     /// ```text
@@ -182,9 +182,6 @@ pub enum GraphConfiguration {
     /// Additionally, each sampler pool includes a [`VolumeNode`] effect
     /// for each sample player, allowing you to dynamically modulate volume
     /// on a per-sample basis.
-    ///
-    /// These [`VolumeNode`]s are _not_ included in the other configurations,
-    /// so you'll need to insert them manually if you migrate.
     ///
     /// Here's how you can create this configuration yourself:
     ///
@@ -231,7 +228,7 @@ pub enum GraphConfiguration {
 
     /// A minimal graph.
     ///
-    /// After [`SeedlingInitSystems::Devices`] in [`PreStartup`], the graph will
+    /// After [`SeedlingStartupSystems::GraphSetup`] in [`PreStartup`], the graph will
     /// have the following shape:
     ///
     /// ```text
@@ -243,8 +240,8 @@ pub enum GraphConfiguration {
     /// └──────────────┘
     /// ```
     ///
-    /// Unlike the [`Game`] configuration, [`VolumeNode`]s are not inserted
-    /// into the [`DefaultPool`].
+    /// As with the [`Game`] configuration, [`VolumeNode`]s are included
+    /// in the [`DefaultPool`].
     ///
     /// Here's how you can create this configuration yourself:
     ///
@@ -260,7 +257,10 @@ pub enum GraphConfiguration {
     ///    commands.spawn((crate::pool::dynamic::DynamicBus, VolumeNode::default()));
     ///
     ///    // Pools
-    ///    commands.spawn(SamplerPool(DefaultPool));
+    ///    commands.spawn((
+    ///        SamplerPool(DefaultPool),
+    ///        sample_effects![VolumeNode::default()],
+    ///    ));
     /// }
     /// ```
     ///
@@ -372,7 +372,10 @@ fn set_up_graph(mut commands: Commands, config: Res<ConfigResource>) {
             commands.spawn((crate::pool::dynamic::DynamicBus, VolumeNode::default()));
 
             // Pools
-            commands.spawn(SamplerPool(DefaultPool));
+            commands.spawn((
+                SamplerPool(DefaultPool),
+                sample_effects![VolumeNode::default()],
+            ));
         }
         GraphConfiguration::Empty => {}
     }

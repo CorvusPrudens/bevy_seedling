@@ -14,7 +14,7 @@ use std::{
 
 /// A very simple backend for testing and profiling.
 pub struct ProfilingBackend {
-    processor: mpsc::Sender<FirewheelProcessor>,
+    processor: mpsc::Sender<FirewheelProcessor<Self>>,
 }
 
 impl core::fmt::Debug for ProfilingBackend {
@@ -39,6 +39,7 @@ impl std::error::Error for ProfilingError {}
 
 impl AudioBackend for ProfilingBackend {
     type Config = ();
+    type Instant = std::time::Instant;
 
     type StartStreamError = ProfilingError;
     type StreamError = ProfilingError;
@@ -53,6 +54,13 @@ impl AudioBackend for ProfilingBackend {
             num_channels: 2,
             is_default: true,
         }]
+    }
+
+    fn delay_from_last_process(
+        &self,
+        process_timestamp: Self::Instant,
+    ) -> Option<std::time::Duration> {
+        Some(std::time::Instant::now() - process_timestamp)
     }
 
     fn start_stream(_: Self::Config) -> Result<(Self, StreamInfo), Self::StartStreamError> {
@@ -71,21 +79,27 @@ impl AudioBackend for ProfilingBackend {
             let input = [0f32; BLOCK_SIZE * CHANNELS];
             let mut output = [0f32; BLOCK_SIZE * CHANNELS];
 
+            let start = std::time::Instant::now();
+
             loop {
                 match &mut processor {
                     None => {
-                        let new_processor: FirewheelProcessor = receiver.recv().unwrap();
+                        let new_processor: FirewheelProcessor<Self> = receiver.recv().unwrap();
                         processor = Some(new_processor);
                     }
                     Some(processor) => {
+                        let now = std::time::Instant::now();
+
                         processor.process_interleaved(
                             &input,
                             &mut output,
                             CHANNELS,
                             CHANNELS,
                             BLOCK_SIZE,
-                            seconds,
+                            now,
+                            start - now,
                             StreamStatus::empty(),
+                            0,
                         );
                         std::thread::sleep(std::time::Duration::from_secs_f64(block_duration));
                         seconds.0 += block_duration;
@@ -103,6 +117,7 @@ impl AudioBackend for ProfilingBackend {
         Ok((
             Self { processor: sender },
             StreamInfo {
+                prev_sample_rate: sample_rate,
                 sample_rate,
                 sample_rate_recip: 1.0 / sample_rate.get() as f64,
                 max_block_frames: NonZeroU32::new(BLOCK_SIZE as u32).unwrap(),
@@ -116,7 +131,7 @@ impl AudioBackend for ProfilingBackend {
         ))
     }
 
-    fn set_processor(&mut self, processor: FirewheelProcessor) {
+    fn set_processor(&mut self, processor: FirewheelProcessor<Self>) {
         self.processor.send(processor).unwrap();
     }
 

@@ -439,6 +439,7 @@ where
                     spatial::update_2d_emitters_effects,
                     spatial::update_3d_emitters,
                     spatial::update_3d_emitters_effects,
+                    spatial::update_itd_effects,
                 )
                     .before(SeedlingSystems::Acquire),
                 edge::auto_connect

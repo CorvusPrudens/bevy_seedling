@@ -1,6 +1,6 @@
 //! This example demonstrates how to manage sample pausing and playing.
 
-use bevy::{log::LogPlugin, prelude::*};
+use bevy::{log::LogPlugin, prelude::*, time::common_conditions::on_timer};
 use bevy_seedling::prelude::*;
 use std::time::Duration;
 
@@ -12,45 +12,33 @@ fn main() {
             AssetPlugin::default(),
             SeedlingPlugin::default(),
         ))
-        .insert_resource(Metronome(Timer::new(
-            Duration::from_millis(1500),
-            TimerMode::Repeating,
-        )))
         .add_systems(Startup, startup)
-        .add_systems(Update, toggle_playback)
+        .add_systems(
+            Update,
+            toggle_playback.run_if(on_timer(Duration::from_millis(1500))),
+        )
         .run();
 }
 
 // Let's start playing a couple samples.
 fn startup(server: Res<AssetServer>, mut commands: Commands) {
     commands.spawn(SamplePlayer::new(server.load("caw.ogg")).looping());
-
     commands.spawn(SamplePlayer::new(server.load("crow_ambience.ogg")).looping());
 }
 
-#[derive(Resource)]
-struct Metronome(Timer);
-
 fn toggle_playback(
     // With this, we can iterate over _all_ sample players.
-    mut players: Query<&mut PlaybackSettings, With<SamplePlayer>>,
-    mut metro: ResMut<Metronome>,
-    time: Res<Time>,
+    mut settings: Query<&mut PlaybackSettings, With<SamplePlayer>>,
 ) {
-    let delta = time.delta();
-    metro.0.tick(delta);
+    info!("toggled playback!");
 
-    if metro.0.just_finished() {
-        info!("toggled playback!");
-
-        // The pause and play methods queue up audio events that
-        // are sent at the end of the frame.
-        for mut player in players.iter_mut() {
-            if matches!(*player.playback, PlaybackState::Play { .. }) {
-                player.pause();
-            } else {
-                player.play();
-            }
+    // The pause and play methods queue up audio events that
+    // are sent at the end of the frame.
+    for mut settings in settings.iter_mut() {
+        if matches!(*settings.playback, PlaybackState::Play { .. }) {
+            settings.pause();
+        } else {
+            settings.play();
         }
     }
 }

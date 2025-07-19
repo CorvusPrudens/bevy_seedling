@@ -34,7 +34,7 @@
 use bevy::prelude::*;
 use firewheel::nodes::spatial_basic::SpatialBasicNode;
 
-use crate::pool::sample_effects::EffectOf;
+use crate::{nodes::itd::ItdNode, pool::sample_effects::EffectOf};
 
 /// A scaling factor applied to the distance between spatial listeners and emitters.
 ///
@@ -154,6 +154,7 @@ pub(crate) fn update_2d_emitters(
         let x_diff = (emitter_pos.x - listener_pos.x) * scale.x;
         let y_diff = (emitter_pos.y - listener_pos.y) * scale.y;
 
+        // TODO: factor in listener rotation
         spatial.offset.x = x_diff;
         spatial.offset.z = y_diff;
     }
@@ -188,6 +189,31 @@ pub(crate) fn update_2d_emitters_effects(
 
         spatial.offset.x = x_diff;
         spatial.offset.z = y_diff;
+    }
+}
+
+pub(crate) fn update_itd_effects(
+    listeners: Query<&GlobalTransform, Or<(With<SpatialListener2D>, With<SpatialListener3D>)>>,
+    mut emitters: Query<(&mut ItdNode, &EffectOf)>,
+    effect_parents: Query<&GlobalTransform>,
+) {
+    for (mut spatial, effect_of) in emitters.iter_mut() {
+        let Ok(transform) = effect_parents.get(effect_of.0) else {
+            continue;
+        };
+
+        let emitter_pos = transform.translation();
+        let closest_listener = find_closest_listener(
+            emitter_pos,
+            listeners.iter().map(GlobalTransform::translation),
+        );
+
+        let Some(listener_pos) = closest_listener else {
+            continue;
+        };
+
+        // TODO: factor in listener rotation
+        spatial.direction = emitter_pos - listener_pos;
     }
 }
 
