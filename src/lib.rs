@@ -4,6 +4,15 @@
 //! A sprouting integration of the [Firewheel](https://github.com/BillyDM/firewheel)
 //! audio engine for [Bevy](https://bevyengine.org/).
 //!
+//! `bevy_seedling` is powerful, flexible, and extensible.
+//! You can [play sounds](prelude::SamplePlayer), [apply effects](prelude::SampleEffects),
+//! and [route audio anywhere](crate::edge::Connect). Creating
+//! and integrating [custom audio processors](prelude::RegisterNode#creating-and-registering-nodes)
+//! is a breeze.
+//! To top it all off, `bevy_seedling` is _fast_,
+//! [beating other crates](https://github.com/CorvusPrudens/rust-audio-demo?tab=readme-ov-file#performance)
+//! by a factor of 2.5-3 on realistic workloads.
+//!
 //! ## Getting started
 //!
 //! First, you'll need to add the dependency to your `Cargo.toml`.
@@ -313,7 +322,6 @@ pub mod prelude {
     pub use firewheel::{
         CpalBackend, FirewheelConfig, Volume,
         channel_config::{ChannelCount, NonZeroChannelCount},
-        clock::{ClockSamples, ClockSeconds},
         diff::{Memo, Notify},
         nodes::{
             StereoToMonoNode,
@@ -397,6 +405,15 @@ where
     }
 }
 
+/// Run a system if the given resource has changed, ignoring
+/// change ticks on startup.
+fn resource_changed_without_insert<R: Resource>(res: Res<R>, mut has_run: Local<bool>) -> bool {
+    let changed = res.is_changed() && *has_run;
+    *has_run = true;
+
+    changed
+}
+
 impl<B: AudioBackend> Plugin for SeedlingPlugin<B>
 where
     B: 'static,
@@ -453,14 +470,9 @@ where
         )
         .add_systems(
             PostUpdate,
-            context::restart_context::<B>.run_if(
-                |res: Res<AudioStreamConfig<B>>, mut has_run: Local<bool>| {
-                    let changed = res.is_changed() && *has_run;
-                    *has_run = true;
-
-                    changed
-                },
-            ),
+            (context::pre_restart_context, context::restart_context::<B>)
+                .chain()
+                .run_if(resource_changed_without_insert::<AudioStreamConfig<B>>),
         )
         .add_observer(node::label::NodeLabels::on_add_observer)
         .add_observer(node::label::NodeLabels::on_replace_observer);

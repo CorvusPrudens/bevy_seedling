@@ -43,7 +43,7 @@ where
                     stream_config.0.clone(),
                     &mut commands,
                     &server,
-                );
+                )
             }
         };
 
@@ -52,7 +52,7 @@ where
         )
         .add_systems(
             PreStartup,
-            (insert_io::<B>, set_up_graph)
+            (insert_io, set_up_graph)
                 .chain()
                 .in_set(SeedlingStartupSystems::GraphSetup),
         )
@@ -61,7 +61,9 @@ where
             (initialize_stream, connect_io)
                 .chain()
                 .in_set(SeedlingStartupSystems::StreamInitialization),
-        );
+        )
+        .add_observer(fetch_io::<B>)
+        .add_observer(restart_audio);
     }
 }
 
@@ -79,8 +81,137 @@ pub enum SeedlingStartupSystems {
     StreamInitialization,
 }
 
+/// When triggered globally, this event refreshes the audio
+/// I/O device entities.
+///
+/// Any devices that are no longer available
+/// are despawned.
+#[derive(Event, Debug)]
+pub struct FetchAudioIoEvent;
+
+fn fetch_io<B: AudioBackend>(
+    _: Trigger<FetchAudioIoEvent>,
+    existing_inputs: Query<(Entity, &InputDeviceInfo)>,
+    existing_outputs: Query<(Entity, &OutputDeviceInfo)>,
+    mut commands: Commands,
+) {
+    let new_inputs = B::available_input_devices();
+    let old_inputs: Vec<_> = existing_inputs.iter().collect();
+
+    // check for new or chnaged inputs
+    for new_input in &new_inputs {
+        let matching = old_inputs.iter().find(|e| e.1.name() == new_input.name);
+        match matching {
+            Some((entity, old_value)) => {
+                if &old_value.0 != new_input {
+                    commands
+                        .entity(*entity)
+                        .insert(InputDeviceInfo(new_input.clone()));
+                }
+            }
+            None => {
+                info!("Found audio input \"{}\"", new_input.name);
+                commands.spawn(InputDeviceInfo(new_input.clone()));
+            }
+        }
+    }
+
+    // check for unavailable inputs
+    for (entity, old_input) in old_inputs {
+        if !new_inputs.iter().any(|i| i.name == old_input.name()) {
+            info!("Audio input \"{}\" no longer available.", old_input.name());
+            commands.entity(entity).despawn();
+        }
+    }
+
+    let new_outputs = B::available_output_devices();
+    let old_outputs: Vec<_> = existing_outputs.iter().collect();
+
+    // check for new or changed outputs
+    for new_output in &new_outputs {
+        let matching = old_outputs.iter().find(|e| e.1.name() == new_output.name);
+        match matching {
+            Some((entity, old_value)) => {
+                if &old_value.0 != new_output {
+                    commands
+                        .entity(*entity)
+                        .insert(OutputDeviceInfo(new_output.clone()));
+                }
+            }
+            None => {
+                info!("Found audio output \"{}\"", new_output.name);
+                commands.spawn(OutputDeviceInfo(new_output.clone()));
+            }
+        }
+    }
+
+    // check for unavailable ouputs
+    for (entity, old_output) in old_outputs {
+        if !new_outputs.iter().any(|i| i.name == old_output.name()) {
+            info!(
+                "Audio output \"{}\" no longer available.",
+                old_output.name()
+            );
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// When triggered globally, this attempts to automatically
+/// restart the audio stream.
+///
+/// If the current devices are no longer available, this will
+/// attempt to select the default input and output.
+///
+/// This only works with the default `cpal` backend.
+#[derive(Event, Debug)]
+pub struct RestartAudioEvent;
+
+fn restart_audio(
+    _: Trigger<RestartAudioEvent>,
+    inputs: Query<&InputDeviceInfo>,
+    outputs: Query<&OutputDeviceInfo>,
+    mut config: ResMut<AudioStreamConfig>,
+) {
+    // Since people often won't have any input
+    // at all, we'll be careful about selecting
+    // a new device.
+    if let Some(input) = &mut config.0.input {
+        // If the current input device no longer exists, attempt to
+        // fetch the default input, otherwise leaving the choice up
+        // to `cpal`.
+        if let Some(input_name) = &input.device_name {
+            if !inputs.iter().any(|i| i.name() == input_name) {
+                // try to find the default input, or just pass `None`
+                let new_input_name = inputs
+                    .iter()
+                    .find(|i| i.is_default())
+                    .map(|input| input.name().into());
+                input.device_name = new_input_name;
+            }
+        }
+    }
+
+    if let Some(output_name) = &config.0.output.device_name {
+        // If the current output device no longer exists, attempt to
+        // fetch the default output, otherwise leaving the choice up
+        // to `cpal`.
+        if !outputs.iter().any(|i| i.name() == output_name) {
+            let new_output_name = outputs
+                .iter()
+                .find(|o| o.is_default())
+                .map(|output| output.name().into());
+            config.0.output.device_name = new_output_name;
+        }
+    }
+
+    // set it changed in case the above made
+    // no modifications
+    config.set_changed();
+}
+
 /// Information about an audio input device.
-#[derive(Component, Debug)]
+#[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 pub struct InputDeviceInfo(firewheel::backend::DeviceInfo);
 
@@ -102,7 +233,7 @@ impl InputDeviceInfo {
 }
 
 /// Information about an audio input device.
-#[derive(Component, Debug)]
+#[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 pub struct OutputDeviceInfo(firewheel::backend::DeviceInfo);
 
@@ -287,23 +418,10 @@ pub(crate) struct ConfigResource(pub GraphConfiguration);
 ///
 /// We have to defer adding [`FirewheelNode`] because the audio context
 /// isn't yet available.
-fn insert_io<B: AudioBackend>(mut commands: Commands) {
-    // I/O
+fn insert_io(mut commands: Commands) {
     commands.spawn((AudioGraphInput, PendingConnections::default()));
     commands.spawn((AudioGraphOutput, PendingConnections::default()));
-
-    // Devices
-    commands.spawn_batch(
-        B::available_input_devices()
-            .into_iter()
-            .map(InputDeviceInfo),
-    );
-
-    commands.spawn_batch(
-        B::available_output_devices()
-            .into_iter()
-            .map(OutputDeviceInfo),
-    );
+    commands.trigger(FetchAudioIoEvent);
 }
 
 fn connect_io(

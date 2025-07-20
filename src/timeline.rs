@@ -6,7 +6,7 @@ use bevy::math::{
     curve::{Ease, EaseFunction, EasingCurve},
 };
 use firewheel::{
-    clock::ClockSeconds,
+    clock::InstantSeconds,
     diff::{Diff, EventQueue, Patch, PatchError, PathBuilder},
     event::ParamData,
 };
@@ -34,14 +34,14 @@ impl<T> Timeline<T> {
     }
 
     /// Returns whether the value is changing at `time`.
-    pub fn is_active(&self, time: ClockSeconds) -> bool {
+    pub fn is_active(&self, time: InstantSeconds) -> bool {
         self.events
             .iter()
             .any(|e| e.contains(time) && matches!(e, TimelineEvent::Curve { .. }))
     }
 
     /// Returns whether this node will change within the time range.
-    pub fn active_within(&self, start: ClockSeconds, end: ClockSeconds) -> bool {
+    pub fn active_within(&self, start: InstantSeconds, end: InstantSeconds) -> bool {
         self.events.iter().any(|e| {
             e.start_time()
                 .is_some_and(|t| (start.0..end.0).contains(&t.0))
@@ -105,8 +105,8 @@ impl<T: Ease + Clone> Timeline<T> {
     pub fn push_curve(
         &mut self,
         end_value: T,
-        start: ClockSeconds,
-        end: ClockSeconds,
+        start: InstantSeconds,
+        end: InstantSeconds,
         curve: EaseFunction,
     ) -> Result<(), TimelineError> {
         let start_value = self.value_at(start);
@@ -116,7 +116,7 @@ impl<T: Ease + Clone> Timeline<T> {
     }
 
     /// Get the value at a point in time.
-    pub fn value_at(&self, time: ClockSeconds) -> T {
+    pub fn value_at(&self, time: InstantSeconds) -> T {
         if let Some(bounded) = self.events.iter().find(|e| e.contains(time)) {
             return bounded.get(time);
         }
@@ -147,7 +147,7 @@ impl<T: Ease + Clone> Timeline<T> {
     }
 
     /// Update the inner value to the current timestamp.
-    pub fn tick(&mut self, now: ClockSeconds) {
+    pub fn tick(&mut self, now: InstantSeconds) {
         self.value = self.value_at(now);
     }
 }
@@ -162,22 +162,22 @@ pub enum TimelineEvent<T> {
         /// The target value.
         value: T,
         /// The time at which this value should be written.
-        time: ClockSeconds,
+        time: InstantSeconds,
     },
     /// An animation curve.
     Curve {
         /// The easing curve for this animation.
         curve: EasingCurve<T>,
         /// The animation's start time.
-        start: ClockSeconds,
+        start: InstantSeconds,
         /// The animation's end time.
-        end: ClockSeconds,
+        end: InstantSeconds,
     },
 }
 
 impl<T> TimelineEvent<T> {
     /// This event's start time, if any.
-    pub fn start_time(&self) -> Option<ClockSeconds> {
+    pub fn start_time(&self) -> Option<InstantSeconds> {
         match self {
             Self::Deferred { time, .. } => Some(*time),
             Self::Curve { start, .. } => Some(*start),
@@ -189,7 +189,7 @@ impl<T> TimelineEvent<T> {
     ///
     /// A [`TimelineEvent::Deferred`] variant will
     /// provide its start time.
-    pub fn end_time(&self) -> Option<ClockSeconds> {
+    pub fn end_time(&self) -> Option<InstantSeconds> {
         match self {
             Self::Deferred { time, .. } => Some(*time),
             Self::Curve { end, .. } => Some(*end),
@@ -198,7 +198,7 @@ impl<T> TimelineEvent<T> {
     }
 
     /// Returns true if the event contains the given time.
-    pub fn contains(&self, time: ClockSeconds) -> bool {
+    pub fn contains(&self, time: InstantSeconds) -> bool {
         match self {
             Self::Deferred { time: t, .. } => *t == time,
             Self::Curve { start, end, .. } => (*start..=*end).contains(&time),
@@ -207,7 +207,7 @@ impl<T> TimelineEvent<T> {
     }
 
     /// Returns true if the event fully overlaps the given time.
-    pub fn overlaps(&self, time: ClockSeconds) -> bool {
+    pub fn overlaps(&self, time: InstantSeconds) -> bool {
         match self {
             Self::Curve { start, end, .. } => time > *start && time < *end,
             _ => false,
@@ -217,7 +217,7 @@ impl<T> TimelineEvent<T> {
 
 impl<T: Ease + Clone> TimelineEvent<T> {
     /// Calculates the value at `time`.
-    pub fn get(&self, time: ClockSeconds) -> T {
+    pub fn get(&self, time: InstantSeconds) -> T {
         match self {
             Self::Immediate(i) => i.clone(),
             Self::Deferred { value, .. } => value.clone(),
@@ -298,8 +298,8 @@ mod test {
 
         b.push_curve(
             2f32,
-            ClockSeconds(1.),
-            ClockSeconds(2.),
+            InstantSeconds(1.),
+            InstantSeconds(2.),
             EaseFunction::Linear,
         )
         .unwrap();
@@ -319,8 +319,8 @@ mod test {
     //     for _ in 0..8 {
     //         a.push_curve(
     //             2f32,
-    //             ClockSeconds(1.),
-    //             ClockSeconds(2.),
+    //             InstantSeconds(1.),
+    //             InstantSeconds(2.),
     //             EaseFunction::Linear,
     //         )
     //         .unwrap();
@@ -330,8 +330,8 @@ mod test {
     //
     //     b.push_curve(
     //         1f32,
-    //         ClockSeconds(1.),
-    //         ClockSeconds(2.),
+    //         InstantSeconds(1.),
+    //         InstantSeconds(2.),
     //         EaseFunction::Linear,
     //     )
     //     .unwrap();
@@ -351,8 +351,8 @@ mod test {
         value
             .push_curve(
                 1f32,
-                ClockSeconds(0.),
-                ClockSeconds(1.),
+                InstantSeconds(0.),
+                InstantSeconds(1.),
                 EaseFunction::Linear,
             )
             .unwrap();
@@ -360,8 +360,8 @@ mod test {
         value
             .push_curve(
                 2f32,
-                ClockSeconds(1.),
-                ClockSeconds(2.),
+                InstantSeconds(1.),
+                InstantSeconds(2.),
                 EaseFunction::Linear,
             )
             .unwrap();
@@ -369,20 +369,20 @@ mod test {
         value
             .push(TimelineEvent::Deferred {
                 value: 3.0,
-                time: ClockSeconds(2.5),
+                time: InstantSeconds(2.5),
             })
             .unwrap();
 
-        assert_eq!(value.value_at(ClockSeconds(0.)), 0.);
-        assert_eq!(value.value_at(ClockSeconds(0.5)), 0.5);
-        assert_eq!(value.value_at(ClockSeconds(1.0)), 1.0);
+        assert_eq!(value.value_at(InstantSeconds(0.)), 0.);
+        assert_eq!(value.value_at(InstantSeconds(0.5)), 0.5);
+        assert_eq!(value.value_at(InstantSeconds(1.0)), 1.0);
 
-        assert_eq!(value.value_at(ClockSeconds(1.)), 1.);
-        assert_eq!(value.value_at(ClockSeconds(1.5)), 1.5);
-        assert_eq!(value.value_at(ClockSeconds(2.0)), 2.0);
+        assert_eq!(value.value_at(InstantSeconds(1.)), 1.);
+        assert_eq!(value.value_at(InstantSeconds(1.5)), 1.5);
+        assert_eq!(value.value_at(InstantSeconds(2.0)), 2.0);
 
-        assert_eq!(value.value_at(ClockSeconds(2.25)), 2.0);
+        assert_eq!(value.value_at(InstantSeconds(2.25)), 2.0);
 
-        assert_eq!(value.value_at(ClockSeconds(2.5)), 3.0);
+        assert_eq!(value.value_at(InstantSeconds(2.5)), 3.0);
     }
 }

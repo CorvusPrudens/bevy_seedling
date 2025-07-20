@@ -381,7 +381,7 @@ impl PlaybackSettings {
     /// }
     /// ```
     pub fn play(&mut self) {
-        *self.playback = PlaybackState::Play { delay: None };
+        *self.playback = PlaybackState::Play { instant: None };
     }
 
     /// Pause playback.
@@ -419,7 +419,7 @@ impl PlaybackSettings {
 impl Default for PlaybackSettings {
     fn default() -> Self {
         Self {
-            playback: Notify::new(PlaybackState::Play { delay: None }),
+            playback: Notify::new(PlaybackState::Play { instant: None }),
             playhead: Notify::default(),
             speed: 1.0,
             on_complete: OnComplete::Despawn,

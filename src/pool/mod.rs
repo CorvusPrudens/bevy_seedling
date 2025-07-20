@@ -2,7 +2,7 @@
 
 use crate::{
     SeedlingSystems,
-    context::AudioContext,
+    context::{AudioContext, PreStreamRestartEvent, SampleRate, StreamRestartEvent},
     edge::{PendingConnections, PendingEdge},
     error::SeedlingError,
     node::{EffectId, FirewheelNode, RegisterNode},
@@ -21,7 +21,7 @@ use bevy::{
 };
 use core::ops::{Deref, RangeInclusive};
 use firewheel::nodes::{
-    sampler::{SamplerConfig, SamplerNode, SamplerState},
+    sampler::{Playhead, SamplerConfig, SamplerNode, SamplerState},
     volume::VolumeNode,
 };
 use queue::SkipTimer;
@@ -59,6 +59,8 @@ impl Plugin for SamplePoolPlugin {
                 ),
             )
             .add_observer(remove_finished)
+            .add_observer(generate_snapshots)
+            .add_observer(apply_snapshots)
             .add_plugins(dynamic::DynamicPlugin);
     }
 }
@@ -315,6 +317,7 @@ impl SamplerOf {
 pub struct Sampler {
     #[relationship]
     sampler: Entity,
+    sample_rate: Option<SampleRate>,
     state: Option<SamplerState>,
 }
 
@@ -350,6 +353,28 @@ impl Sampler {
     pub fn try_playhead_frames(&self) -> Option<u64> {
         self.state.as_ref().map(|s| s.playhead_frames())
     }
+
+    /// Returns the current playhead in seconds.
+    ///
+    /// # Panics
+    ///
+    /// If the sample player has not yet propagated to the audio
+    /// graph, this information may not yet be available. For a
+    /// fallible method, see [`try_playhead_frames`][Self::try_playhead_seconds].
+    pub fn playhead_seconds(&self) -> f64 {
+        self.try_playhead_seconds().unwrap()
+    }
+
+    /// Returns the current playhead in seconds.
+    ///
+    /// If the sample player has not yet propagated to the audio
+    /// graph, this returns `None`.
+    pub fn try_playhead_seconds(&self) -> Option<f64> {
+        let state = self.state.as_ref()?;
+        let sample_rate = self.sample_rate.as_ref()?;
+
+        Some(state.playhead_seconds(sample_rate.get()))
+    }
 }
 
 impl core::fmt::Debug for Sampler {
@@ -363,12 +388,76 @@ impl core::fmt::Debug for Sampler {
 impl Sampler {
     fn on_insert_hook(mut world: DeferredWorld, context: HookContext) {
         let sampler = world.get::<Sampler>(context.entity).unwrap().sampler;
+        let sample_rate = world.resource::<SampleRate>().clone();
 
         // We'll attempt to eagerly fill the state here, otherwise falling
-        // back to `retrieve_State` when it's not ready.
+        // back to `retrieve_state` when it's not ready.
         if let Some(state) = world.get::<SamplerStateWrapper>(sampler).cloned() {
-            world.get_mut::<Sampler>(context.entity).unwrap().state = Some(state.0);
+            let mut sampler = world.get_mut::<Sampler>(context.entity).unwrap();
+            sampler.state = Some(state.0);
+            sampler.sample_rate = Some(sample_rate);
         }
+    }
+}
+
+/// A snapshot of a sampler's state.
+///
+/// This helps us restore the state of every
+/// active sampler when the audio stream's sample
+/// rate changes.
+#[derive(Component)]
+struct SamplerSnapshot {
+    pub playhead: f64,
+}
+
+fn generate_snapshots(
+    _: Trigger<PreStreamRestartEvent>,
+    sample_players: Query<(Entity, Option<&Sampler>), With<SamplePlayer>>,
+    mut commands: Commands,
+) {
+    for (entity, sampler) in &sample_players {
+        let playhead = sampler
+            .and_then(|s| s.try_playhead_seconds())
+            .unwrap_or_default();
+
+        commands.entity(entity).insert(SamplerSnapshot { playhead });
+    }
+}
+
+fn apply_snapshots(
+    trigger: Trigger<StreamRestartEvent>,
+    mut sample_players: Query<(
+        Entity,
+        &SamplerSnapshot,
+        &SamplePlayer,
+        &mut PlaybackSettings,
+        Has<QueuedSample>,
+        Has<Sampler>,
+    )>,
+    server: Res<AssetServer>,
+    mut assets: ResMut<Assets<crate::sample::Sample>>,
+    mut commands: Commands,
+) {
+    let rates_changed = trigger.previous_rate != trigger.current_rate;
+
+    for (entity, snapshot, player, mut settings, has_queued, has_sampler) in &mut sample_players {
+        let active = has_queued || has_sampler;
+        let mut commands = commands.entity(entity);
+
+        if rates_changed && active {
+            let new_player = player.clone();
+
+            if let Some(sample) = new_player.sample.path() {
+                assets.remove(&new_player.sample);
+                server.reload(sample);
+            }
+
+            *settings.playhead = Playhead::Seconds(snapshot.playhead);
+
+            commands.insert(new_player).remove::<Sampler>();
+        }
+
+        commands.remove::<SamplerSnapshot>();
     }
 }
 

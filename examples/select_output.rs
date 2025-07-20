@@ -32,7 +32,11 @@ fn startup(
         }
     }
 
-    commands.spawn(SamplePlayer::new(server.load("caw.ogg")));
+    commands.spawn(
+        SamplePlayer::new(server.load("selfless_courage.ogg"))
+            .looping()
+            .with_volume(Volume::Decibels(-6.0)),
+    );
 }
 
 fn play_sound(keys: Res<ButtonInput<KeyCode>>, mut commands: Commands, server: Res<AssetServer>) {
@@ -45,14 +49,14 @@ fn select_output(
     keys: Res<ButtonInput<KeyCode>>,
     outputs: Query<(Entity, &OutputDeviceInfo, Has<SelectedOutput>)>,
     mut commands: Commands,
-) -> Result {
+) {
     let mut devices = outputs.iter().collect::<Vec<_>>();
     devices.sort_unstable_by_key(|(_, device, _)| device.name());
 
-    let mut selected_index = devices
-        .iter()
-        .position(|(.., has_selected)| *has_selected)
-        .ok_or("no selected device")?;
+    let Some(mut selected_index) = devices.iter().position(|(.., has_selected)| *has_selected)
+    else {
+        return;
+    };
 
     if keys.just_pressed(KeyCode::ArrowRight) {
         commands
@@ -75,17 +79,23 @@ fn select_output(
             .entity(devices[selected_index].0)
             .insert(SelectedOutput);
     }
-
-    Ok(())
 }
 
 fn observe_selection(
     trigger: Trigger<OnAdd, SelectedOutput>,
     outputs: Query<&OutputDeviceInfo>,
     mut stream: ResMut<AudioStreamConfig>,
+    mut rate_toggle: Local<bool>,
 ) -> Result {
     let output = outputs.get(trigger.target())?;
     stream.0.output.device_name = Some(output.name().into());
+
+    let rate = if *rate_toggle { 48000 } else { 44100 };
+    *rate_toggle = !*rate_toggle;
+    stream.0.output.desired_sample_rate = Some(rate);
+
+    info!("new output: {:#?}", stream.0.output);
+
     Ok(())
 }
 

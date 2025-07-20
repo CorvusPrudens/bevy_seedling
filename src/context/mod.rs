@@ -37,13 +37,16 @@ pub struct AudioContext(InnerContext);
 
 impl AudioContext {
     /// Initialize the audio process.
-    pub fn new<B>(settings: FirewheelConfig, stream_settings: B::Config) -> Self
+    pub fn new<B>(settings: FirewheelConfig, stream_settings: B::Config) -> Result<Self>
     where
         B: AudioBackend + 'static,
         B::Config: Send + 'static,
         B::StreamError: Send + Sync + 'static,
     {
-        AudioContext(InnerContext::new::<B>(settings, stream_settings))
+        Ok(AudioContext(InnerContext::new::<B>(
+            settings,
+            stream_settings,
+        )?))
     }
 
     /// Get an absolute timestamp from the audio thread of the current time.
@@ -132,12 +135,13 @@ pub(crate) fn initialize_context<B>(
     stream_config: B::Config,
     commands: &mut Commands,
     server: &AssetServer,
-) where
+) -> Result
+where
     B: AudioBackend + 'static,
     B::Config: Clone + Send + Sync + 'static,
     B::StreamError: Send + Sync + 'static,
 {
-    let mut context = AudioContext::new::<B>(firewheel_config, stream_config.clone());
+    let mut context = AudioContext::new::<B>(firewheel_config, stream_config.clone())?;
     let sample_rate = context.with(|ctx| ctx.stream_info().unwrap().sample_rate);
     let sample_rate = SampleRate(sync::Arc::new(sync::atomic::AtomicU32::new(
         sample_rate.get(),
@@ -146,6 +150,19 @@ pub(crate) fn initialize_context<B>(
     commands.insert_resource(context);
     commands.insert_resource(sample_rate.clone());
     server.register_loader(crate::sample::SampleLoader { sample_rate });
+
+    Ok(())
+}
+
+/// An event triggered just before the audio stream restarts.
+///
+/// This allows components to temporarily store any state
+/// that may be lost if sample rates or other parameters change.
+#[derive(Event, Debug)]
+pub struct PreStreamRestartEvent;
+
+pub(crate) fn pre_restart_context(mut commands: Commands) {
+    commands.trigger(PreStreamRestartEvent);
 }
 
 /// An event triggered when the audio stream restarts.
@@ -162,7 +179,8 @@ pub(crate) fn restart_context<B>(
     mut commands: Commands,
     mut audio_context: ResMut<AudioContext>,
     sample_rate: Res<SampleRate>,
-) where
+) -> Result
+where
     B: AudioBackend + 'static,
     B::Config: Clone + Send + Sync + 'static,
     B::StreamError: Send + Sync + 'static,
@@ -170,12 +188,12 @@ pub(crate) fn restart_context<B>(
     audio_context.with(|context| {
         let context: &mut FirewheelCtx<B> = context
             .downcast_mut()
-            .expect("only one audio context should exist");
+            .ok_or("only one audio context should be active at a time")?;
 
         context.stop_stream();
         context
             .start_stream(stream_config.0.clone())
-            .expect("failed to restart the audio context");
+            .map_err(|e| format!("failed to restart audio stream: {e:?}"))?;
 
         let previous_rate = sample_rate.get();
 
@@ -188,5 +206,7 @@ pub(crate) fn restart_context<B>(
             previous_rate,
             current_rate,
         });
-    });
+
+        Ok(())
+    })
 }

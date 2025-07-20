@@ -4,7 +4,8 @@ use crate::timeline::Timeline;
 use bevy::prelude::*;
 use firewheel::{
     channel_config::ChannelConfig,
-    core::{channel_config::NonZeroChannelCount, clock::ClockSeconds, node::ProcInfo},
+    clock::DurationSeconds,
+    core::{channel_config::NonZeroChannelCount, node::ProcInfo},
     diff::{Diff, Patch},
     event::NodeEventList,
     node::{
@@ -170,13 +171,12 @@ impl AudioNodeProcessor for BandPassProcessor {
             return ProcessStatus::ClearAllOutputs;
         }
 
-        let seconds = proc_info.audio_clock_seconds.start;
-        let frame_time = (proc_info.audio_clock_seconds.end.0
-            - proc_info.audio_clock_seconds.start.0)
+        let seconds = proc_info.clock_seconds.start;
+        let frame_time = (proc_info.clock_seconds.end.0 - proc_info.clock_seconds.start.0)
             / proc_info.frames as f64;
         for sample in 0..inputs[0].len() {
             if sample % 32 == 0 {
-                let seconds = seconds + ClockSeconds(sample as f64 * frame_time);
+                let seconds = seconds + DurationSeconds(sample as f64 * frame_time);
                 self.params.frequency.tick(seconds);
                 let frequency = self.params.frequency.get();
                 let q = self.params.q.get();

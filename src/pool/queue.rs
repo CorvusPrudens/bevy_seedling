@@ -49,12 +49,12 @@ pub(super) fn grow_pools(
         &SamplerConfig,
     )>,
     nodes: Query<Option<&SamplerOf>, With<PoolSamplerOf>>,
-    server: Res<AssetServer>,
+    assets: Res<Assets<Sample>>,
     mut commands: Commands,
 ) -> Result {
     let queued_samples: HashMap<_, usize> = queued_samples
         .iter()
-        .filter_map(|(player, label)| server.is_loaded(&player.sample).then_some(label))
+        .filter_map(|(player, label)| assets.get(&player.sample).map(|_| label))
         .fold(HashMap::new(), |mut acc, label| {
             *acc.entry(label.label).or_default() += 1;
             acc
@@ -517,11 +517,11 @@ pub(super) struct SkipTimer(Stopwatch);
 
 pub(super) fn mark_skipped(
     samples: Query<(Entity, &SamplePlayer), (With<QueuedSample>, Without<SkipTimer>)>,
-    server: Res<AssetServer>,
+    assets: Res<Assets<Sample>>,
     mut commands: Commands,
 ) {
     for (sample, player) in &samples {
-        if server.is_loaded(&player.sample) {
+        if assets.get(&player.sample).is_some() {
             commands.entity(sample).insert(SkipTimer(Stopwatch::new()));
         }
     }

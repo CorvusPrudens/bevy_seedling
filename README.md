@@ -4,6 +4,15 @@
 A sprouting integration of the [Firewheel](https://github.com/BillyDM/firewheel)
 audio engine for [Bevy](https://bevyengine.org/).
 
+`bevy_seedling` is powerful, flexible, and extensible.
+You can play sounds, apply effects,
+and route audio anywhere. Creating
+and integrating custom audio processors
+is a breeze.
+To top it all off, `bevy_seedling` is _fast_,
+[beating other crates](https://github.com/CorvusPrudens/rust-audio-demo?tab=readme-ov-file#performance)
+by a factor of 2.5-3 on realistic workloads.
+
 ## Getting started
 
 First, you'll need to add the dependency to your `Cargo.toml`.

@@ -7,6 +7,7 @@ use crate::{SeedlingSystems, prelude::AudioContext};
 use bevy::ecs::component::{ComponentId, HookContext, Mutable};
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
+use firewheel::error::UpdateError;
 use firewheel::{
     diff::{Diff, Patch},
     event::{NodeEvent, NodeEventType},
@@ -299,6 +300,7 @@ pub(crate) fn flush_events(
     mut nodes: Query<(&FirewheelNode, &mut Events)>,
     mut removals: ResMut<PendingRemovals>,
     mut context: ResMut<AudioContext>,
+    mut commands: Commands,
 ) {
     context.with(|context| {
         for node in removals.0.drain(..) {
@@ -316,8 +318,23 @@ pub(crate) fn flush_events(
             }
         }
 
-        if let Err(e) = context.update() {
-            error!("graph error: {:?}", e);
+        let result = context.update();
+
+        match result {
+            Err(UpdateError::StreamStoppedUnexpectedly(e)) => {
+                // For now, we'll assume this is always due to a device becoming unavailable.
+                // As such, we'll attempt a reinitialization.
+                warn!("Audio stream stopped: {e:?}");
+
+                // First, we'll want to make sure the devices are up-to-date.
+                commands.trigger(crate::startup::FetchAudioIoEvent);
+                // Then, we'll attempt a restart.
+                commands.trigger(crate::startup::RestartAudioEvent);
+            }
+            Err(e) => {
+                error!("graph error: {e:?}");
+            }
+            _ => {}
         }
     });
 }
