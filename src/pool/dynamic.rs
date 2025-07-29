@@ -54,11 +54,10 @@ use crate::{
     pool::{label::PoolLabelContainer, sample_effects::SampleEffects},
     sample::{QueuedSample, SamplePlayer},
 };
-use bevy::{
-    ecs::{component::ComponentId, entity::EntityCloner},
-    platform::collections::HashMap,
-    prelude::*,
-};
+use bevy_app::prelude::*;
+use bevy_ecs::{component::ComponentId, entity::EntityCloner, prelude::*};
+use bevy_log::prelude::*;
+use bevy_platform::collections::HashMap;
 use bevy_seedling_macros::{NodeLabel, PoolLabel};
 
 pub(super) struct DynamicPlugin;

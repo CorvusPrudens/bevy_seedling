@@ -5,7 +5,7 @@ use crate::{
     node::follower::FollowerOf,
     prelude::MainBus,
 };
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use firewheel::{
     SilenceMask, Volume,
     channel_config::{ChannelConfig, ChannelCount, NonZeroChannelCount},
@@ -176,7 +176,6 @@ impl AudioNode for SendNode {
                 num_outputs: ChannelCount::new(config.channels.get().get() * 2)
                     .expect("send channel count must not exceed 32"),
             })
-            .uses_events(true)
     }
 
     fn construct_processor(
@@ -213,11 +212,11 @@ impl AudioNodeProcessor for SendProcessor {
             inputs, outputs, ..
         }: ProcBuffers,
         proc_info: &ProcInfo,
-        mut events: NodeEventList,
+        events: &mut NodeEventList,
     ) -> ProcessStatus {
-        events.for_each_patch::<SendNode>(|SendNodePatch::SendVolume(v)| {
+        for SendNodePatch::SendVolume(v) in events.drain_patches::<SendNode>() {
             self.gain.set_value(v.amp_clamped(DEFAULT_AMP_EPSILON));
-        });
+        }
 
         if proc_info.in_silence_mask.all_channels_silent(inputs.len()) {
             return ProcessStatus::ClearAllOutputs;

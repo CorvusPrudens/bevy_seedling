@@ -7,8 +7,8 @@
 //! Any node that doesn't provide an explicit connection when spawned
 //! will be automatically connected to [MainBus].
 use crate::edge::NodeMap;
-use bevy::ecs::intern::Interned;
-use bevy::prelude::*;
+use bevy_ecs::{intern::Interned, prelude::*};
+use bevy_log::prelude::*;
 use smallvec::SmallVec;
 
 /// Node label derive macro.
@@ -47,7 +47,7 @@ use smallvec::SmallVec;
 /// [`Component`]: bevy_ecs::component::Component
 pub use bevy_seedling_macros::NodeLabel;
 
-bevy::ecs::define_label!(
+bevy_ecs::define_label!(
     /// A label for addressing audio nodes.
     ///
     /// Types that implement [NodeLabel] can be used in place of entity IDs

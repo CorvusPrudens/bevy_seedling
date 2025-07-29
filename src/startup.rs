@@ -6,7 +6,10 @@ use crate::{
     node::FirewheelNode,
     nodes::limiter::LimiterNode,
 };
-use bevy::prelude::*;
+use bevy_app::prelude::*;
+use bevy_asset::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_log::prelude::*;
 use bevy_seedling_macros::{NodeLabel, PoolLabel};
 use core::marker::PhantomData;
 use firewheel::backend::AudioBackend;

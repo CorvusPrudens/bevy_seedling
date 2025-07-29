@@ -1,8 +1,8 @@
 //! Types and traits for managing per-sample effects.
 
-use bevy::{
-    ecs::query::{QueryData, QueryFilter, QueryManyUniqueIter, ROQueryItem},
+use bevy_ecs::{
     prelude::*,
+    query::{QueryData, QueryFilter, QueryManyUniqueIter, ROQueryItem},
 };
 
 /// An effect applied to a sample player.
@@ -105,7 +105,7 @@ pub struct EffectOf(pub Entity);
 /// sample's [`SampleEffects`].
 #[derive(Debug, Component)]
 #[relationship_target(relationship = EffectOf, linked_spawn)]
-pub struct SampleEffects(super::entity_set::EffectsSet);
+pub struct SampleEffects(crate::entity_set::EntitySet);
 
 impl core::ops::Deref for SampleEffects {
     type Target = [Entity];
@@ -116,9 +116,9 @@ impl core::ops::Deref for SampleEffects {
 }
 
 #[doc(hidden)]
-pub use bevy::ecs::spawn::Spawn;
+pub use bevy_ecs::spawn::Spawn;
 
-use super::entity_set::EffectsSetIter;
+use crate::entity_set::EntitySetIter;
 
 /// Returns a spawnable list of [`SampleEffects`].
 ///
@@ -273,7 +273,7 @@ where
     fn iter_effects<'a>(
         &self,
         effects: &'a SampleEffects,
-    ) -> QueryManyUniqueIter<'_, 's, D::ReadOnly, F, EffectsSetIter<'a>>;
+    ) -> QueryManyUniqueIter<'_, 's, D::ReadOnly, F, EntitySetIter<'a>>;
 
     /// Mutably iterate over all effects entities that match the query.
     ///
@@ -297,7 +297,7 @@ where
     fn iter_effects_mut<'a>(
         &mut self,
         effects: &'a SampleEffects,
-    ) -> QueryManyUniqueIter<'_, 's, D, F, EffectsSetIter<'a>>;
+    ) -> QueryManyUniqueIter<'_, 's, D, F, EntitySetIter<'a>>;
 }
 
 impl<'s, D, F> EffectsQuery<'s, D, F> for Query<'_, 's, D, F>
@@ -331,14 +331,14 @@ where
     fn iter_effects<'a>(
         &self,
         effects: &'a SampleEffects,
-    ) -> QueryManyUniqueIter<'_, 's, D::ReadOnly, F, EffectsSetIter<'a>> {
+    ) -> QueryManyUniqueIter<'_, 's, D::ReadOnly, F, EntitySetIter<'a>> {
         self.iter_many_unique(effects.iter())
     }
 
     fn iter_effects_mut<'a>(
         &mut self,
         effects: &'a SampleEffects,
-    ) -> QueryManyUniqueIter<'_, 's, D, F, EffectsSetIter<'a>> {
+    ) -> QueryManyUniqueIter<'_, 's, D, F, EntitySetIter<'a>> {
         self.iter_many_unique_mut(effects.iter())
     }
 }

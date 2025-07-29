@@ -1,7 +1,8 @@
 //! Audio sample components.
 
 use crate::prelude::Volume;
-use bevy::prelude::*;
+use bevy_asset::Handle;
+use bevy_ecs::prelude::*;
 use firewheel::{
     diff::Notify,
     nodes::sampler::{PlaybackState, Playhead, RepeatMode},
@@ -444,7 +445,8 @@ mod random {
     use crate::SeedlingSystems;
 
     use super::PlaybackSettings;
-    use bevy::prelude::*;
+    use bevy_app::prelude::*;
+    use bevy_ecs::prelude::*;
     use rand::{Rng, SeedableRng, rngs::SmallRng};
 
     pub struct RandomPlugin;

@@ -4,7 +4,7 @@
 #![allow(missing_docs)]
 #![allow(clippy::module_inception)]
 
-use bevy::prelude::Component;
+use bevy_ecs::component::Component;
 use firewheel::{
     channel_config::{ChannelConfig, ChannelCount},
     core::node::ProcInfo,
@@ -89,13 +89,14 @@ impl AudioNodeProcessor for FreeverbProcessor {
             inputs, outputs, ..
         }: ProcBuffers,
         proc_info: &ProcInfo,
-        mut events: NodeEventList,
+        events: &mut NodeEventList,
     ) -> ProcessStatus {
         let mut changed = false;
-        events.for_each_patch::<FreeverbNode>(|p| {
+
+        for patch in events.drain_patches::<FreeverbNode>() {
             changed = true;
-            self.params.apply(p);
-        });
+            self.params.apply(patch);
+        }
 
         if changed {
             self.params.apply_params(&mut self.freeverb);

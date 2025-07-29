@@ -10,14 +10,14 @@ use crate::{
     prelude::PoolLabel,
     sample::{OnComplete, PlaybackSettings, QueuedSample, SamplePlayer},
 };
-use bevy::{
-    ecs::{
-        component::{ComponentId, HookContext},
-        entity::EntityCloner,
-        system::QueryLens,
-        world::DeferredWorld,
-    },
+use bevy_app::prelude::*;
+use bevy_asset::prelude::*;
+use bevy_ecs::{
+    component::{ComponentId, HookContext},
+    entity::EntityCloner,
     prelude::*,
+    system::QueryLens,
+    world::DeferredWorld,
 };
 use core::ops::{Deref, RangeInclusive};
 use firewheel::nodes::{
@@ -28,7 +28,6 @@ use queue::SkipTimer;
 use sample_effects::{EffectOf, SampleEffects};
 
 pub mod dynamic;
-mod entity_set;
 pub mod label;
 mod queue;
 pub mod sample_effects;
@@ -731,7 +730,7 @@ fn poll_finished(
     mut commands: Commands,
 ) {
     for (node, active, state) in nodes.iter() {
-        let finished = state.0.finished() == node.sequence.id();
+        let finished = state.0.finished() == node.playback.id();
 
         if finished {
             commands.entity(active.0).trigger(PlaybackCompletionEvent);

@@ -25,19 +25,18 @@ use bevy_seedling::{
 
 fn main() {
     let mut app = App::new();
-    app.add_plugins((DefaultPlugins, SeedlingPlugin::default()));
-
-    app.add_systems(Startup, setup).add_systems(
-        Update,
-        (
-            update_music_volume_label,
-            update_master_volume_label,
-            update_sfx_volume_label,
-            button_hover,
-        ),
-    );
-
-    app.run();
+    app.add_plugins((DefaultPlugins, SeedlingPlugin::default()))
+        .add_systems(Startup, setup)
+        .add_systems(
+            Update,
+            (
+                update_music_volume_label,
+                update_master_volume_label,
+                update_sfx_volume_label,
+                button_hover,
+            ),
+        )
+        .run();
 }
 
 fn setup(mut master: Single<&mut VolumeNode, With<MainBus>>, mut commands: Commands) {

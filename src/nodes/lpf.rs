@@ -1,6 +1,6 @@
 //! One-pole, low-pass filter.
 
-use bevy::prelude::*;
+use bevy_ecs::component::Component;
 use firewheel::{
     channel_config::{ChannelConfig, NonZeroChannelCount},
     diff::{Diff, Patch},
@@ -53,7 +53,6 @@ impl AudioNode for LowPassNode {
                 num_inputs: config.channels.get(),
                 num_outputs: config.channels.get(),
             })
-            .uses_events(true)
     }
 
     fn construct_processor(
@@ -129,11 +128,13 @@ impl AudioNodeProcessor for LowPassProcessor {
             inputs, outputs, ..
         }: ProcBuffers,
         proc_info: &ProcInfo,
-        mut events: NodeEventList,
+        events: &mut NodeEventList,
     ) -> ProcessStatus {
-        events.for_each_patch::<LowPassNode>(|p| match p {
-            LowPassNodePatch::Frequency(f) => self.frequency.set_value(f.clamp(0.0, 20_000.0)),
-        });
+        for patch in events.drain_patches::<LowPassNode>() {
+            match patch {
+                LowPassNodePatch::Frequency(f) => self.frequency.set_value(f.clamp(0.0, 20_000.0)),
+            }
+        }
 
         // Actually this won't _technically_ be true, since
         // the filter may cary over a bit of energy from

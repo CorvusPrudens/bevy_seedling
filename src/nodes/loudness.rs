@@ -1,6 +1,6 @@
 //! EBU R128 loudness measurement.
 
-use bevy::prelude::Component;
+use bevy_ecs::component::Component;
 use core::sync::atomic::Ordering;
 use ebur128::{Channel, EbuR128, Mode};
 use firewheel::{
@@ -181,7 +181,7 @@ impl AudioNodeProcessor for LoudnessProcessor {
         &mut self,
         buffers: firewheel::node::ProcBuffers,
         proc_info: &firewheel::node::ProcInfo,
-        _: firewheel::event::NodeEventList,
+        _: &mut firewheel::event::NodeEventList,
     ) -> firewheel::node::ProcessStatus {
         if self.ignore_silence
             && proc_info

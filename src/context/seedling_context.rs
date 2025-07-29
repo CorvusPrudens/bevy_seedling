@@ -125,7 +125,7 @@ pub trait SeedlingContextWrapper: core::any::Any {
     /// This method accounts for the delay between when the audio clock was last
     /// updated and now, leading to a more accurate result for games and other
     /// applications.
-    fn audio_clock_instant(&self) -> Option<bevy::platform::time::Instant>;
+    fn audio_clock_instant(&self) -> Option<bevy_platform::time::Instant>;
 
     /// Get the current transport state.
     fn transport(&self) -> &TransportState;
@@ -303,7 +303,7 @@ where
         <FirewheelCtx<B>>::audio_clock_corrected(self)
     }
 
-    fn audio_clock_instant(&self) -> Option<bevy::platform::time::Instant> {
+    fn audio_clock_instant(&self) -> Option<bevy_platform::time::Instant> {
         <FirewheelCtx<B>>::audio_clock_instant(self)
     }
 

@@ -1,6 +1,6 @@
 //! Interaural time difference node.
 
-use bevy::prelude::Component;
+use bevy_ecs::component::Component;
 use bevy_math::Vec3;
 use delay_line::DelayLine;
 use firewheel::{
@@ -74,7 +74,6 @@ impl AudioNode for ItdNode {
     fn info(&self, config: &Self::Configuration) -> AudioNodeInfo {
         AudioNodeInfo::new()
             .debug_name("itd node")
-            .uses_events(true)
             .channel_config(ChannelConfig::new(config.input_channels.get(), 2))
     }
 
@@ -109,16 +108,16 @@ impl AudioNodeProcessor for ItdProcessor {
             inputs, outputs, ..
         }: ProcBuffers,
         proc_info: &firewheel::node::ProcInfo,
-        mut events: firewheel::event::NodeEventList,
+        events: &mut firewheel::event::NodeEventList,
     ) -> ProcessStatus {
-        events.for_each_patch::<ItdNode>(|patch| {
+        for patch in events.drain_patches::<ItdNode>() {
             let ItdNodePatch::Direction(direction) = patch;
             let direction = direction.normalize_or_zero();
 
             if direction.length_squared() == 0.0 {
                 self.left.read_head = 0.0;
                 self.right.read_head = 0.0;
-                return;
+                continue;
             }
 
             let left_delay =
@@ -128,7 +127,7 @@ impl AudioNodeProcessor for ItdProcessor {
 
             self.left.read_head = left_delay;
             self.right.read_head = right_delay;
-        });
+        }
 
         if proc_info.in_silence_mask.all_channels_silent(2) {
             return ProcessStatus::ClearAllOutputs;

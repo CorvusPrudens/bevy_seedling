@@ -4,9 +4,13 @@ use crate::edge::NodeMap;
 use crate::error::SeedlingError;
 use crate::pool::sample_effects::EffectOf;
 use crate::{SeedlingSystems, prelude::AudioContext};
-use bevy::ecs::component::{ComponentId, HookContext, Mutable};
-use bevy::ecs::world::DeferredWorld;
-use bevy::prelude::*;
+use bevy_app::prelude::*;
+use bevy_ecs::{
+    component::{ComponentId, HookContext, Mutable},
+    prelude::*,
+    world::DeferredWorld,
+};
+use bevy_log::prelude::*;
 use firewheel::error::UpdateError;
 use firewheel::{
     diff::{Diff, Patch},
@@ -58,7 +62,7 @@ impl Events {
     ///
     /// `value` is boxed and wrapped in [NodeEventType::Custom].
     pub fn push_custom<T: Send + Sync + 'static>(&mut self, value: T) {
-        self.0.push(NodeEventType::Custom(Box::new(value)));
+        self.0.push(NodeEventType::custom(value));
     }
 }
 
@@ -309,11 +313,14 @@ pub(crate) fn flush_events(
             }
         }
 
+        let now = context.audio_clock_corrected().seconds;
+
         for (node, mut events) in nodes.iter_mut() {
             for event in events.0.drain(..) {
                 context.queue_event(NodeEvent {
                     node_id: node.0,
                     event,
+                    time: Some(firewheel::clock::EventInstant::Seconds(now)),
                 });
             }
         }

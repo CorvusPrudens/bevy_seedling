@@ -1,6 +1,6 @@
 //! Types that allow one set of params to track another.
 
-use bevy::{ecs::component::Mutable, prelude::*};
+use bevy_ecs::{component::Mutable, prelude::*};
 use firewheel::diff::{Diff, Patch, PathBuilder};
 use smallvec::SmallVec;
 

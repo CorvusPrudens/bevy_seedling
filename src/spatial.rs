@@ -31,7 +31,9 @@
 //! simply select the closest listener for distance
 //! calculations.
 
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_math::prelude::*;
+use bevy_transform::prelude::*;
 use firewheel::nodes::spatial_basic::SpatialBasicNode;
 
 use crate::{nodes::itd::ItdNode, pool::sample_effects::EffectOf};

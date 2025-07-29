@@ -1,6 +1,6 @@
 //! `bevy_seedling`'s error types.
 
-use bevy::prelude::Entity;
+use bevy_ecs::entity::Entity;
 use firewheel::diff::PatchError;
 
 // TODO: add location tracking where relevant

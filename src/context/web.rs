@@ -17,7 +17,7 @@ impl InnerContext {
     pub fn new<B>(
         settings: FirewheelConfig,
         stream_settings: B::Config,
-    ) -> bevy::prelude::Result<Self>
+    ) -> bevy_ecs::prelude::Result<Self>
     where
         B: AudioBackend + 'static,
         B::Config: Send + 'static,

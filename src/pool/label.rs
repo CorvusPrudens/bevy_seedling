@@ -4,16 +4,12 @@
 //! Any node that doesn't provide an explicit pool when spawned
 //! and has no effects will be automatically played in the [`DefaultPool`].
 
-use bevy::{
-    ecs::{component::ComponentId, intern::Interned},
-    prelude::*,
-};
-// use bevy_ecs::{component::ComponentId, intern::Interned, prelude::*, world::DeferredWorld};
+use bevy_ecs::{component::ComponentId, intern::Interned, prelude::*};
 
 pub use bevy_seedling_macros::PoolLabel;
 use firewheel::nodes::sampler::SamplerConfig;
 
-bevy::ecs::define_label!(
+bevy_ecs::define_label!(
     /// A label for differentiating sample pools.
     ///
     /// When deriving [`PoolLabel`], you'll need to make sure your type implements

@@ -21,7 +21,8 @@ fn startup(server: Res<AssetServer>, mut commands: Commands) {
     // Here we spawn a sample player with a spatial effect,
     // making sure our sample player entity has a transform.
     commands.spawn((
-        SamplePlayer::new(server.load("caw.ogg")).looping(),
+        // SamplePlayer::new(server.load("caw.ogg")).looping(),
+        SamplePlayer::new(server.load("selfless_courage.ogg")).looping(),
         Transform::default(),
         sample_effects![
             ItdNode {

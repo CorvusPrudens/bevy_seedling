@@ -9,12 +9,11 @@ use crate::{
     prelude::DefaultPool,
     sample::{QueuedSample, Sample, SamplePlayer, SamplePriority, SampleQueueLifetime},
 };
-use bevy::{
-    ecs::{entity::EntityCloner, relationship::Relationship},
-    platform::collections::HashMap,
-    prelude::*,
-    time::Stopwatch,
-};
+use bevy_asset::prelude::*;
+use bevy_ecs::{entity::EntityCloner, prelude::*, relationship::Relationship};
+use bevy_log::prelude::*;
+use bevy_platform::collections::HashMap;
+use bevy_time::{Stopwatch, Time};
 use firewheel::nodes::sampler::{RepeatMode, SamplerConfig, SamplerNode};
 use std::ops::Deref;
 
@@ -215,7 +214,11 @@ pub(super) fn assign_work(
                 let (sampler_entity, mut params, state, _) =
                     nodes.get_mut(*inactive.next().unwrap())?;
 
-                params.set_sample(asset.get(), player.volume, player.repeat_mode);
+                params.sample = Some(asset.get());
+                params.volume = player.volume;
+                params.repeat_mode = player.repeat_mode;
+                // params.playback = sett
+
                 // commands
                 //     .entity(sample_entity)
                 //     .insert(crate::prelude::SampleState(state.0.clone()));
@@ -384,7 +387,9 @@ pub(super) fn assign_work(
 
             let (sampler_entity, mut params, state, _) = nodes.get_mut(sampler_entity)?;
 
-            params.set_sample(asset.get(), player.volume, player.repeat_mode);
+            params.sample = Some(asset.get());
+            params.volume = player.volume;
+            params.repeat_mode = player.repeat_mode;
             // commands
             //     .entity(sample_entity)
             //     .insert(crate::prelude::SampleState(state.0.clone()));

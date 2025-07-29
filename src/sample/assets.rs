@@ -1,4 +1,5 @@
-use bevy::{asset::AssetLoader, prelude::*};
+use bevy_asset::{Asset, AssetLoader};
+use bevy_reflect::TypePath;
 use firewheel::{collector::ArcGc, sample_resource::SampleResource};
 use std::sync::Arc;
 
@@ -94,9 +95,9 @@ impl AssetLoader for SampleLoader {
 
     async fn load(
         &self,
-        reader: &mut dyn bevy::asset::io::Reader,
+        reader: &mut dyn bevy_asset::io::Reader,
         _settings: &Self::Settings,
-        load_context: &mut bevy::asset::LoadContext<'_>,
+        load_context: &mut bevy_asset::LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;

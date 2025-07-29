@@ -1,9 +1,10 @@
 //! Glue code for interfacing with the underlying audio context.
 
-use std::num::NonZeroU32;
-
-use bevy::prelude::*;
+use bevy_asset::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_platform::sync;
 use firewheel::{FirewheelConfig, FirewheelCtx, backend::AudioBackend, clock::AudioClock};
+use std::num::NonZeroU32;
 
 #[cfg(target_arch = "wasm32")]
 mod web;
@@ -98,8 +99,6 @@ impl AudioContext {
         self.0.with(f)
     }
 }
-
-use bevy::platform::sync;
 
 /// Provides the current audio sample rate.
 ///

@@ -1,6 +1,7 @@
 use super::{DEFAULT_CONNECTION, EdgeTarget, NodeMap, PendingEdge};
 use crate::{context::AudioContext, node::FirewheelNode};
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_log::prelude::*;
 
 #[cfg(debug_assertions)]
 use core::panic::Location;

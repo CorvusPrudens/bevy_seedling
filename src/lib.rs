@@ -8,7 +8,7 @@
 //! You can [play sounds](prelude::SamplePlayer), [apply effects](prelude::SampleEffects),
 //! and [route audio anywhere](crate::edge::Connect). Creating
 //! and integrating [custom audio processors](prelude::RegisterNode#creating-and-registering-nodes)
-//! is a breeze.
+//! is simple.
 //! To top it all off, `bevy_seedling` is _fast_,
 //! [beating other crates](https://github.com/CorvusPrudens/rust-audio-demo?tab=readme-ov-file#performance)
 //! by a factor of 2.5-3 on realistic workloads.
@@ -60,7 +60,7 @@
 //! Then, you'll need to add the [`SeedlingPlugin`] to your app.
 //!
 //! ```no_run
-//! use bevy::prelude::*;
+//! use bevy_ecs::prelude::*;
 //! use bevy_seedling::prelude::*;
 //!
 //! fn main() {
@@ -73,7 +73,7 @@
 //! Once you've set it all up, playing sounds is easy!
 //!
 //! ```
-//! # use bevy::prelude::*;
+//! # use bevy_ecs::prelude::*;
 //! # use bevy_seedling::prelude::*;
 //! fn play_sound(mut commands: Commands, server: Res<AssetServer>) {
 //!     // Play a sound!
@@ -144,7 +144,7 @@
 //! [`VolumeNode`][prelude::VolumeNode] as an effect.
 //!
 //! ```
-//! # use bevy::prelude::*;
+//! # use bevy_ecs::prelude::*;
 //! # use bevy_seedling::prelude::*;
 //! # fn dynamic(mut commands: Commands, server: Res<AssetServer>) {
 //! commands.spawn((
@@ -165,7 +165,7 @@
 //! a node for each sample.
 //!
 //! ```
-//! # use bevy::prelude::*;
+//! # use bevy_ecs::prelude::*;
 //! # use bevy_seedling::prelude::*;
 //! # fn dynamic(mut commands: Commands, server: Res<AssetServer>) {
 //! #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
@@ -201,7 +201,7 @@
 //! [register your audio node][prelude::RegisterNode#creating-and-registering-nodes].
 //!
 //! ```ignore
-//! use bevy::prelude::*;
+//! use bevy_ecs::prelude::*;
 //! use bevy_seedling::prelude::*;
 //!
 //! // Let's assume the relevant traits are implemented.
@@ -272,13 +272,16 @@
 // Naming trick to facilitate straightforward internal macro usage.
 extern crate self as bevy_seedling;
 
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_app::prelude::*;
+use bevy_asset::prelude::AssetApp;
 use context::AudioStreamConfig;
 use core::ops::RangeInclusive;
 use firewheel::{CpalBackend, backend::AudioBackend};
 
 pub mod context;
 pub mod edge;
+mod entity_set;
 pub mod error;
 pub mod fixed_vec;
 pub mod node;

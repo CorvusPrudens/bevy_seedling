@@ -3,7 +3,7 @@
 use core::f32;
 use std::num::NonZeroU32;
 
-use bevy::ecs::component::Component;
+use bevy_ecs::component::Component;
 use firewheel::{
     Volume,
     channel_config::{ChannelConfig, NonZeroChannelCount},
@@ -247,7 +247,6 @@ impl AudioNode for LimiterNode {
                 num_inputs: config.channels.get(),
                 num_outputs: config.channels.get(),
             })
-            .uses_events(true)
     }
 
     fn construct_processor(
@@ -318,16 +317,18 @@ impl AudioNodeProcessor for Limiter {
         &mut self,
         buffers: ProcBuffers,
         proc_info: &ProcInfo,
-        mut events: NodeEventList,
+        events: &mut NodeEventList,
     ) -> ProcessStatus {
-        events.for_each_patch::<LimiterNode>(|patch| match patch {
-            LimiterNodePatch::Attack(atk) => {
-                self.follower.set_smooth_secs_up(self.sample_rate, atk);
+        for patch in events.drain_patches::<LimiterNode>() {
+            match patch {
+                LimiterNodePatch::Attack(atk) => {
+                    self.follower.set_smooth_secs_up(self.sample_rate, atk);
+                }
+                LimiterNodePatch::Release(rel) => {
+                    self.follower.set_smooth_secs_down(self.sample_rate, rel);
+                }
             }
-            LimiterNodePatch::Release(rel) => {
-                self.follower.set_smooth_secs_down(self.sample_rate, rel);
-            }
-        });
+        }
 
         if proc_info
             .in_silence_mask

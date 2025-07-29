@@ -1,7 +1,8 @@
 //! All of `bevy_seedling`'s audio nodes.
 
 use crate::{SeedlingSystems, prelude::RegisterNode};
-use bevy::prelude::*;
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
 
 pub mod bpf;
 pub mod freeverb;

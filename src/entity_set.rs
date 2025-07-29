@@ -1,20 +1,17 @@
 use std::iter::Copied;
 
-use bevy::{
-    ecs::{
-        entity::{EntitySetIterator, MapEntities},
-        relationship::RelationshipSourceCollection,
-    },
-    prelude::*,
+use bevy_ecs::{
+    entity::{Entity, EntityMapper, EntitySetIterator, MapEntities},
+    relationship::RelationshipSourceCollection,
 };
 
 /// A thin wrapper around `std::vec::Vec<Entity>`.
 ///
 /// This type guarantees that all elements are unique.
 #[derive(Debug)]
-pub struct EffectsSet(Vec<Entity>);
+pub struct EntitySet(Vec<Entity>);
 
-impl EffectsSet {
+impl EntitySet {
     fn has_duplicates(&self) -> bool {
         for i in 1..self.len() {
             if self[i..].contains(&self[i - 1]) {
@@ -25,7 +22,7 @@ impl EffectsSet {
     }
 }
 
-impl MapEntities for EffectsSet {
+impl MapEntities for EntitySet {
     fn map_entities<E: EntityMapper>(&mut self, entity_mapper: &mut E) {
         for entity in self.0.iter_mut() {
             *entity = entity_mapper.get_mapped(*entity);
@@ -38,7 +35,7 @@ impl MapEntities for EffectsSet {
     }
 }
 
-impl core::ops::Deref for EffectsSet {
+impl core::ops::Deref for EntitySet {
     type Target = [Entity];
 
     fn deref(&self) -> &Self::Target {
@@ -46,15 +43,15 @@ impl core::ops::Deref for EffectsSet {
     }
 }
 
-impl RelationshipSourceCollection for EffectsSet {
-    type SourceIter<'a> = EffectsSetIter<'a>;
+impl RelationshipSourceCollection for EntitySet {
+    type SourceIter<'a> = EntitySetIter<'a>;
 
     fn new() -> Self {
-        EffectsSet(Vec::new())
+        EntitySet(Vec::new())
     }
 
     fn with_capacity(capacity: usize) -> Self {
-        EffectsSet(Vec::with_capacity(capacity))
+        EntitySet(Vec::with_capacity(capacity))
     }
 
     fn reserve(&mut self, additional: usize) {
@@ -80,7 +77,7 @@ impl RelationshipSourceCollection for EffectsSet {
     }
 
     fn iter(&self) -> Self::SourceIter<'_> {
-        EffectsSetIter {
+        EntitySetIter {
             iter: Vec::iter(&self.0),
         }
     }
@@ -99,11 +96,11 @@ impl RelationshipSourceCollection for EffectsSet {
 }
 
 #[derive(Debug)]
-pub struct EffectsSetIter<'a> {
+pub struct EntitySetIter<'a> {
     iter: Copied<core::slice::Iter<'a, Entity>>,
 }
 
-impl Iterator for EffectsSetIter<'_> {
+impl Iterator for EntitySetIter<'_> {
     type Item = Entity;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -111,8 +108,14 @@ impl Iterator for EffectsSetIter<'_> {
     }
 }
 
+impl DoubleEndedIterator for EntitySetIter<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back()
+    }
+}
+
 /// # Safety
 ///
 /// Because [`EffectsSet`] cannot be mutated in any way
 /// that will introduce duplicate elements, this must be safe.
-unsafe impl EntitySetIterator for EffectsSetIter<'_> {}
+unsafe impl EntitySetIterator for EntitySetIter<'_> {}
