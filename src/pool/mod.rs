@@ -248,6 +248,7 @@ impl Plugin for SamplePoolPlugin {
 #[derive(Debug, Component)]
 #[component(immutable, on_insert = Self::on_insert_hook)]
 #[require(PoolMarker)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SamplerPool<T: PoolLabel + Component + Clone>(pub T);
 
 impl<T: PoolLabel + Component + Clone> SamplerPool<T> {
@@ -610,6 +611,7 @@ fn spawn_chain(
 /// Pools are grown quadratically, so the cost of queuing samples
 /// is roughly amortized constant.
 #[derive(Debug, Clone, Component)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct PoolSize(pub RangeInclusive<usize>);
 
 /// The default [`PoolSize`] applied to [`SamplerPool`]s.
@@ -617,6 +619,7 @@ pub struct PoolSize(pub RangeInclusive<usize>);
 /// The default is `4..=32`.
 /// When set to `0..=0`, dynamic pools are disabled.
 #[derive(Debug, Clone, Resource)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct DefaultPoolSize(pub RangeInclusive<usize>);
 
 impl Default for DefaultPoolSize {
@@ -685,6 +688,7 @@ fn populate_pool(
 /// [`PlaybackState::Stop`][crate::prelude::PlaybackState] or
 /// when it can't find space in a sampler pool.
 #[derive(Debug, Event)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct PlaybackCompletionEvent;
 
 /// Clean up sample resources according to their playback settings.

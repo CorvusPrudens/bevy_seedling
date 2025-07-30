@@ -272,12 +272,13 @@
 // Naming trick to facilitate straightforward internal macro usage.
 extern crate self as bevy_seedling;
 
-use bevy_ecs::prelude::*;
 use bevy_app::prelude::*;
 use bevy_asset::prelude::AssetApp;
+use bevy_ecs::prelude::*;
 use context::AudioStreamConfig;
 use core::ops::RangeInclusive;
-use firewheel::{CpalBackend, backend::AudioBackend};
+use firewheel::{CpalBackend, backend::AudioBackend, dsp::pan_law::PanLaw};
+use startup::{InputDeviceInfo, OutputDeviceInfo};
 
 pub mod context;
 pub mod edge;
@@ -305,14 +306,19 @@ pub mod prelude {
         FirewheelNode, RegisterNode,
         label::{MainBus, NodeLabel},
     };
+    #[cfg(feature = "loudness")]
+    pub use crate::nodes::loudness::{LoudnessConfig, LoudnessNode, LoudnessState};
     pub use crate::nodes::{
         bpf::{BandPassConfig, BandPassNode},
         freeverb::FreeverbNode,
+        itd::{ItdConfig, ItdNode},
+        limiter::{LimiterConfig, LimiterNode},
         lpf::{LowPassConfig, LowPassNode},
         send::{SendConfig, SendNode},
     };
     pub use crate::pool::{
         DefaultPoolSize, PlaybackCompletionEvent, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
+        dynamic::DynamicBus,
         label::{DefaultPool, PoolLabel},
         sample_effects::{EffectOf, EffectsQuery, SampleEffects},
     };
@@ -487,6 +493,59 @@ where
             #[cfg(feature = "rand")]
             sample::RandomPlugin,
         ));
+
+        #[cfg(all(feature = "reflect", feature = "loudness"))]
+        app.register_type::<LoudnessNode>();
+
+        #[cfg(all(feature = "reflect", feature = "rand"))]
+        app.register_type::<RandomPitch>();
+
+        #[cfg(feature = "reflect")]
+        app.register_type::<FirewheelNode>()
+            .register_type::<SamplePlayer>()
+            .register_type::<SamplePriority>()
+            .register_type::<sample::SampleQueueLifetime>()
+            .register_type::<OnComplete>()
+            .register_type::<SpatialScale>()
+            .register_type::<DefaultSpatialScale>()
+            .register_type::<SpatialListener2D>()
+            .register_type::<SpatialListener3D>()
+            .register_type::<InputDeviceInfo>()
+            .register_type::<OutputDeviceInfo>()
+            .register_type::<firewheel::node::NodeID>()
+            .register_type::<node::follower::FollowerOf>()
+            .register_type::<SendNode>()
+            .register_type::<LowPassNode>()
+            .register_type::<LowPassConfig>()
+            .register_type::<BandPassConfig>()
+            .register_type::<LimiterNode>()
+            .register_type::<LimiterConfig>()
+            .register_type::<ItdNode>()
+            .register_type::<ItdConfig>()
+            .register_type::<LimiterConfig>()
+            .register_type::<FreeverbNode>()
+            .register_type::<Volume>()
+            .register_type::<PanLaw>()
+            .register_type::<MainBus>()
+            .register_type::<PoolSize>()
+            .register_type::<DefaultPoolSize>()
+            .register_type::<PlaybackCompletionEvent>()
+            .register_type::<DefaultPool>()
+            .register_type::<SamplerPool<DefaultPool>>()
+            .register_type::<DynamicBus>()
+            .register_type::<startup::FetchAudioIoEvent>()
+            .register_type::<startup::RestartAudioEvent>()
+            .register_type::<startup::SfxBus>()
+            .register_type::<startup::GraphConfiguration>()
+            .register_type::<startup::MusicPool>()
+            .register_type::<SamplerPool<startup::MusicPool>>()
+            .register_type::<startup::SpatialPool>()
+            .register_type::<SamplerPool<startup::SpatialPool>>()
+            .register_type::<NonZeroChannelCount>()
+            .register_type::<VolumeNode>()
+            .register_type::<VolumeNodeConfig>()
+            .register_type::<VolumePanNode>()
+            .register_type::<VolumePanNodeConfig>();
     }
 }
 

@@ -71,6 +71,7 @@ impl Plugin for DynamicPlugin {
 
 /// The destination for all dynamic pools.
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct DynamicBus;
 
 /// A label reserved for dynamic pools.

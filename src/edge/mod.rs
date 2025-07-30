@@ -34,6 +34,7 @@ pub use disconnect::*;
 /// selected backend and [`FirewheelConfig`][firewheel::FirewheelConfig] are
 /// configured for input.
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct AudioGraphInput;
 
 /// A node label for Firewheel's audio graph output.
@@ -48,6 +49,7 @@ pub struct AudioGraphInput;
 /// }
 /// ```
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct AudioGraphOutput;
 
 /// A target for node connections.

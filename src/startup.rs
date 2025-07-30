@@ -4,7 +4,6 @@ use crate::{
     context::AudioStreamConfig,
     edge::{AudioGraphInput, AudioGraphOutput, PendingConnections},
     node::FirewheelNode,
-    nodes::limiter::LimiterNode,
 };
 use bevy_app::prelude::*;
 use bevy_asset::prelude::*;
@@ -90,6 +89,7 @@ pub enum SeedlingStartupSystems {
 /// Any devices that are no longer available
 /// are despawned.
 #[derive(Event, Debug)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct FetchAudioIoEvent;
 
 fn fetch_io<B: AudioBackend>(
@@ -98,63 +98,70 @@ fn fetch_io<B: AudioBackend>(
     existing_outputs: Query<(Entity, &OutputDeviceInfo)>,
     mut commands: Commands,
 ) {
-    let new_inputs = B::available_input_devices();
+    let new_inputs = B::available_input_devices()
+        .into_iter()
+        .map(|input| InputDeviceInfo {
+            name: input.name,
+            num_channels: input.num_channels,
+            is_default: input.is_default,
+        })
+        .collect::<Vec<_>>();
     let old_inputs: Vec<_> = existing_inputs.iter().collect();
 
     // check for new or chnaged inputs
     for new_input in &new_inputs {
-        let matching = old_inputs.iter().find(|e| e.1.name() == new_input.name);
+        let matching = old_inputs.iter().find(|e| e.1.name == new_input.name);
         match matching {
             Some((entity, old_value)) => {
-                if &old_value.0 != new_input {
-                    commands
-                        .entity(*entity)
-                        .insert(InputDeviceInfo(new_input.clone()));
+                if old_value != &new_input {
+                    commands.entity(*entity).insert(new_input.clone());
                 }
             }
             None => {
-                info!("Found audio input \"{}\"", new_input.name);
-                commands.spawn(InputDeviceInfo(new_input.clone()));
+                debug!("Found audio input \"{}\"", new_input.name);
+                commands.spawn((new_input.clone(), Name::new("Audio Input Device")));
             }
         }
     }
 
     // check for unavailable inputs
     for (entity, old_input) in old_inputs {
-        if !new_inputs.iter().any(|i| i.name == old_input.name()) {
-            info!("Audio input \"{}\" no longer available.", old_input.name());
+        if !new_inputs.iter().any(|i| i.name == old_input.name) {
+            debug!("Audio input \"{}\" no longer available.", old_input.name);
             commands.entity(entity).despawn();
         }
     }
 
-    let new_outputs = B::available_output_devices();
+    let new_outputs = B::available_output_devices()
+        .into_iter()
+        .map(|output| OutputDeviceInfo {
+            name: output.name,
+            num_channels: output.num_channels,
+            is_default: output.is_default,
+        })
+        .collect::<Vec<_>>();
     let old_outputs: Vec<_> = existing_outputs.iter().collect();
 
     // check for new or changed outputs
     for new_output in &new_outputs {
-        let matching = old_outputs.iter().find(|e| e.1.name() == new_output.name);
+        let matching = old_outputs.iter().find(|e| e.1.name == new_output.name);
         match matching {
             Some((entity, old_value)) => {
-                if &old_value.0 != new_output {
-                    commands
-                        .entity(*entity)
-                        .insert(OutputDeviceInfo(new_output.clone()));
+                if old_value != &new_output {
+                    commands.entity(*entity).insert(new_output.clone());
                 }
             }
             None => {
-                info!("Found audio output \"{}\"", new_output.name);
-                commands.spawn(OutputDeviceInfo(new_output.clone()));
+                debug!("Found audio output \"{}\"", new_output.name);
+                commands.spawn((new_output.clone(), Name::new("Audio Output Device")));
             }
         }
     }
 
     // check for unavailable ouputs
     for (entity, old_output) in old_outputs {
-        if !new_outputs.iter().any(|i| i.name == old_output.name()) {
-            info!(
-                "Audio output \"{}\" no longer available.",
-                old_output.name()
-            );
+        if !new_outputs.iter().any(|i| i.name == old_output.name) {
+            debug!("Audio output \"{}\" no longer available.", old_output.name);
             commands.entity(entity).despawn();
         }
     }
@@ -168,6 +175,7 @@ fn fetch_io<B: AudioBackend>(
 ///
 /// This only works with the default `cpal` backend.
 #[derive(Event, Debug)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct RestartAudioEvent;
 
 fn restart_audio(
@@ -184,12 +192,12 @@ fn restart_audio(
         // fetch the default input, otherwise leaving the choice up
         // to `cpal`.
         if let Some(input_name) = &input.device_name {
-            if !inputs.iter().any(|i| i.name() == input_name) {
+            if !inputs.iter().any(|i| &i.name == input_name) {
                 // try to find the default input, or just pass `None`
                 let new_input_name = inputs
                     .iter()
-                    .find(|i| i.is_default())
-                    .map(|input| input.name().into());
+                    .find(|i| i.is_default)
+                    .map(|input| input.name.clone());
                 input.device_name = new_input_name;
             }
         }
@@ -199,11 +207,11 @@ fn restart_audio(
         // If the current output device no longer exists, attempt to
         // fetch the default output, otherwise leaving the choice up
         // to `cpal`.
-        if !outputs.iter().any(|i| i.name() == output_name) {
+        if !outputs.iter().any(|i| &i.name == output_name) {
             let new_output_name = outputs
                 .iter()
-                .find(|o| o.is_default())
-                .map(|output| output.name().into());
+                .find(|o| o.is_default)
+                .map(|output| output.name.clone());
             config.0.output.device_name = new_output_name;
         }
     }
@@ -214,47 +222,29 @@ fn restart_audio(
 }
 
 /// Information about an audio input device.
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Clone)]
 #[component(immutable)]
-pub struct InputDeviceInfo(firewheel::backend::DeviceInfo);
-
-impl InputDeviceInfo {
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub struct InputDeviceInfo {
     /// The device's name.
-    pub fn name(&self) -> &str {
-        &self.0.name
-    }
-
+    pub name: String,
     /// The number of channels the device expects.
-    pub fn num_channels(&self) -> u16 {
-        self.0.num_channels
-    }
-
+    pub num_channels: u16,
     /// Whether this device is the default selection.
-    pub fn is_default(&self) -> bool {
-        self.0.is_default
-    }
+    pub is_default: bool,
 }
 
 /// Information about an audio input device.
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Clone)]
 #[component(immutable)]
-pub struct OutputDeviceInfo(firewheel::backend::DeviceInfo);
-
-impl OutputDeviceInfo {
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub struct OutputDeviceInfo {
     /// The device's name.
-    pub fn name(&self) -> &str {
-        &self.0.name
-    }
-
+    pub name: String,
     /// The number of channels the device expects.
-    pub fn num_channels(&self) -> u16 {
-        self.0.num_channels
-    }
-
+    pub num_channels: u16,
     /// Whether this device is the default selection.
-    pub fn is_default(&self) -> bool {
-        self.0.is_default
-    }
+    pub is_default: bool,
 }
 
 /// In [`GraphConfiguration::Game`], a sampler pool with spatial audio
@@ -263,6 +253,7 @@ impl OutputDeviceInfo {
 /// This pool is unused in all other configurations,
 /// so you can freely reuse it.
 #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SpatialPool;
 
 /// In [`GraphConfiguration::Game`], a sampler pool specifically
@@ -271,6 +262,7 @@ pub struct SpatialPool;
 /// This pool is unused in all other configurations,
 /// so you can freely reuse it.
 #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct MusicPool;
 
 /// In [`GraphConfiguration::Game`], all audio besides the [`MusicPool`] is
@@ -279,6 +271,7 @@ pub struct MusicPool;
 /// This label is unused in all other configurations,
 /// so you can freely reuse it.
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SfxBus;
 
 /// Describes the initial audio graph configuration.
@@ -292,6 +285,7 @@ pub struct SfxBus;
 /// [`Minimal`]: GraphConfiguration::Minimal
 /// [`Empty`]: GraphConfiguration::Empty
 #[derive(Debug, Default, Clone, Copy)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub enum GraphConfiguration {
     /// The default game template, suitable for smaller projects.
     ///
@@ -434,13 +428,15 @@ fn connect_io(
     mut context: ResMut<crate::prelude::AudioContext>,
 ) -> Result {
     context.with(|ctx| {
-        commands
-            .entity(input.single()?)
-            .insert(FirewheelNode(ctx.graph_in_node_id()));
+        commands.entity(input.single()?).insert((
+            FirewheelNode(ctx.graph_in_node_id()),
+            Name::new("Audio Input Node"),
+        ));
 
-        commands
-            .entity(output.single()?)
-            .insert(FirewheelNode(ctx.graph_out_node_id()));
+        commands.entity(output.single()?).insert((
+            FirewheelNode(ctx.graph_out_node_id()),
+            Name::new("Audio Output Node"),
+        ));
 
         Ok(())
     })
@@ -454,20 +450,25 @@ fn set_up_graph(mut commands: Commands, config: Res<ConfigResource>) {
         GraphConfiguration::Game => {
             // Buses
             commands
-                .spawn((MainBus, VolumeNode::default()))
+                .spawn((MainBus, VolumeNode::default(), Name::new("Main Bus")))
                 .chain_node(LimiterNode::new(0.003, 0.15))
                 .connect(AudioGraphOutput);
 
-            commands.spawn((SfxBus, VolumeNode::default()));
+            commands.spawn((SfxBus, VolumeNode::default(), Name::new("SFX Bus")));
 
             commands
-                .spawn((crate::pool::dynamic::DynamicBus, VolumeNode::default()))
+                .spawn((
+                    crate::pool::dynamic::DynamicBus,
+                    VolumeNode::default(),
+                    Name::new("Dynamic Bus"),
+                ))
                 .connect(SfxBus);
 
             // Pools
             commands
                 .spawn((
                     SamplerPool(DefaultPool),
+                    Name::new("Default Sampler Pool"),
                     sample_effects![VolumeNode::default()],
                 ))
                 .connect(SfxBus);
@@ -475,12 +476,14 @@ fn set_up_graph(mut commands: Commands, config: Res<ConfigResource>) {
             commands
                 .spawn((
                     SamplerPool(SpatialPool),
+                    Name::new("Spatial Sampler Pool"),
                     sample_effects![VolumeNode::default(), SpatialBasicNode::default()],
                 ))
                 .connect(SfxBus);
 
             commands.spawn((
                 SamplerPool(MusicPool),
+                Name::new("Music Sampler Pool"),
                 sample_effects![VolumeNode::default()],
             ));
         }

@@ -111,6 +111,7 @@ bevy_ecs::define_label!(
 /// }
 /// ```
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct MainBus;
 
 /// A type-erased node label.

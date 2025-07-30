@@ -73,6 +73,7 @@ use crate::{nodes::itd::ItdNode, pool::sample_effects::EffectOf};
 /// factor, so if a meter in your game corresponds to more than one unit, you
 /// should provide a spatial scale of less than one to compensate.
 #[derive(Component, Debug, Clone, Copy)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SpatialScale(pub Vec3);
 
 impl Default for SpatialScale {
@@ -86,20 +87,13 @@ impl Default for SpatialScale {
 /// For more details on spatial scaling, see [`SpatialScale`].
 ///
 /// The default scaling is 1 in every direction, [`Vec3::ONE`].
-#[derive(Resource, Debug, Default, Clone)]
-pub struct DefaultSpatialScale(SpatialScale);
+#[derive(Resource, Debug, Clone, Copy)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub struct DefaultSpatialScale(pub Vec3);
 
-impl core::ops::Deref for DefaultSpatialScale {
-    type Target = SpatialScale;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl core::ops::DerefMut for DefaultSpatialScale {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+impl Default for DefaultSpatialScale {
+    fn default() -> Self {
+        Self(Vec3::ONE)
     }
 }
 
@@ -115,6 +109,7 @@ impl core::ops::DerefMut for DefaultSpatialScale {
 /// calculations.
 #[derive(Debug, Default, Component)]
 #[require(Transform)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SpatialListener2D;
 
 /// A 3D spatial listener.
@@ -129,6 +124,7 @@ pub struct SpatialListener2D;
 /// calculations.
 #[derive(Debug, Default, Component)]
 #[require(Transform)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SpatialListener3D;
 
 pub(crate) fn update_2d_emitters(
@@ -151,7 +147,7 @@ pub(crate) fn update_2d_emitters(
             continue;
         };
 
-        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0.0);
+        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
 
         let x_diff = (emitter_pos.x - listener_pos.x) * scale.x;
         let y_diff = (emitter_pos.y - listener_pos.y) * scale.y;
@@ -184,7 +180,7 @@ pub(crate) fn update_2d_emitters_effects(
             continue;
         };
 
-        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0.0);
+        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
 
         let x_diff = (emitter_pos.x - listener_pos.x) * scale.x;
         let y_diff = (emitter_pos.y - listener_pos.y) * scale.y;
@@ -239,7 +235,7 @@ pub(crate) fn update_3d_emitters(
             continue;
         };
 
-        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0.0);
+        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
 
         spatial.offset = (emitter_pos - listener_pos) * scale;
     }
@@ -266,7 +262,7 @@ pub(crate) fn update_3d_emitters_effects(
             continue;
         };
 
-        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0.0);
+        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
 
         spatial.offset = (emitter_pos - listener_pos) * scale;
     }

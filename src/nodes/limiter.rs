@@ -165,6 +165,7 @@ impl IncrementalMax {
 
 /// Configuration for a [`LimiterNode`].
 #[derive(Debug, Clone, Component)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct LimiterConfig {
     /// The limiter lookahead.
     ///
@@ -200,6 +201,7 @@ impl Default for LimiterConfig {
 /// By default the lookahead will be set to `attack`, see [`LimiterConfig`] to see how to
 /// set lookahead to something else.
 #[derive(Diff, Patch, Debug, Clone, Component)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct LimiterNode {
     /// How long it takes to react to increases in volume, in seconds.
     ///

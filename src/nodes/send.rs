@@ -44,6 +44,8 @@ use firewheel::{
 /// The signal simply passing through [`SendNode`] is untouched, while the
 /// send output has [`SendNode::send_volume`] applied.
 #[derive(Diff, Patch, Debug, Clone, Component)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature = "reflect", reflect(from_reflect = false))]
 pub struct SendNode {
     /// The send volume.
     ///
@@ -51,6 +53,7 @@ pub struct SendNode {
     pub send_volume: Volume,
 
     #[diff(skip)]
+    #[reflect(ignore)]
     pub(crate) target: EdgeTarget,
 }
 

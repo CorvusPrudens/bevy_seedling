@@ -26,6 +26,7 @@ const SPEED_OF_SOUND: f32 = 343.0;
 /// the spatialization, so some sounds may appear to be "compacted"
 /// by the transformation.
 #[derive(Debug, Default, Clone, Component, Diff, Patch)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct ItdNode {
     /// The direction vector pointing from the listener to the
     /// emitter.
@@ -34,6 +35,7 @@ pub struct ItdNode {
 
 /// Configuration for [`ItdNode`].
 #[derive(Debug, Clone, Component)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct ItdConfig {
     /// The inter-ear distance in meters.
     ///

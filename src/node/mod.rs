@@ -274,6 +274,7 @@ impl RegisterNode for App {
 /// audio node is removed from the graph.
 #[derive(Debug, Clone, Copy, Component)]
 #[component(on_remove = Self::on_remove_hook, immutable)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct FirewheelNode(pub NodeID);
 
 impl FirewheelNode {

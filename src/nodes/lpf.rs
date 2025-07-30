@@ -14,6 +14,7 @@ use firewheel::{
 
 /// A one-pole, low-pass filter.
 #[derive(Diff, Patch, Debug, Clone, Component)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct LowPassNode {
     /// The cutoff frequency in hertz.
     pub frequency: f32,
@@ -27,6 +28,7 @@ impl Default for LowPassNode {
 
 /// [`LowPassNode`]'s configuration.
 #[derive(Debug, Component, Clone)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct LowPassConfig {
     /// The parameter smoothing config used for frequency.
     pub smoother_config: SmootherConfig,

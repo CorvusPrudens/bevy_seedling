@@ -38,6 +38,7 @@ use smallvec::SmallVec;
 /// ```
 #[derive(Debug, Component)]
 #[relationship(relationship_target = Followers)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct FollowerOf(pub Entity);
 
 /// The relationship target for [`FollowerOf`].

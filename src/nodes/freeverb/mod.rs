@@ -23,6 +23,7 @@ mod freeverb;
 
 /// A simple, relatively cheap stereo reverb.
 #[derive(Diff, Patch, Clone, Debug, Component)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct FreeverbNode {
     /// Set the size of the emulated room, expressed from 0 to 1.
     pub room_size: f32,

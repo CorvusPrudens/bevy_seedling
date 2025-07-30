@@ -12,6 +12,7 @@ use portable_atomic::AtomicF64;
 
 /// A node that analyzes the loudness of an incoming signal.
 #[derive(Debug, Default, Clone, Component)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct LoudnessNode;
 
 /// Configuration for [`LoudnessNode`].

@@ -79,6 +79,7 @@ bevy_ecs::define_label!(
 /// }
 /// ```
 #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct DefaultPool;
 
 /// A type-erased node label.
