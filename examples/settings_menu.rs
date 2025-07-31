@@ -19,8 +19,8 @@ use bevy::{
     prelude::*,
 };
 use bevy_seedling::{
+    configuration::{MusicPool, SfxBus},
     prelude::*,
-    startup::{MusicPool, SfxBus},
 };
 
 fn main() {

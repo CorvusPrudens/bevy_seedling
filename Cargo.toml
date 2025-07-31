@@ -14,10 +14,11 @@ categories = ["game-development", "multimedia::audio"]
 exclude = ["/assets"]
 
 [features]
-default = ["stream", "wav", "ogg", "rand", "loudness"]
+default = ["stream", "wav", "ogg", "rand", "loudness", "reflect"]
 stream = ["firewheel/stream_nodes"]
 rand = ["dep:rand"]
 loudness = ["dep:ebur128", "dep:portable-atomic"]
+reflect = ["firewheel/bevy_reflect"]
 
 # formats
 wav = ["symphonium/wav", "symphonium/pcm"]
@@ -34,14 +35,24 @@ adpcm = ["symphonium/adpcm"]
 profiling = []
 
 [dependencies]
-bevy = { version = "0.16", default-features = false, features = [
-  "bevy_asset",
-  "bevy_log",
-  "std",
-] }
+bevy_ecs = "0.16"
+bevy_app = "0.16"
 bevy_math = { version = "0.16", default-features = false, features = ["curve"] }
-firewheel = { version = "0.4.0", features = ["bevy", "spatial_basic_node"] }
-symphonium = { version = "0.5", default-features = false, features = [
+bevy_asset = "0.16"
+bevy_transform = "0.16"
+bevy_log = "0.16"
+bevy_platform = "0.16"
+bevy_time = "0.16"
+bevy_reflect = { version = "0.16", default-features = false, features = [
+  "glam",
+] }
+
+firewheel = { version = "0.6.1-beta", features = [
+  "bevy",
+  "spatial_basic_node",
+  "scheduled_events",
+  "musical_transport",
+] }
 symphonium = { version = "0.6", default-features = false, features = [
   "opt-simd",
   "fft-resampler",
@@ -56,9 +67,10 @@ rand = { version = "0.8", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
+bevy_keyframe = { path = "../bevy_keyframe/", features = ["firewheel"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { version = "0.4.0", features = ["wasm-bindgen"] }
+firewheel = { version = "0.6.1-beta", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
 bevy = { version = "0.16", default-features = false, features = [
@@ -68,6 +80,7 @@ bevy = { version = "0.16", default-features = false, features = [
   "multi_threaded",
   "sysinfo_plugin",
   "std",
+  "bevy_log",
   # for examples with ui
   "bevy_text",
   "default_font",

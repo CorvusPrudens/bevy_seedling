@@ -275,11 +275,12 @@ extern crate self as bevy_seedling;
 use bevy_app::prelude::*;
 use bevy_asset::prelude::AssetApp;
 use bevy_ecs::prelude::*;
+use configuration::{InputDeviceInfo, OutputDeviceInfo};
 use context::AudioStreamConfig;
 use core::ops::RangeInclusive;
 use firewheel::{CpalBackend, backend::AudioBackend, dsp::pan_law::PanLaw};
-use startup::{InputDeviceInfo, OutputDeviceInfo};
 
+pub mod configuration;
 pub mod context;
 pub mod edge;
 mod entity_set;
@@ -290,7 +291,6 @@ pub mod nodes;
 pub mod pool;
 pub mod sample;
 pub mod spatial;
-pub mod startup;
 pub mod timeline;
 
 #[cfg(any(feature = "profiling", test))]
@@ -300,6 +300,10 @@ pub mod prelude {
     //! All `bevy_seedlings`'s important types and traits.
 
     pub use crate::SeedlingPlugin;
+    pub use crate::configuration::{
+        GraphConfiguration, InputDeviceInfo, MusicPool, OutputDeviceInfo, SeedlingStartupSystems,
+        SfxBus, SpatialPool,
+    };
     pub use crate::context::AudioContext;
     pub use crate::edge::{AudioGraphInput, AudioGraphOutput, Connect, Disconnect, EdgeTarget};
     pub use crate::node::{
@@ -394,7 +398,7 @@ pub struct SeedlingPlugin<B: AudioBackend = CpalBackend> {
     pub stream_config: B::Config,
 
     /// The initial graph configuration.
-    pub graph_config: startup::GraphConfiguration,
+    pub graph_config: configuration::GraphConfiguration,
 
     /// Sets the default size range for sample pools.
     pub pool_size: RangeInclusive<usize>,
@@ -440,7 +444,7 @@ where
         use prelude::*;
 
         app.insert_resource(context::AudioStreamConfig::<B>(self.stream_config.clone()))
-            .insert_resource(startup::ConfigResource(self.graph_config))
+            .insert_resource(configuration::ConfigResource(self.graph_config))
             .init_resource::<edge::NodeMap>()
             .init_resource::<node::PendingRemovals>()
             .init_resource::<spatial::DefaultSpatialScale>()
@@ -494,7 +498,7 @@ where
         .add_observer(node::label::NodeLabels::on_replace_observer);
 
         app.add_plugins((
-            startup::SeedlingStartup::<B>::new(self.config),
+            configuration::SeedlingStartup::<B>::new(self.config),
             pool::SamplePoolPlugin,
             nodes::SeedlingNodesPlugin,
             #[cfg(feature = "rand")]
@@ -541,14 +545,14 @@ where
             .register_type::<DefaultPool>()
             .register_type::<SamplerPool<DefaultPool>>()
             .register_type::<DynamicBus>()
-            .register_type::<startup::FetchAudioIoEvent>()
-            .register_type::<startup::RestartAudioEvent>()
-            .register_type::<startup::SfxBus>()
-            .register_type::<startup::GraphConfiguration>()
-            .register_type::<startup::MusicPool>()
-            .register_type::<SamplerPool<startup::MusicPool>>()
-            .register_type::<startup::SpatialPool>()
-            .register_type::<SamplerPool<startup::SpatialPool>>()
+            .register_type::<configuration::FetchAudioIoEvent>()
+            .register_type::<configuration::RestartAudioEvent>()
+            .register_type::<configuration::SfxBus>()
+            .register_type::<configuration::GraphConfiguration>()
+            .register_type::<configuration::MusicPool>()
+            .register_type::<SamplerPool<configuration::MusicPool>>()
+            .register_type::<configuration::SpatialPool>()
+            .register_type::<SamplerPool<configuration::SpatialPool>>()
             .register_type::<NonZeroChannelCount>()
             .register_type::<SamplerConfig>()
             .register_type::<PlaybackState>()
@@ -582,7 +586,7 @@ mod test {
             MinimalPlugins,
             AssetPlugin::default(),
             SeedlingPlugin::<crate::profiling::ProfilingBackend> {
-                graph_config: crate::startup::GraphConfiguration::Empty,
+                graph_config: crate::configuration::GraphConfiguration::Empty,
                 ..SeedlingPlugin::<crate::profiling::ProfilingBackend>::new()
             },
         ))

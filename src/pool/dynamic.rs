@@ -50,6 +50,7 @@
 
 use super::{DefaultPoolSize, PoolSize, SamplerPool, sample_effects::EffectOf};
 use crate::{
+    edge::Connect,
     node::EffectId,
     pool::{label::PoolLabelContainer, sample_effects::SampleEffects},
     sample::{QueuedSample, SamplePlayer},
@@ -94,15 +95,13 @@ fn update_dynamic_pools(
             Without<PoolLabelContainer>,
         ),
     >,
+    // TODO: make sure to migrate this to `If<Single<_>>` for 0.17
+    dynamic_bus: Single<Entity, With<DynamicBus>>,
     mut effects: Query<&EffectId>,
     mut registries: ResMut<Registries>,
     mut commands: Commands,
     dynamic_range: Res<DefaultPoolSize>,
 ) -> Result {
-    if *dynamic_range.0.end() == 0 {
-        return Ok(());
-    }
-
     for (sample, sample_effects) in queued_samples.iter() {
         let component_ids =
             match super::fetch_effect_ids(sample_effects, &mut effects.as_query_lens()) {
@@ -123,7 +122,8 @@ fn update_dynamic_pools(
 
                 let bus = commands
                     .spawn((SamplerPool(label), PoolSize(dynamic_range.0.clone())))
-                    .id();
+                    .connect(*dynamic_bus)
+                    .head();
 
                 let effects: Vec<_> = sample_effects.iter().collect();
                 commands.queue(move |world: &mut World| {

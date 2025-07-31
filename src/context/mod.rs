@@ -141,16 +141,27 @@ where
     B::StreamError: Send + Sync + 'static,
 {
     let mut context = AudioContext::new::<B>(firewheel_config, stream_config.clone())?;
-    let sample_rate = context.with(|ctx| ctx.stream_info().unwrap().sample_rate);
+    let raw_sample_rate = context.with(|ctx| ctx.stream_info().unwrap().sample_rate);
     let sample_rate = SampleRate(sync::Arc::new(sync::atomic::AtomicU32::new(
-        sample_rate.get(),
+        raw_sample_rate.get(),
     )));
 
     commands.insert_resource(context);
     commands.insert_resource(sample_rate.clone());
     server.register_loader(crate::sample::SampleLoader { sample_rate });
 
+    commands.trigger(StreamStartEvent {
+        sample_rate: raw_sample_rate,
+    });
+
     Ok(())
+}
+
+/// An event triggered when the audio stream first initializes.
+#[derive(Event, Debug)]
+pub struct StreamStartEvent {
+    /// The sample rate of the initialized stream.
+    pub sample_rate: NonZeroU32,
 }
 
 /// An event triggered just before the audio stream restarts.

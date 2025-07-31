@@ -439,9 +439,9 @@ pub(crate) fn flush_events(
                 warn!("Audio stream stopped: {e:?}");
 
                 // First, we'll want to make sure the devices are up-to-date.
-                commands.trigger(crate::startup::FetchAudioIoEvent);
+                commands.trigger(crate::configuration::FetchAudioIoEvent);
                 // Then, we'll attempt a restart.
-                commands.trigger(crate::startup::RestartAudioEvent);
+                commands.trigger(crate::configuration::RestartAudioEvent);
             }
             Err(e) => {
                 error!("graph error: {e:?}");

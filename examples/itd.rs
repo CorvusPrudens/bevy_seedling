@@ -31,6 +31,7 @@ fn startup(server: Res<AssetServer>, mut commands: Commands) {
             SpatialBasicNode {
                 // This should make the panning obvious.
                 panning_threshold: 0.8,
+                downmix: false,
                 ..Default::default()
             }
         ],
