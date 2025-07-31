@@ -317,36 +317,36 @@ pub enum GraphConfiguration {
     /// # use bevy::prelude::*;
     /// # use bevy_seedling::prelude::*;
     /// fn game_setup(mut commands: Commands) {
-    ///    // Buses
-    ///    commands
-    ///        .spawn((MainBus, VolumeNode::default()))
-    ///        .chain_node(LimiterNode::new(0.003, 0.15))
-    ///        .connect(AudioGraphOutput);
+    ///     // Buses
+    ///     commands
+    ///         .spawn((MainBus, VolumeNode::default()))
+    ///         .chain_node(LimiterNode::new(0.003, 0.15))
+    ///         .connect(AudioGraphOutput);
     ///
-    ///    commands.spawn((SfxBus, VolumeNode::default()));
+    ///     commands.spawn((SfxBus, VolumeNode::default()));
     ///
-    ///    commands
-    ///        .spawn((crate::pool::dynamic::DynamicBus, VolumeNode::default()))
-    ///        .connect(SfxBus);
+    ///     commands
+    ///         .spawn((crate::pool::dynamic::DynamicBus, VolumeNode::default()))
+    ///         .connect(SfxBus);
     ///
-    ///    // Pools
-    ///    commands
-    ///        .spawn((
-    ///            SamplerPool(DefaultPool),
-    ///            sample_effects![VolumeNode::default()],
-    ///        ))
-    ///        .connect(SfxBus);
-    ///    commands
-    ///        .spawn((
-    ///            SamplerPool(SpatialPool),
-    ///            sample_effects![VolumeNode::default(), SpatialBasicNode::default()],
-    ///        ))
-    ///        .connect(SfxBus);
+    ///     // Pools
+    ///     commands
+    ///         .spawn((
+    ///             SamplerPool(DefaultPool),
+    ///             sample_effects![VolumeNode::default()],
+    ///         ))
+    ///         .connect(SfxBus);
+    ///     commands
+    ///         .spawn((
+    ///             SamplerPool(SpatialPool),
+    ///             sample_effects![VolumeNode::default(), SpatialBasicNode::default()],
+    ///         ))
+    ///         .connect(SfxBus);
     ///
-    ///    commands.spawn((
-    ///        SamplerPool(MusicPool),
-    ///        sample_effects![VolumeNode::default()],
-    ///    ));
+    ///     commands.spawn((
+    ///         SamplerPool(MusicPool),
+    ///         sample_effects![VolumeNode::default()],
+    ///     ));
     /// }
     /// ```
     ///
@@ -377,18 +377,18 @@ pub enum GraphConfiguration {
     /// # use bevy::prelude::*;
     /// # use bevy_seedling::prelude::*;
     /// fn minimal_setup(mut commands: Commands) {
-    ///    // Buses
-    ///    commands
-    ///        .spawn((MainBus, VolumeNode::default()))
-    ///        .connect(AudioGraphOutput);
+    ///     // Buses
+    ///     commands
+    ///         .spawn((MainBus, VolumeNode::default()))
+    ///         .connect(AudioGraphOutput);
     ///
-    ///    commands.spawn((crate::pool::dynamic::DynamicBus, VolumeNode::default()));
+    ///     commands.spawn((crate::pool::dynamic::DynamicBus, VolumeNode::default()));
     ///
-    ///    // Pools
-    ///    commands.spawn((
-    ///        SamplerPool(DefaultPool),
-    ///        sample_effects![VolumeNode::default()],
-    ///    ));
+    ///     // Pools
+    ///     commands.spawn((
+    ///         SamplerPool(DefaultPool),
+    ///         sample_effects![VolumeNode::default()],
+    ///     ));
     /// }
     /// ```
     ///

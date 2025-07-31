@@ -45,7 +45,9 @@ pub struct AudioGraphInput;
 /// # use bevy::prelude::*;
 /// # use bevy_seedling::{prelude::*, edge::AudioGraphOutput};
 /// fn route_output(mut commands: Commands) {
-///     commands.spawn(VolumeNode::default()).connect(AudioGraphOutput);
+///     commands
+///         .spawn(VolumeNode::default())
+///         .connect(AudioGraphOutput);
 /// }
 /// ```
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
