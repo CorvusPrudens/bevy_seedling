@@ -147,7 +147,7 @@ impl SendNode {
 }
 
 /// [`SendNode`]'s configuration.
-#[derive(Debug, Component, Clone)]
+#[derive(Debug, Component, Clone, PartialEq)]
 pub struct SendConfig {
     /// The number of channels in this node's direct output and send output.
     pub channels: NonZeroChannelCount,

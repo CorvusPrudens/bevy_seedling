@@ -27,7 +27,7 @@ impl Default for LowPassNode {
 }
 
 /// [`LowPassNode`]'s configuration.
-#[derive(Debug, Component, Clone)]
+#[derive(Debug, Component, Clone, PartialEq)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct LowPassConfig {
     /// The parameter smoothing config used for frequency.

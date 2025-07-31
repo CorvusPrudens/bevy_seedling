@@ -164,7 +164,7 @@ impl IncrementalMax {
 }
 
 /// Configuration for a [`LimiterNode`].
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, PartialEq)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct LimiterConfig {
     /// The limiter lookahead.

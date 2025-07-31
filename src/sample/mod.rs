@@ -349,6 +349,7 @@ pub enum OnComplete {
 /// }
 /// ```
 #[derive(Component, Debug)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct PlaybackSettings {
     /// Sets the playback state, allowing you to play, pause or stop samples.
     ///
@@ -357,24 +358,12 @@ pub struct PlaybackSettings {
     /// see [`Sampler::is_playing`][crate::pool::Sampler::is_playing].
     pub playback: Notify<PlaybackState>,
 
-    /// Sets the playhead.
-    ///
-    /// This field provides only one-way communication with the
-    /// audio processor. To get the current value of the playhead,
-    /// see [`Sampler::playhead_frames`][crate::pool::Sampler::playhead_frames].
-    pub playhead: Notify<Playhead>,
-
     /// Sets the playback speed.
     pub speed: f64,
 
     /// Determines this sample's behavior on playback completion.
     pub on_complete: OnComplete,
 }
-
-// pub struct Notify2<T> {
-//     value: T,
-//     counter: u64,
-// }
 
 // const _: () = {
 //     #[allow(unused_mut)]
@@ -798,7 +787,9 @@ impl PlaybackSettings {
     /// }
     /// ```
     pub fn play(&mut self) {
-        *self.playback = PlaybackState::Play { instant: None };
+        *self.playback = PlaybackState::Play {
+            playhead: Some(Playhead::Seconds(0.0)),
+        };
     }
 
     /// Pause playback.
@@ -829,15 +820,15 @@ impl PlaybackSettings {
     /// ```
     pub fn stop(&mut self) {
         *self.playback = PlaybackState::Stop;
-        *self.playhead = Playhead::default();
     }
 }
 
 impl Default for PlaybackSettings {
     fn default() -> Self {
         Self {
-            playback: Notify::new(PlaybackState::Play { instant: None }),
-            playhead: Notify::default(),
+            playback: Notify::new(PlaybackState::Play {
+                playhead: Some(Playhead::Seconds(0.0)),
+            }),
             speed: 1.0,
             on_complete: OnComplete::Despawn,
         }
@@ -851,7 +842,7 @@ impl Default for PlaybackSettings {
 pub struct QueuedSample;
 
 #[cfg(feature = "rand")]
-pub use random::RandomPitch;
+pub use random::{PitchRngSource, RandomPitch};
 
 #[cfg(feature = "rand")]
 pub(crate) use random::RandomPlugin;
@@ -863,19 +854,37 @@ mod random {
     use super::PlaybackSettings;
     use bevy_app::prelude::*;
     use bevy_ecs::prelude::*;
-    use rand::{Rng, SeedableRng, rngs::SmallRng};
+    use rand::{SeedableRng, rngs::SmallRng};
 
     pub struct RandomPlugin;
 
     impl Plugin for RandomPlugin {
         fn build(&self, app: &mut App) {
-            app.insert_resource(PitchRng(SmallRng::from_entropy()))
+            app.insert_resource(PitchRngSource::new(SmallRng::from_entropy()))
                 .add_systems(Last, RandomPitch::apply.before(SeedlingSystems::Acquire));
         }
     }
 
+    trait PitchRng {
+        fn gen_pitch(&mut self, range: std::ops::Range<f64>) -> f64;
+    }
+
+    struct RandRng<T>(T);
+
+    impl<T: rand::Rng> PitchRng for RandRng<T> {
+        fn gen_pitch(&mut self, range: std::ops::Range<f64>) -> f64 {
+            self.0.gen_range(range)
+        }
+    }
+
     #[derive(Resource)]
-    struct PitchRng(SmallRng);
+    pub struct PitchRngSource(Box<dyn PitchRng + Send + Sync>);
+
+    impl PitchRngSource {
+        pub fn new<T: rand::Rng + Send + Sync + 'static>(rng: T) -> Self {
+            Self(Box::new(RandRng(rng)))
+        }
+    }
 
     /// A component that applies a random pitch
     /// to a sample player when spawned.
@@ -908,10 +917,10 @@ mod random {
         fn apply(
             mut samples: Query<(Entity, &mut PlaybackSettings, &Self)>,
             mut commands: Commands,
-            mut rng: ResMut<PitchRng>,
+            mut rng: ResMut<PitchRngSource>,
         ) {
             for (entity, mut settings, range) in samples.iter_mut() {
-                settings.speed = rng.0.gen_range(range.0.clone());
+                settings.speed = rng.0.gen_pitch(range.0.clone());
                 commands.entity(entity).remove::<Self>();
             }
         }

@@ -21,13 +21,9 @@ fn startup(
     mut commands: Commands,
 ) {
     for (entity, device) in &outputs {
-        info!(
-            "device: {}, default: {}",
-            device.name(),
-            device.is_default()
-        );
+        info!("device: {}, default: {}", device.name, device.is_default);
 
-        if device.is_default() {
+        if device.is_default {
             commands.entity(entity).insert(SelectedOutput);
         }
     }
@@ -51,7 +47,7 @@ fn select_output(
     mut commands: Commands,
 ) {
     let mut devices = outputs.iter().collect::<Vec<_>>();
-    devices.sort_unstable_by_key(|(_, device, _)| device.name());
+    devices.sort_unstable_by_key(|(_, device, _)| &device.name);
 
     let Some(mut selected_index) = devices.iter().position(|(.., has_selected)| *has_selected)
     else {
@@ -88,7 +84,7 @@ fn observe_selection(
     mut rate_toggle: Local<bool>,
 ) -> Result {
     let output = outputs.get(trigger.target())?;
-    stream.0.output.device_name = Some(output.name().into());
+    stream.0.output.device_name = Some(output.name.clone());
 
     let rate = if *rate_toggle { 48000 } else { 44100 };
     *rate_toggle = !*rate_toggle;

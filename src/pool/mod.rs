@@ -21,7 +21,7 @@ use bevy_ecs::{
 };
 use core::ops::{Deref, RangeInclusive};
 use firewheel::nodes::{
-    sampler::{Playhead, SamplerConfig, SamplerNode, SamplerState},
+    sampler::{PlaybackState, Playhead, SamplerConfig, SamplerNode, SamplerState},
     volume::VolumeNode,
 };
 use queue::SkipTimer;
@@ -247,7 +247,7 @@ impl Plugin for SamplePoolPlugin {
 /// ```
 #[derive(Debug, Component)]
 #[component(immutable, on_insert = Self::on_insert_hook)]
-#[require(PoolMarker)]
+#[require(PoolMarker, SamplerConfig)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SamplerPool<T: PoolLabel + Component + Clone>(pub T);
 
@@ -452,7 +452,9 @@ fn apply_snapshots(
                 server.reload(sample);
             }
 
-            *settings.playhead = Playhead::Seconds(snapshot.playhead);
+            *settings.playback = PlaybackState::Play {
+                playhead: Some(Playhead::Seconds(snapshot.playhead)),
+            };
 
             commands.insert(new_player).remove::<Sampler>();
         }
@@ -531,8 +533,7 @@ fn watch_sample_players(
             continue;
         };
 
-        sampler_node.playhead = settings.playhead.clone();
-        sampler_node.playback = settings.playback.clone();
+        sampler_node.playback = settings.playback;
         sampler_node.speed = settings.speed;
     }
 }

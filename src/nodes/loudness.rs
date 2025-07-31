@@ -16,7 +16,7 @@ use portable_atomic::AtomicF64;
 pub struct LoudnessNode;
 
 /// Configuration for [`LoudnessNode`].
-#[derive(Debug, Default, Clone, Component)]
+#[derive(Debug, Default, Clone, Component, PartialEq)]
 pub struct LoudnessConfig {
     /// The EBU R128 channel map.
     ///

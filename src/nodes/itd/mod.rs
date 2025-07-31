@@ -34,7 +34,7 @@ pub struct ItdNode {
 }
 
 /// Configuration for [`ItdNode`].
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, PartialEq)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct ItdConfig {
     /// The inter-ear distance in meters.

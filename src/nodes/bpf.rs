@@ -51,7 +51,7 @@ impl BandPassNode {
 }
 
 /// [`BandPassNode`]'s configuration.
-#[derive(Debug, Component, Clone)]
+#[derive(Debug, Component, Clone, PartialEq)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct BandPassConfig {
     /// The number of channels to process.

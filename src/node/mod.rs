@@ -1,5 +1,7 @@
 //! Audio node registration and management.
 
+use std::any::TypeId;
+
 use crate::edge::NodeMap;
 use crate::error::SeedlingError;
 use crate::pool::sample_effects::EffectOf;
@@ -11,6 +13,7 @@ use bevy_ecs::{
     world::DeferredWorld,
 };
 use bevy_log::prelude::*;
+use bevy_platform::collections::HashSet;
 use firewheel::error::UpdateError;
 use firewheel::{
     diff::{Diff, Patch},
@@ -100,14 +103,78 @@ fn generate_param_events<T: Diff + Patch + Component + Clone>(
     Ok(())
 }
 
+fn handle_configuration_changes<
+    T: AudioNode<Configuration: Component + PartialEq + Clone> + Component + Clone,
+>(
+    mut configs: Query<
+        (
+            Entity,
+            &T,
+            &FirewheelNode,
+            &T::Configuration,
+            &mut Baseline<T::Configuration>,
+        ),
+        Changed<T::Configuration>,
+    >,
+    mut context: ResMut<AudioContext>,
+    mut commands: Commands,
+) -> Result {
+    let changes: Vec<_> = configs.iter_mut().filter(|(.., c, b)| *c != &b.0).collect();
+    if changes.is_empty() {
+        return Ok(());
+    }
+
+    context.with(|context| {
+        for (entity, node, node_id, config, mut baseline) in changes {
+            // we have to get them every time, which is kind of annoying
+            let edges = context.edges();
+            let existing_inputs = edges
+                .iter()
+                .filter(|e| e.dst_node == node_id.0)
+                .map(|e| firewheel::graph::Edge::clone(e))
+                .collect::<Vec<_>>();
+            let existing_outputs = edges
+                .iter()
+                .filter(|e| e.src_node == node_id.0)
+                .map(|e| firewheel::graph::Edge::clone(e))
+                .collect::<Vec<_>>();
+
+            let new_node = context.add_node(node.clone(), Some(config.clone()));
+            commands.entity(entity).insert(FirewheelNode(new_node));
+
+            for edge in existing_inputs {
+                context.connect(
+                    edge.src_node,
+                    new_node,
+                    &[(edge.src_port, edge.dst_port)],
+                    true,
+                )?;
+            }
+
+            for edge in existing_outputs {
+                context.connect(
+                    new_node,
+                    edge.dst_node,
+                    &[(edge.src_port, edge.dst_port)],
+                    true,
+                )?;
+            }
+
+            baseline.0 = config.clone();
+        }
+
+        Ok(())
+    })
+}
+
 fn acquire_id<T>(
     q: Query<
         (Entity, &T, Option<&T::Configuration>, Option<&NodeLabels>),
         (Without<FirewheelNode>, Without<EffectOf>),
     >,
     mut context: ResMut<AudioContext>,
-    mut commands: Commands,
     mut node_map: ResMut<NodeMap>,
+    mut commands: Commands,
 ) where
     T: AudioNode<Configuration: Component + Clone> + Component + Clone,
 {
@@ -127,6 +194,22 @@ fn acquire_id<T>(
         }
     });
 }
+
+fn insert_baseline<T: Component + Clone>(
+    trigger: Trigger<OnInsert, T>,
+    q: Query<&T>,
+    mut commands: Commands,
+) -> Result {
+    let value = q.get(trigger.target())?;
+    commands
+        .entity(trigger.target())
+        .insert(Baseline(value.clone()));
+
+    Ok(())
+}
+
+#[derive(Resource, Default)]
+struct RegisteredConfigs(HashSet<TypeId>);
 
 /// Register audio nodes in the ECS.
 ///
@@ -202,7 +285,7 @@ pub trait RegisterNode {
     /// parameter diffing.
     fn register_node<T>(&mut self) -> &mut Self
     where
-        T: AudioNode<Configuration: Component + Clone>
+        T: AudioNode<Configuration: Component + Clone + PartialEq>
             + Diff
             + Patch
             + Component<Mutability = Mutable>
@@ -215,13 +298,13 @@ pub trait RegisterNode {
     /// parameter diffing.
     fn register_simple_node<T>(&mut self) -> &mut Self
     where
-        T: AudioNode<Configuration: Component + Clone> + Component + Clone;
+        T: AudioNode<Configuration: Component + Clone + PartialEq> + Component + Clone;
 }
 
 impl RegisterNode for App {
     fn register_node<T>(&mut self) -> &mut Self
     where
-        T: AudioNode<Configuration: Component + Clone>
+        T: AudioNode<Configuration: Component + Clone + PartialEq>
             + Diff
             + Patch
             + Component<Mutability = Mutable>
@@ -241,10 +324,19 @@ impl RegisterNode for App {
         world.register_required_components::<T, Events>();
         world.register_required_components::<T, T::Configuration>();
 
+        // Different nodes may share configuration structs, so we need
+        // to make sure this isn't registered more than once.
+        let mut configs = world.get_resource_or_init::<RegisteredConfigs>();
+        if configs.0.insert(TypeId::of::<T::Configuration>()) {
+            world.add_observer(insert_baseline::<T::Configuration>);
+        }
+
         self.add_systems(
             Last,
             (
-                acquire_id::<T>.in_set(SeedlingSystems::Acquire),
+                (acquire_id::<T>, handle_configuration_changes::<T>)
+                    .chain()
+                    .in_set(SeedlingSystems::Acquire),
                 (follower::param_follower::<T>, generate_param_events::<T>)
                     .chain()
                     .in_set(SeedlingSystems::Queue),
@@ -254,13 +346,25 @@ impl RegisterNode for App {
 
     fn register_simple_node<T>(&mut self) -> &mut Self
     where
-        T: AudioNode<Configuration: Component + Clone> + Component + Clone,
+        T: AudioNode<Configuration: Component + Clone + PartialEq> + Component + Clone,
     {
         let world = self.world_mut();
         world.register_required_components::<T, Events>();
         world.register_required_components::<T, T::Configuration>();
 
-        self.add_systems(Last, acquire_id::<T>.in_set(SeedlingSystems::Acquire))
+        // Different nodes may share configuration structs, so we need
+        // to make sure this isn't registered more than once.
+        let mut configs = world.get_resource_or_init::<RegisteredConfigs>();
+        if configs.0.insert(TypeId::of::<T::Configuration>()) {
+            world.add_observer(insert_baseline::<T::Configuration>);
+        }
+
+        self.add_systems(
+            Last,
+            (acquire_id::<T>, handle_configuration_changes::<T>)
+                .chain()
+                .in_set(SeedlingSystems::Acquire),
+        )
     }
 }
 
@@ -273,12 +377,12 @@ impl RegisterNode for App {
 /// When this component is removed, the underlying
 /// audio node is removed from the graph.
 #[derive(Debug, Clone, Copy, Component)]
-#[component(on_remove = Self::on_remove_hook, immutable)]
+#[component(on_replace = Self::on_replace_hook, immutable)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct FirewheelNode(pub NodeID);
 
 impl FirewheelNode {
-    fn on_remove_hook(mut world: DeferredWorld, context: HookContext) {
+    fn on_replace_hook(mut world: DeferredWorld, context: HookContext) {
         let Some(node) = world.get::<FirewheelNode>(context.entity).copied() else {
             return;
         };
@@ -345,4 +449,88 @@ pub(crate) fn flush_events(
             _ => {}
         }
     });
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{
+        prelude::*,
+        test::{prepare_app, run},
+    };
+
+    #[derive(Component)]
+    struct TestMarker;
+
+    #[test]
+    fn test_config_reinsertion() {
+        let mut app = prepare_app(|mut commands: Commands| {
+            commands
+                .spawn(VolumeNode::default())
+                .chain_node((VolumeNode::default(), TestMarker))
+                .chain_node(VolumeNode::default());
+        });
+
+        let initial_id = run(
+            &mut app,
+            |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioContext>| {
+                let node = q.single().unwrap().0;
+
+                let total_nodes = context.with(|context| {
+                    let edges = context.edges();
+
+                    let inputs = edges.iter().filter(|e| e.src_node == node).count();
+                    let outputs = edges.iter().filter(|e| e.dst_node == node).count();
+
+                    assert_eq!(inputs, 2);
+                    assert_eq!(outputs, 2);
+                    context.nodes().len()
+                });
+
+                // 3 + input and output
+                assert_eq!(total_nodes, 5);
+
+                node
+            },
+        );
+
+        // now, we modify the configuration
+        run(
+            &mut app,
+            |mut q: Query<&mut VolumeNodeConfig, With<TestMarker>>| {
+                let mut config = q.single_mut().unwrap();
+                config.smooth_secs = 0.05;
+            },
+        );
+
+        app.update();
+
+        // finally, if the ID is different but still has the appropriate connections, our
+        // splicing has succeeded
+        run(
+            &mut app,
+            move |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioContext>| {
+                let node = q.single().unwrap().0;
+
+                assert_ne!(initial_id, node);
+
+                let total_nodes = context.with(|context| {
+                    let edges = context.edges();
+
+                    let inputs = edges.iter().filter(|e| e.src_node == node).count();
+                    let outputs = edges.iter().filter(|e| e.dst_node == node).count();
+
+                    assert_eq!(inputs, 2);
+                    assert_eq!(outputs, 2);
+
+                    context.nodes().len()
+                });
+
+                // 3 + input and output
+                assert_eq!(total_nodes, 5);
+
+                node.0
+            },
+        );
+    }
 }

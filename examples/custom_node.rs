@@ -48,7 +48,7 @@ pub struct CustomVolumeNode {
 // Most nodes with have a configuration struct,
 // which allows users to define additional parameters
 // that are only required once during construction.
-#[derive(Debug, Component, Clone)]
+#[derive(Debug, Component, Clone, PartialEq)]
 pub struct VolumeConfig {
     pub channels: NonZeroChannelCount,
 }

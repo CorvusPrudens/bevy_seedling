@@ -7,7 +7,6 @@
 use bevy_ecs::{component::ComponentId, intern::Interned, prelude::*};
 
 pub use bevy_seedling_macros::PoolLabel;
-use firewheel::nodes::sampler::SamplerConfig;
 
 bevy_ecs::define_label!(
     /// A label for differentiating sample pools.
@@ -87,7 +86,6 @@ pub type InternedPoolLabel = Interned<dyn PoolLabel>;
 
 /// A type-erased pool label container.
 #[derive(Component, Debug, Clone)]
-#[require(SamplerConfig)]
 pub struct PoolLabelContainer {
     pub(crate) label: InternedPoolLabel,
     pub(crate) label_id: ComponentId,

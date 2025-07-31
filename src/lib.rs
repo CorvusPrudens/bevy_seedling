@@ -331,10 +331,17 @@ pub mod prelude {
     pub use firewheel::{
         CpalBackend, FirewheelConfig, Volume,
         channel_config::{ChannelCount, NonZeroChannelCount},
+        clock::{
+            DurationMusical, DurationSamples, DurationSeconds, InstantMusical, InstantSamples,
+            InstantSeconds,
+        },
         diff::{Memo, Notify},
         nodes::{
             StereoToMonoNode,
-            sampler::{PlaybackSpeedQuality, PlaybackState, Playhead, RepeatMode, SamplerNode},
+            sampler::{
+                PlaybackSpeedQuality, PlaybackState, Playhead, RepeatMode, SamplerConfig,
+                SamplerNode,
+            },
             spatial_basic::{SpatialBasicConfig, SpatialBasicNode},
             volume::{VolumeNode, VolumeNodeConfig},
             volume_pan::{VolumePanNode, VolumePanNodeConfig},
@@ -504,6 +511,7 @@ where
         app.register_type::<FirewheelNode>()
             .register_type::<SamplePlayer>()
             .register_type::<SamplePriority>()
+            .register_type::<PlaybackSettings>()
             .register_type::<sample::SampleQueueLifetime>()
             .register_type::<OnComplete>()
             .register_type::<SpatialScale>()
@@ -542,6 +550,19 @@ where
             .register_type::<startup::SpatialPool>()
             .register_type::<SamplerPool<startup::SpatialPool>>()
             .register_type::<NonZeroChannelCount>()
+            .register_type::<SamplerConfig>()
+            .register_type::<PlaybackState>()
+            .register_type::<RepeatMode>()
+            .register_type::<Playhead>()
+            .register_type::<Notify<f32>>()
+            .register_type::<Notify<bool>>()
+            .register_type::<Notify<PlaybackState>>()
+            .register_type::<InstantMusical>()
+            .register_type::<InstantSeconds>()
+            .register_type::<InstantSamples>()
+            .register_type::<DurationMusical>()
+            .register_type::<DurationSeconds>()
+            .register_type::<DurationSamples>()
             .register_type::<VolumeNode>()
             .register_type::<VolumeNodeConfig>()
             .register_type::<VolumePanNode>()
