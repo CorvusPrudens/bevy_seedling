@@ -53,7 +53,7 @@ pub struct SendNode {
     pub send_volume: Volume,
 
     #[diff(skip)]
-    #[reflect(ignore)]
+    #[cfg_attr(feature = "reflect", reflect(ignore))]
     pub(crate) target: EdgeTarget,
 }
 
