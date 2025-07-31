@@ -275,7 +275,6 @@ extern crate self as bevy_seedling;
 use bevy_app::prelude::*;
 use bevy_asset::prelude::AssetApp;
 use bevy_ecs::prelude::*;
-use configuration::{InputDeviceInfo, OutputDeviceInfo};
 use context::AudioStreamConfig;
 use core::ops::RangeInclusive;
 use firewheel::{CpalBackend, backend::AudioBackend, dsp::pan_law::PanLaw};
