@@ -78,7 +78,7 @@ bevy_ecs::define_label!(
 /// If no connections are specified for an entity
 /// with a [`FirewheelNode`][crate::prelude::FirewheelNode] component, the
 /// node will automatically be routed to this bus.
-/// For example, if you spawn a [`VolumeNode`]:
+/// For example, if you spawn a [`VolumeNode`][crate::prelude::VolumeNode]:
 ///
 /// ```
 /// # use bevy::prelude::*;

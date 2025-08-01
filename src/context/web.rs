@@ -26,7 +26,7 @@ impl InnerContext {
         let mut context = FirewheelCtx::<B>::new(settings);
         context
             .start_stream(stream_settings)
-            .map_err(|e| format!("failed to start audio stream: {e:?}"));
+            .map_err(|e| format!("failed to start audio stream: {e:?}"))?;
 
         CONTEXT.set(SeedlingContext::new(context));
 

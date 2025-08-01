@@ -104,10 +104,10 @@ pub trait SeedlingContextWrapper: core::any::Any {
     /// instead, but this method is provided if needed.
     ///
     /// Note, due to the nature of audio processing, this clock is is *NOT* synced with
-    /// the system's time [`Instant::now`]. (Instead it is based on the amount of data
+    /// the system's time [`Instant::now`][std::time::Instant]. (Instead it is based on the amount of data
     /// that has been processed.) For applications where the timing of audio events is
-    /// critical (i.e. a rythm game), sync the game to this audio clock instead of the
-    /// OS's clock [`Instant::now`].
+    /// critical (i.e. a rhythm game), sync the game to this audio clock instead of the
+    /// OS's clock [`Instant::now`][std::time::Instant].
     ///
     /// Note, calling this method is not super cheap, so avoid calling it many
     /// times within the same game loop iteration if possible.

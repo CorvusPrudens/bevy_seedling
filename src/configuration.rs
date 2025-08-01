@@ -72,7 +72,7 @@ where
 /// System sets for audio initialization.
 #[derive(Debug, SystemSet, PartialEq, Eq, Hash, Clone)]
 pub enum SeedlingStartupSystems {
-    /// I/O devices are fetched and the graoh configuration is initialized.
+    /// I/O devices are fetched and the graph configuration is initialized.
     ///
     /// This is run in the [`PreStartup`] schedule.
     GraphSetup,
@@ -108,7 +108,7 @@ fn fetch_io<B: AudioBackend>(
         .collect::<Vec<_>>();
     let old_inputs: Vec<_> = existing_inputs.iter().collect();
 
-    // check for new or chnaged inputs
+    // check for new or changed inputs
     for new_input in &new_inputs {
         let matching = old_inputs.iter().find(|e| e.1.name == new_input.name);
         match matching {
@@ -158,7 +158,7 @@ fn fetch_io<B: AudioBackend>(
         }
     }
 
-    // check for unavailable ouputs
+    // check for unavailable outputs
     for (entity, old_output) in old_outputs {
         if !new_outputs.iter().any(|i| i.name == old_output.name) {
             debug!("Audio output \"{}\" no longer available.", old_output.name);
@@ -326,7 +326,10 @@ pub enum GraphConfiguration {
     ///     commands.spawn((SfxBus, VolumeNode::default()));
     ///
     ///     commands
-    ///         .spawn((crate::pool::dynamic::DynamicBus, VolumeNode::default()))
+    ///         .spawn((
+    ///             bevy_seedling::pool::dynamic::DynamicBus,
+    ///             VolumeNode::default(),
+    ///         ))
     ///         .connect(SfxBus);
     ///
     ///     // Pools
@@ -382,7 +385,10 @@ pub enum GraphConfiguration {
     ///         .spawn((MainBus, VolumeNode::default()))
     ///         .connect(AudioGraphOutput);
     ///
-    ///     commands.spawn((crate::pool::dynamic::DynamicBus, VolumeNode::default()));
+    ///     commands.spawn((
+    ///         bevy_seedling::pool::dynamic::DynamicBus,
+    ///         VolumeNode::default(),
+    ///     ));
     ///
     ///     // Pools
     ///     commands.spawn((

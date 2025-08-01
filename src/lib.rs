@@ -60,7 +60,7 @@
 //! Then, you'll need to add the [`SeedlingPlugin`] to your app.
 //!
 //! ```no_run
-//! use bevy_ecs::prelude::*;
+//! use bevy::prelude::*;
 //! use bevy_seedling::prelude::*;
 //!
 //! fn main() {
@@ -73,7 +73,7 @@
 //! Once you've set it all up, playing sounds is easy!
 //!
 //! ```
-//! # use bevy_ecs::prelude::*;
+//! # use bevy::prelude::*;
 //! # use bevy_seedling::prelude::*;
 //! fn play_sound(mut commands: Commands, server: Res<AssetServer>) {
 //!     // Play a sound!
@@ -123,7 +123,7 @@
 //!
 //! | Flag | Description | Default feature |
 //! | ---  | ----------- | --------------- |
-//! | `rand` | Enable the [`PitchRange`][crate::prelude::PitchRange] component. | Yes |
+//! | `rand` | Enable the [`RandomPitch`][crate::prelude::RandomPitch] component. | Yes |
 //! | `wav` | Enable WAV format and PCM encoding. | Yes |
 //! | `ogg` | Enable Ogg format and Vorbis encoding. | Yes |
 //! | `mp3` | Enable mp3 format and encoding. | No |
@@ -144,7 +144,7 @@
 //! [`VolumeNode`][prelude::VolumeNode] as an effect.
 //!
 //! ```
-//! # use bevy_ecs::prelude::*;
+//! # use bevy::prelude::*;
 //! # use bevy_seedling::prelude::*;
 //! # fn dynamic(mut commands: Commands, server: Res<AssetServer>) {
 //! commands.spawn((
@@ -165,7 +165,7 @@
 //! a node for each sample.
 //!
 //! ```
-//! # use bevy_ecs::prelude::*;
+//! # use bevy::prelude::*;
 //! # use bevy_seedling::prelude::*;
 //! # fn dynamic(mut commands: Commands, server: Res<AssetServer>) {
 //! #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
@@ -201,7 +201,7 @@
 //! [register your audio node][prelude::RegisterNode#creating-and-registering-nodes].
 //!
 //! ```ignore
-//! use bevy_ecs::prelude::*;
+//! use bevy::prelude::*;
 //! use bevy_seedling::prelude::*;
 //!
 //! // Let's assume the relevant traits are implemented.
@@ -364,7 +364,7 @@ pub mod prelude {
 ///
 /// These are all inserted into the [`Last`] schedule.
 ///
-/// [`Last`]: bevy::prelude::Last
+/// [`Last`]: bevy_app::prelude::Last
 #[derive(Debug, SystemSet, PartialEq, Eq, Hash, Clone)]
 pub enum SeedlingSystems {
     /// Entities without audio nodes acquire them from the audio context.

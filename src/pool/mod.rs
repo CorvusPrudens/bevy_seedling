@@ -904,6 +904,9 @@ mod test {
     #[test]
     fn test_remove_in_dynamic() {
         let mut app = prepare_app(|mut commands: Commands, server: Res<AssetServer>| {
+            // make sure we can spawn dynamic pools
+            commands.spawn((VolumeNode::default(), dynamic::DynamicBus));
+
             // We'll play a short sample
             commands.spawn((
                 SamplePlayer::new(server.load("sine_440hz_1ms.wav")),

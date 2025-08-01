@@ -31,9 +31,8 @@ bevy_ecs::define_label!(
 ///
 /// [`SamplePlayer`]: crate::sample::SamplePlayer
 ///
-/// You can customize the default sampler pool by setting
-/// [`SeedlingPlugin::spawn_default_pool`][crate::prelude::SeedlingPlugin::spawn_default_pool]
-/// to `false`, preventing the plugin from spawning it for you.
+/// Depending on your [`GraphConfiguration`][crate::prelude::GraphConfiguration], you
+/// can customize the default pool or even omit it entirely.
 ///
 /// ```no_run
 /// use bevy::prelude::*;
@@ -44,16 +43,20 @@ bevy_ecs::define_label!(
 ///         .add_plugins((
 ///             DefaultPlugins,
 ///             SeedlingPlugin {
-///                 spawn_default_pool: false,
+///                 graph_config: GraphConfiguration::Empty,
 ///                 ..Default::default()
 ///             },
 ///         ))
 ///         .add_systems(Startup, |mut commands: Commands| {
-///             // Make the default pool provide spatial audio
+///             // Make the default pool provide spatial audio.
 ///             commands.spawn((
 ///                 SamplerPool(DefaultPool),
 ///                 sample_effects![SpatialBasicNode::default()],
 ///             ));
+///
+///             commands
+///                 .spawn((MainBus, VolumeNode::default()))
+///                 .connect(AudioGraphOutput);
 ///         })
 ///         .run();
 /// }
@@ -74,7 +77,8 @@ bevy_ecs::define_label!(
 ///     commands
 ///         .entity(*pool)
 ///         .disconnect(MainBus)
-///         .chain_node(SendNode::new(Volume::Decibels(-12.0), reverb));
+///         .chain_node(SendNode::new(Volume::Decibels(-12.0), reverb))
+///         .connect(SfxBus);
 /// }
 /// ```
 #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]

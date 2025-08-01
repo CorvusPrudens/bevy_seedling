@@ -149,10 +149,11 @@ pub use assets::{Sample, SampleLoader, SampleLoaderError};
 ///         volume: Volume::UNITY_GAIN,
 ///     },
 ///     PlaybackSettings {
-///         playback: Notify::new(PlaybackState::Play { delay: None }),
-///         playhead: Notify::new(Playhead::Seconds(0.0)),
+///         playback: Notify::new(PlaybackState::Play {
+///             playhead: Some(Playhead::Seconds(0.0)),
+///         }),
 ///         speed: 1.0,
-///         on_complete: OnComplete::Remove,
+///         on_complete: OnComplete::Despawn,
 ///     },
 ///     SamplePriority(0),
 ///     SampleQueueLifetime(std::time::Duration::from_millis(100)),
@@ -333,7 +334,9 @@ pub enum OnComplete {
 ///         SamplePlayer::new(server.load("my_sample.wav")),
 ///         // You can start one second in
 ///         PlaybackSettings {
-///             playhead: Notify::new(Playhead::Seconds(1.0)),
+///             playback: Notify::new(PlaybackState::Play {
+///                 playhead: Some(Playhead::Seconds(1.0)),
+///             }),
 ///             ..Default::default()
 ///         },
 ///     ));
@@ -504,7 +507,7 @@ mod random {
     pub struct RandomPitch(pub core::ops::Range<f64>);
 
     impl RandomPitch {
-        /// Create a new [`PitchRange`] with deviation about 1.0.
+        /// Create a new [`RandomPitch`] with deviation about 1.0.
         ///
         /// ```
         /// # use bevy::prelude::*;
@@ -512,7 +515,7 @@ mod random {
         /// # fn deviation(mut commands: Commands, server: Res<AssetServer>) {
         /// commands.spawn((
         ///     SamplePlayer::new(server.load("my_sample.wav")),
-        ///     PitchRange::new(0.05),
+        ///     RandomPitch::new(0.05),
         /// ));
         /// # }
         /// ```

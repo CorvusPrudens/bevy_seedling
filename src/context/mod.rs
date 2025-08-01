@@ -57,14 +57,14 @@ impl AudioContext {
     /// # use bevy::prelude::*;
     /// # use bevy_seedling::prelude::*;
     /// fn mute_all(mut q: Query<&mut BandPassNode>, mut context: ResMut<AudioContext>) {
-    ///     let now = context.now();
+    ///     let now = context.now().seconds;
     ///     for mut filter in q.iter_mut() {
     ///         filter
     ///             .frequency
     ///             .push_curve(
     ///                 0.,
     ///                 now,
-    ///                 now + ClockSeconds(1.),
+    ///                 now + DurationSeconds(1.),
     ///                 EaseFunction::ExponentialOut,
     ///             )
     ///             .unwrap();
@@ -107,8 +107,8 @@ impl AudioContext {
 /// so this can't be used for detecting changes in the sample rate.
 ///
 /// [`SeedlingStartupSystems::StreamInitialization`]:
-/// crate::startup::SeedlingStartupSystems::StreamInitialization
-/// [`PostStartup`]: bevy::prelude::PostStartup
+/// crate::configuration::SeedlingStartupSystems::StreamInitialization
+/// [`PostStartup`]: bevy_app::prelude::PostStartup
 #[derive(Resource, Debug, Clone)]
 pub struct SampleRate(sync::Arc<sync::atomic::AtomicU32>);
 

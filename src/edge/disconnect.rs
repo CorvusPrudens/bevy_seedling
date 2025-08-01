@@ -58,7 +58,7 @@ impl PendingDisconnections {
 /// [`SeedlingSystems::Connect`][crate::SeedlingSystems::Connect] set immediately
 /// after connections.
 ///
-/// [`EntityCommands`]: bevy::prelude::EntityCommands
+/// [`EntityCommands`]: bevy_ecs::prelude::EntityCommands
 /// [`NodeLabel`]: crate::prelude::NodeLabel
 pub trait Disconnect: Sized {
     /// Queue a disconnection from this entity to the target.

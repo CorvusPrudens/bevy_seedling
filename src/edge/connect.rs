@@ -133,7 +133,7 @@ impl PendingConnections {
 /// # }
 /// ```
 ///
-/// [`EntityCommands`]: bevy::prelude::EntityCommands
+/// [`EntityCommands`]: bevy_ecs::prelude::EntityCommands
 /// [`NodeLabel`]: crate::prelude::NodeLabel
 pub trait Connect<'a>: Sized {
     /// Queue a connection from this entity to the target.
