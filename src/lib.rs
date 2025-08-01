@@ -276,7 +276,6 @@ use bevy_app::prelude::*;
 use bevy_asset::prelude::AssetApp;
 use bevy_ecs::prelude::*;
 use context::AudioStreamConfig;
-use core::ops::RangeInclusive;
 use firewheel::{CpalBackend, backend::AudioBackend, dsp::pan_law::PanLaw};
 
 pub mod configuration;
@@ -332,7 +331,7 @@ pub mod prelude {
     };
 
     pub use firewheel::{
-        CpalBackend, FirewheelConfig, Volume,
+        self, CpalBackend, FirewheelConfig, Volume,
         channel_config::{ChannelCount, NonZeroChannelCount},
         clock::{
             DurationMusical, DurationSamples, DurationSeconds, InstantMusical, InstantSamples,
@@ -398,9 +397,6 @@ pub struct SeedlingPlugin<B: AudioBackend = CpalBackend> {
 
     /// The initial graph configuration.
     pub graph_config: configuration::GraphConfiguration,
-
-    /// Sets the default size range for sample pools.
-    pub pool_size: RangeInclusive<usize>,
 }
 
 impl Default for SeedlingPlugin<CpalBackend> {
@@ -416,10 +412,9 @@ where
     /// Create a new default [`SeedlingPlugin`].
     pub fn new() -> Self {
         Self {
-            config: Default::default(),
-            stream_config: Default::default(),
-            graph_config: Default::default(),
-            pool_size: 4..=32,
+            config: prelude::FirewheelConfig::default(),
+            stream_config: B::Config::default(),
+            graph_config: prelude::GraphConfiguration::default(),
         }
     }
 }

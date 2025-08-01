@@ -16,7 +16,16 @@ fn main() {
             MinimalPlugins,
             LogPlugin::default(),
             AssetPlugin::default(),
-            SeedlingPlugin::default(),
+            SeedlingPlugin {
+                // Without a window, the event loop tends to run quite
+                // fast. We'll bump up the channel capacity here to
+                // ensure every message makes it to the audio context.
+                config: FirewheelConfig {
+                    channel_capacity: 256,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
         ))
         .add_systems(Startup, startup)
         .add_systems(

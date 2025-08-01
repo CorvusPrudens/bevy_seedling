@@ -67,7 +67,9 @@ rand = { version = "0.8", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-bevy_keyframe = { path = "../bevy_keyframe/", features = ["firewheel"] }
+bevy_keyframe = { git = "https://github.com/corvusprudens/bevy_keyframe", features = [
+  "firewheel",
+] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 firewheel = { version = "0.6.1-beta", features = ["wasm-bindgen"] }

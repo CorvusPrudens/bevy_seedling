@@ -22,7 +22,16 @@ fn main() {
             MinimalPlugins,
             bevy::log::LogPlugin::default(),
             AssetPlugin::default(),
-            SeedlingPlugin::default(),
+            SeedlingPlugin {
+                // Without a window, the event loop tends to run quite
+                // fast. We'll bump up the channel capacity here to
+                // ensure every message makes it to the audio context.
+                config: FirewheelConfig {
+                    channel_capacity: 256,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
         ))
         // All you need to do to register your node is call
         // `RegisterNode::register_node`. This will automatically
