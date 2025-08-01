@@ -116,6 +116,6 @@ impl DoubleEndedIterator for EntitySetIter<'_> {
 
 /// # Safety
 ///
-/// Because [`EffectsSet`] cannot be mutated in any way
+/// Because [`EntitySet`] cannot be mutated in any way
 /// that will introduce duplicate elements, this must be safe.
 unsafe impl EntitySetIterator for EntitySetIter<'_> {}
