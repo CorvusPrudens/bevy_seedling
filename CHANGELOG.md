@@ -1,8 +1,15 @@
+# 0.4.4
+
+## Fixes
+
+- Account for 3D listener orientation
+- Fixed system ordering issue for spatial positioning
+
 # 0.4.3
 
 ## Fixes
 
-- Update `symphonium` to match `firewheel` due to a breaking change in the former
+- Updated `symphonium` to match `firewheel` due to a breaking change in the former
 
 # 0.4.2
 

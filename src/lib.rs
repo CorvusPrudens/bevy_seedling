@@ -309,7 +309,7 @@ pub mod prelude {
     };
 
     pub use firewheel::{
-        FirewheelConfig, Volume,
+        self, FirewheelConfig, Volume,
         channel_config::ChannelCount,
         clock::{ClockSamples, ClockSeconds},
         diff::{Memo, Notify},
@@ -438,19 +438,20 @@ where
         .add_systems(
             Last,
             (
-                (
-                    spatial::update_2d_emitters,
-                    spatial::update_2d_emitters_effects,
-                    spatial::update_3d_emitters,
-                    spatial::update_3d_emitters_effects,
-                )
-                    .before(SeedlingSystems::Acquire),
                 edge::auto_connect
                     .before(SeedlingSystems::Connect)
                     .after(SeedlingSystems::Acquire),
                 (edge::process_connections, edge::process_disconnections)
                     .chain()
                     .in_set(SeedlingSystems::Connect),
+                (
+                    spatial::update_2d_emitters,
+                    spatial::update_2d_emitters_effects,
+                    spatial::update_3d_emitters,
+                    spatial::update_3d_emitters_effects,
+                )
+                    .after(SeedlingSystems::Pool)
+                    .before(SeedlingSystems::Queue),
                 node::flush_events.in_set(SeedlingSystems::Flush),
             ),
         )
@@ -491,6 +492,7 @@ mod test {
                 spawn_default_pool: false,
                 ..SeedlingPlugin::<crate::profiling::ProfilingBackend>::new()
             },
+            TransformPlugin,
         ))
         .add_systems(Startup, startup);
 
