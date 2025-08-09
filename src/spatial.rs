@@ -34,7 +34,7 @@
 use bevy_ecs::prelude::*;
 use bevy_math::prelude::*;
 use bevy_transform::prelude::*;
-use firewheel::nodes::spatial_basic::SpatialBasicNode;
+use firewheel::{nodes::spatial_basic::SpatialBasicNode, vector};
 
 use crate::{nodes::itd::ItdNode, pool::sample_effects::EffectOf};
 
@@ -140,21 +140,19 @@ pub(crate) fn update_2d_emitters(
         let emitter_pos = transform.translation();
         let closest_listener = find_closest_listener(
             emitter_pos,
-            listeners.iter().map(GlobalTransform::translation),
+            listeners.iter().map(GlobalTransform::compute_transform),
         );
 
-        let Some(listener_pos) = closest_listener else {
+        let Some(listener) = closest_listener else {
             continue;
         };
 
         let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
 
-        let x_diff = (emitter_pos.x - listener_pos.x) * scale.x;
-        let y_diff = (emitter_pos.y - listener_pos.y) * scale.y;
-
-        // TODO: factor in listener rotation
-        spatial.offset.x = x_diff;
-        spatial.offset.z = y_diff;
+        let mut world_offset = emitter_pos - listener.translation;
+        world_offset.z = 0.0;
+        let local_offset = (listener.rotation.inverse() * world_offset) * scale;
+        spatial.offset = vector::Vec3::new(local_offset.x, 0.0, local_offset.y);
     }
 }
 
@@ -173,20 +171,19 @@ pub(crate) fn update_2d_emitters_effects(
         let emitter_pos = transform.translation();
         let closest_listener = find_closest_listener(
             emitter_pos,
-            listeners.iter().map(GlobalTransform::translation),
+            listeners.iter().map(GlobalTransform::compute_transform),
         );
 
-        let Some(listener_pos) = closest_listener else {
+        let Some(listener) = closest_listener else {
             continue;
         };
 
         let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
 
-        let x_diff = (emitter_pos.x - listener_pos.x) * scale.x;
-        let y_diff = (emitter_pos.y - listener_pos.y) * scale.y;
-
-        spatial.offset.x = x_diff;
-        spatial.offset.z = y_diff;
+        let mut world_offset = emitter_pos - listener.translation;
+        world_offset.z = 0.0;
+        let local_offset = (listener.rotation.inverse() * world_offset) * scale;
+        spatial.offset = vector::Vec3::new(local_offset.x, 0.0, local_offset.y);
     }
 }
 
@@ -203,15 +200,16 @@ pub(crate) fn update_itd_effects(
         let emitter_pos = transform.translation();
         let closest_listener = find_closest_listener(
             emitter_pos,
-            listeners.iter().map(GlobalTransform::translation),
+            listeners.iter().map(GlobalTransform::compute_transform),
         );
 
-        let Some(listener_pos) = closest_listener else {
+        let Some(listener) = closest_listener else {
             continue;
         };
 
-        // TODO: factor in listener rotation
-        spatial.direction = emitter_pos - listener_pos;
+        let world_offset = emitter_pos - listener.translation;
+        let local_offset = listener.rotation.inverse() * world_offset;
+        spatial.direction = local_offset;
     }
 }
 
@@ -228,16 +226,18 @@ pub(crate) fn update_3d_emitters(
         let emitter_pos = transform.translation();
         let closest_listener = find_closest_listener(
             emitter_pos,
-            listeners.iter().map(GlobalTransform::translation),
+            listeners.iter().map(GlobalTransform::compute_transform),
         );
 
-        let Some(listener_pos) = closest_listener else {
+        let Some(listener) = closest_listener else {
             continue;
         };
 
         let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
 
-        spatial.offset = ((emitter_pos - listener_pos) * scale).into();
+        let world_offset = emitter_pos - listener.translation;
+        let local_offset = listener.rotation.inverse() * world_offset;
+        spatial.offset = (local_offset * scale).into();
     }
 }
 
@@ -255,31 +255,37 @@ pub(crate) fn update_3d_emitters_effects(
         let emitter_pos = transform.translation();
         let closest_listener = find_closest_listener(
             emitter_pos,
-            listeners.iter().map(GlobalTransform::translation),
+            listeners.iter().map(GlobalTransform::compute_transform),
         );
 
-        let Some(listener_pos) = closest_listener else {
+        let Some(listener) = closest_listener else {
             continue;
         };
 
         let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
 
-        spatial.offset = ((emitter_pos - listener_pos) * scale).into();
+        let world_offset = emitter_pos - listener.translation;
+        let local_offset = listener.rotation.inverse() * world_offset;
+        spatial.offset = (local_offset * scale).into();
     }
 }
 
-fn find_closest_listener(emitter_pos: Vec3, listeners: impl Iterator<Item = Vec3>) -> Option<Vec3> {
-    let mut closest_listener: Option<(f32, Vec3)> = None;
+fn find_closest_listener(
+    emitter_pos: Vec3,
+    listeners: impl Iterator<Item = Transform>,
+) -> Option<Transform> {
+    let mut closest_listener: Option<(f32, Transform)> = None;
 
-    for listener_pos in listeners {
+    for listener in listeners {
+        let listener_pos = listener.translation;
         let distance = emitter_pos.distance_squared(listener_pos);
 
         match &mut closest_listener {
-            None => closest_listener = Some((distance, listener_pos)),
-            Some((old_distance, old_pos)) => {
+            None => closest_listener = Some((distance, listener)),
+            Some((old_distance, old_transform)) => {
                 if distance < *old_distance {
                     *old_distance = distance;
-                    *old_pos = listener_pos;
+                    *old_transform = listener;
                 }
             }
         }
@@ -290,11 +296,22 @@ fn find_closest_listener(emitter_pos: Vec3, listeners: impl Iterator<Item = Vec3
 
 #[cfg(test)]
 mod test {
+    use bevy_asset::AssetServer;
+
     use super::*;
+    use crate::{
+        node::follower::FollowerOf,
+        pool::Sampler,
+        prelude::*,
+        test::{prepare_app, run},
+    };
 
     #[test]
     fn test_closest() {
-        let positions = [Vec3::splat(5.0), Vec3::splat(4.0), Vec3::splat(6.0)];
+        let positions = [Vec3::splat(5.0), Vec3::splat(4.0), Vec3::splat(6.0)]
+            .into_iter()
+            .map(Transform::from_translation)
+            .collect::<Vec<_>>();
         let emitter = Vec3::splat(0.0);
         let closest = find_closest_listener(emitter, positions.iter().copied()).unwrap();
 
@@ -309,5 +326,51 @@ mod test {
         let closest = find_closest_listener(emitter, positions.iter().copied());
 
         assert!(closest.is_none());
+    }
+
+    #[derive(PoolLabel, PartialEq, Eq, Hash, Clone, Debug)]
+    struct TestPool;
+
+    /// Ensure that transform updates are propagated immediately when
+    /// queued in a pool.
+    #[test]
+    fn test_immediate_positioning() {
+        let position = Vec3::splat(3.0);
+        let mut app = prepare_app(move |mut commands: Commands, server: Res<AssetServer>| {
+            commands.spawn((
+                SamplerPool(TestPool),
+                sample_effects![SpatialBasicNode::default()],
+            ));
+
+            commands.spawn((SpatialListener3D, Transform::default()));
+
+            commands.spawn((
+                TestPool,
+                Transform::from_translation(position),
+                SamplePlayer::new(server.load("sine_440hz_1ms.wav")).looping(),
+            ));
+        });
+
+        loop {
+            let complete = run(
+                &mut app,
+                move |player: Query<&Sampler>,
+                      effect: Query<&SpatialBasicNode, With<FollowerOf>>| {
+                    if player.iter().len() == 1 {
+                        let effect: Vec3 = effect.single().unwrap().offset.into();
+                        assert_eq!(effect, position);
+                        true
+                    } else {
+                        false
+                    }
+                },
+            );
+
+            if complete {
+                break;
+            }
+
+            app.update();
+        }
     }
 }

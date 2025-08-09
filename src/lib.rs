@@ -472,6 +472,12 @@ where
         .add_systems(
             Last,
             (
+                edge::auto_connect
+                    .before(SeedlingSystems::Connect)
+                    .after(SeedlingSystems::Acquire),
+                (edge::process_connections, edge::process_disconnections)
+                    .chain()
+                    .in_set(SeedlingSystems::Connect),
                 (
                     spatial::update_2d_emitters,
                     spatial::update_2d_emitters_effects,
@@ -479,13 +485,8 @@ where
                     spatial::update_3d_emitters_effects,
                     spatial::update_itd_effects,
                 )
-                    .before(SeedlingSystems::Acquire),
-                edge::auto_connect
-                    .before(SeedlingSystems::Connect)
-                    .after(SeedlingSystems::Acquire),
-                (edge::process_connections, edge::process_disconnections)
-                    .chain()
-                    .in_set(SeedlingSystems::Connect),
+                    .after(SeedlingSystems::Pool)
+                    .before(SeedlingSystems::Queue),
                 node::flush_events.in_set(SeedlingSystems::Flush),
             ),
         )
@@ -590,6 +591,7 @@ mod test {
                 graph_config: crate::configuration::GraphConfiguration::Empty,
                 ..SeedlingPlugin::<crate::profiling::ProfilingBackend>::new()
             },
+            TransformPlugin,
         ))
         .add_systems(Startup, startup);
 
