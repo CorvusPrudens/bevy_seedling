@@ -6,7 +6,8 @@ use ebur128::{Channel, EbuR128, Mode};
 use firewheel::{
     channel_config::{ChannelConfig, ChannelCount},
     collector::ArcGc,
-    node::{AudioNode, AudioNodeProcessor},
+    event::ProcEvents,
+    node::{AudioNode, AudioNodeProcessor, ProcBuffers, ProcExtra, ProcInfo},
 };
 use portable_atomic::AtomicF64;
 
@@ -180,9 +181,10 @@ fn construct_analyzer(sample_rate: u32, map: Option<&[Channel]>) -> EbuR128 {
 impl AudioNodeProcessor for LoudnessProcessor {
     fn process(
         &mut self,
-        buffers: firewheel::node::ProcBuffers,
-        proc_info: &firewheel::node::ProcInfo,
-        _: &mut firewheel::event::NodeEventList,
+        proc_info: &ProcInfo,
+        buffers: ProcBuffers,
+        _: &mut ProcEvents,
+        _: &mut ProcExtra,
     ) -> firewheel::node::ProcessStatus {
         if self.ignore_silence
             && proc_info

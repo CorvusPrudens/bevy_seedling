@@ -6,7 +6,11 @@ use delay_line::DelayLine;
 use firewheel::{
     channel_config::{ChannelConfig, NonZeroChannelCount},
     diff::{Diff, Patch},
-    node::{AudioNode, AudioNodeInfo, AudioNodeProcessor, ProcBuffers, ProcessStatus},
+    event::ProcEvents,
+    node::{
+        AudioNode, AudioNodeInfo, AudioNodeProcessor, ProcBuffers, ProcExtra, ProcInfo,
+        ProcessStatus,
+    },
 };
 
 mod delay_line;
@@ -106,11 +110,10 @@ fn maximum_samples(distance: f32, sample_rate: f32) -> usize {
 impl AudioNodeProcessor for ItdProcessor {
     fn process(
         &mut self,
-        ProcBuffers {
-            inputs, outputs, ..
-        }: ProcBuffers,
-        proc_info: &firewheel::node::ProcInfo,
-        events: &mut firewheel::event::NodeEventList,
+        proc_info: &ProcInfo,
+        ProcBuffers { inputs, outputs }: ProcBuffers,
+        events: &mut ProcEvents,
+        _: &mut ProcExtra,
     ) -> ProcessStatus {
         for patch in events.drain_patches::<ItdNode>() {
             let ItdNodePatch::Direction(direction) = patch;

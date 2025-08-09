@@ -7,10 +7,10 @@ use firewheel::{
     clock::DurationSeconds,
     core::{channel_config::NonZeroChannelCount, node::ProcInfo},
     diff::{Diff, Patch},
-    event::NodeEventList,
+    event::ProcEvents,
     node::{
         AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcessStatus,
+        ProcExtra, ProcessStatus,
     },
 };
 
@@ -158,11 +158,10 @@ struct BandPassProcessor {
 impl AudioNodeProcessor for BandPassProcessor {
     fn process(
         &mut self,
-        ProcBuffers {
-            inputs, outputs, ..
-        }: ProcBuffers,
         proc_info: &ProcInfo,
-        events: &mut NodeEventList,
+        ProcBuffers { inputs, outputs }: ProcBuffers,
+        events: &mut ProcEvents,
+        _: &mut ProcExtra,
     ) -> ProcessStatus {
         for patch in events.drain_patches::<BandPassNode>() {
             self.params.apply(patch);

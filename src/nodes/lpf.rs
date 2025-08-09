@@ -4,10 +4,10 @@ use bevy_ecs::component::Component;
 use firewheel::{
     channel_config::{ChannelConfig, NonZeroChannelCount},
     diff::{Diff, Patch},
-    event::NodeEventList,
+    event::ProcEvents,
     node::{
         AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcInfo, ProcessStatus,
+        ProcExtra, ProcInfo, ProcessStatus,
     },
     param::smoother::{SmoothedParam, SmootherConfig},
 };
@@ -126,11 +126,10 @@ struct LowPassProcessor {
 impl AudioNodeProcessor for LowPassProcessor {
     fn process(
         &mut self,
-        ProcBuffers {
-            inputs, outputs, ..
-        }: ProcBuffers,
         proc_info: &ProcInfo,
-        events: &mut NodeEventList,
+        ProcBuffers { inputs, outputs }: ProcBuffers,
+        events: &mut ProcEvents,
+        _: &mut ProcExtra,
     ) -> ProcessStatus {
         for patch in events.drain_patches::<LowPassNode>() {
             match patch {

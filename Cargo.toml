@@ -47,11 +47,12 @@ bevy_reflect = { version = "0.16", default-features = false, features = [
   "glam",
 ] }
 
-firewheel = { version = "0.6.1-beta", features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "6a001e6", features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
   "musical_transport",
+  "glam",
 ] }
 symphonium = { version = "0.6", default-features = false, features = [
   "opt-simd",
@@ -67,12 +68,11 @@ rand = { version = "0.8", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-bevy_keyframe = { git = "https://github.com/corvusprudens/bevy_keyframe", features = [
-  "firewheel",
-] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { version = "0.6.1-beta", features = ["wasm-bindgen"] }
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "6a001e6", features = [
+  "wasm-bindgen",
+] }
 
 [dev-dependencies]
 bevy = { version = "0.16", default-features = false, features = [

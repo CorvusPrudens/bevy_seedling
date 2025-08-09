@@ -33,7 +33,7 @@
 //! Dynamic pools are a convenient abstraction, but they may not be appropriate for all use-cases.
 //! They have three main drawbacks:
 //!
-//! 1. Dynamic pools cannot be routed anywhere.
+//! 1. Dynamic pools cannot have individual routing. They are all connected to the [`DynamicBus`].
 //! 2. The number of pools corresponds to the total permutations of effects your project uses,
 //!    which could grow fairly large. Silent sampler nodes shouldn't take much CPU time,
 //!    but many unused nodes could grow your memory usage by a few megabytes.

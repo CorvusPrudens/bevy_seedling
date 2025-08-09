@@ -4,14 +4,11 @@
 //! A sprouting integration of the [Firewheel](https://github.com/BillyDM/firewheel)
 //! audio engine for [Bevy](https://bevyengine.org/).
 //!
-//! `bevy_seedling` is powerful, flexible, and extensible.
+//! `bevy_seedling` is powerful, flexible, and [fast](https://github.com/CorvusPrudens/rust-audio-demo?tab=readme-ov-file#performance).
 //! You can [play sounds](prelude::SamplePlayer), [apply effects](prelude::SampleEffects),
 //! and [route audio anywhere](crate::edge::Connect). Creating
 //! and integrating [custom audio processors](prelude::RegisterNode#creating-and-registering-nodes)
 //! is simple.
-//! To top it all off, `bevy_seedling` is _fast_,
-//! [beating other crates](https://github.com/CorvusPrudens/rust-audio-demo?tab=readme-ov-file#performance)
-//! by a factor of 2.5-3 on realistic workloads.
 //!
 //! ## Getting started
 //!
@@ -241,28 +238,38 @@
 //! transitively enabled. In this case, encourage the crate authors to depend on
 //! sub-crates (like `bevy_ecs`) or disable Bevy's default features!
 //!
-//! ## Architecture
+//! ## Glossary
 //!
-//! `bevy_seedling` provides a thin ECS wrapper over `Firewheel`.
+//! ### Bus
 //!
-//! A `Firewheel` audio node is typically represented in the ECS as
-//! an entity with a [`FirewheelNode`][prelude::FirewheelNode] and a component that can generate
-//! `Firewheel` events, such as [`VolumeNode`][prelude::VolumeNode].
+//! In general audio processing, a _bus_ is typically some connection point, to which
+//! we route many tracks of audio.
 //!
-//! Interactions with the audio engine are buffered.
-//! This includes inserting nodes into the audio graph,
-//! removing nodes from the graph, making connections
-//! between nodes, and sending node events. This provides
-//! a few advantages:
+//! In `bevy_seedling`, a bus is nothing special; it's really just a label
+//! applied to a normal audio node. Since connecting many inputs to a node is
+//! trivial, there's no need for special support. All of `bevy_seedling`'s
+//! buses use [`VolumeNode`][prelude::VolumeNode], but you can apply a bus label to
+//! whatever node you like.
 //!
-//! 1. Audio entities do not need to wait until
-//!    they have Firewheel IDs before they can
-//!    make connections or generate events.
-//! 2. Systems that spawn or interact with
-//!    audio entities can be trivially parallelized.
-//! 3. Graph-mutating interactions are properly deferred
-//!    while the audio graph isn't ready, for example
-//!    if it's been temporarily deactiviated.
+//! ### Node
+//!
+//! A _node_ is the smallest unit of audio processing.
+//! It can receive inputs, produce outputs, or both, meaning nodes
+//! can be used as sources, sinks, or effects.
+//!
+//! Nodes in `bevy_seedling` generally consist of two parts:
+//! an ECS handle, like [`VolumeNode`][prelude::VolumeNode], and the
+//! actual audio processor that we insert into the real-time audio graph.
+//! "Node" may refer to either or both of these.
+//!
+//! ### [Pool][crate::prelude::SamplerPool]
+//!
+//! A _pool_ (or sampler pool) is a group of [`SamplerNode`]s connected
+//! to a local bus. Sampler pools are roughly analagous to `bevy_kira_audio`'s
+//! [tracks](https://docs.rs/bevy_kira_audio/latest/bevy_kira_audio/type.Audio.html),
+//! where both allow you to play sounds in the same "place" in the audio graph.
+//!
+//! [`SamplerNode`]: prelude::firewheel::nodes::sampler::SamplerNode
 
 #![allow(clippy::type_complexity)]
 #![expect(clippy::needless_doctest_main)]

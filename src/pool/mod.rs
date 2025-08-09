@@ -20,9 +20,12 @@ use bevy_ecs::{
     world::DeferredWorld,
 };
 use core::ops::{Deref, RangeInclusive};
-use firewheel::nodes::{
-    sampler::{PlaybackState, Playhead, SamplerConfig, SamplerNode, SamplerState},
-    volume::VolumeNode,
+use firewheel::{
+    clock::{DurationSamples, DurationSeconds},
+    nodes::{
+        sampler::{PlaybackState, Playhead, SamplerConfig, SamplerNode, SamplerState},
+        volume::VolumeNode,
+    },
 };
 use queue::SkipTimer;
 use sample_effects::{EffectOf, SampleEffects};
@@ -342,7 +345,7 @@ impl Sampler {
     /// If the sample player has not yet propagated to the audio
     /// graph, this information may not yet be available. For a
     /// fallible method, see [`try_playhead_frames`][Self::try_playhead_frames].
-    pub fn playhead_frames(&self) -> u64 {
+    pub fn playhead_frames(&self) -> DurationSamples {
         self.try_playhead_frames().unwrap()
     }
 
@@ -350,7 +353,7 @@ impl Sampler {
     ///
     /// If the sample player has not yet propagated to the audio
     /// graph, this returns `None`.
-    pub fn try_playhead_frames(&self) -> Option<u64> {
+    pub fn try_playhead_frames(&self) -> Option<DurationSamples> {
         self.state.as_ref().map(|s| s.playhead_frames())
     }
 
@@ -361,7 +364,7 @@ impl Sampler {
     /// If the sample player has not yet propagated to the audio
     /// graph, this information may not yet be available. For a
     /// fallible method, see [`try_playhead_frames`][Self::try_playhead_seconds].
-    pub fn playhead_seconds(&self) -> f64 {
+    pub fn playhead_seconds(&self) -> DurationSeconds {
         self.try_playhead_seconds().unwrap()
     }
 
@@ -369,7 +372,7 @@ impl Sampler {
     ///
     /// If the sample player has not yet propagated to the audio
     /// graph, this returns `None`.
-    pub fn try_playhead_seconds(&self) -> Option<f64> {
+    pub fn try_playhead_seconds(&self) -> Option<DurationSeconds> {
         let state = self.state.as_ref()?;
         let sample_rate = self.sample_rate.as_ref()?;
 
@@ -420,7 +423,9 @@ fn generate_snapshots(
             .and_then(|s| s.try_playhead_seconds())
             .unwrap_or_default();
 
-        commands.entity(entity).insert(SamplerSnapshot { playhead });
+        commands.entity(entity).insert(SamplerSnapshot {
+            playhead: playhead.0,
+        });
     }
 }
 

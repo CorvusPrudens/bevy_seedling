@@ -1,25 +1,19 @@
 //! This example demonstrates how to use spatial audio.
 
-use bevy::{log::LogPlugin, prelude::*};
+use bevy::{app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*};
 use bevy_seedling::prelude::*;
+use std::time::Duration;
 
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins,
+            // Without a window, the event loop tends to run quite fast.
+            // We'll slow it down so we don't drop any audio events.
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_millis(16))),
             LogPlugin::default(),
             AssetPlugin::default(),
             TransformPlugin,
-            SeedlingPlugin {
-                // Without a window, the event loop tends to run quite
-                // fast. We'll bump up the channel capacity here to
-                // ensure every message makes it to the audio context.
-                config: FirewheelConfig {
-                    channel_capacity: 256,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            SeedlingPlugin::default(),
         ))
         .add_systems(Startup, startup)
         .add_systems(Update, spinner)

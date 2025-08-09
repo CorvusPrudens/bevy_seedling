@@ -1,37 +1,31 @@
 //! This example demonstrates how to define and use a custom
 //! Firewheel node.
 
-use bevy::prelude::*;
+use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_seedling::{pool::sample_effects::SampleEffects, prelude::*};
+use std::time::Duration;
 
 // You'll need to depend on firewheel directly when defining
 // custom nodes.
 use firewheel::{
     channel_config::{ChannelConfig, NonZeroChannelCount},
     diff::{Diff, Patch},
-    event::NodeEventList,
+    event::ProcEvents,
     node::{
         AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcInfo, ProcessStatus,
+        ProcExtra, ProcInfo, ProcessStatus,
     },
 };
 
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins,
+            // Without a window, the event loop tends to run quite fast.
+            // We'll slow it down so we don't drop any audio events.
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_millis(16))),
             bevy::log::LogPlugin::default(),
             AssetPlugin::default(),
-            SeedlingPlugin {
-                // Without a window, the event loop tends to run quite
-                // fast. We'll bump up the channel capacity here to
-                // ensure every message makes it to the audio context.
-                config: FirewheelConfig {
-                    channel_capacity: 256,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            SeedlingPlugin::default(),
         ))
         // All you need to do to register your node is call
         // `RegisterNode::register_node`. This will automatically
@@ -110,11 +104,10 @@ struct VolumeProcessor {
 impl AudioNodeProcessor for VolumeProcessor {
     fn process(
         &mut self,
-        ProcBuffers {
-            inputs, outputs, ..
-        }: ProcBuffers,
         proc_info: &ProcInfo,
-        events: &mut NodeEventList,
+        ProcBuffers { inputs, outputs }: ProcBuffers,
+        events: &mut ProcEvents,
+        _: &mut ProcExtra,
     ) -> ProcessStatus {
         // This will iterate over this node's events,
         // applying any patches sent from the ECS in a

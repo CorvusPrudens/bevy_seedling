@@ -6,6 +6,7 @@
 //!
 //! Any node that doesn't provide an explicit connection when spawned
 //! will be automatically connected to [MainBus].
+
 use crate::edge::NodeMap;
 use bevy_ecs::{intern::Interned, prelude::*};
 use bevy_log::prelude::*;

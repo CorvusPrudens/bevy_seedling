@@ -9,10 +9,10 @@ use firewheel::{
     channel_config::{ChannelConfig, NonZeroChannelCount},
     diff::{Diff, Patch},
     dsp::filter::smoothing_filter::{SmoothingFilter, SmoothingFilterCoeff},
-    event::NodeEventList,
+    event::ProcEvents,
     node::{
         AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcInfo, ProcessStatus,
+        ProcExtra, ProcInfo, ProcessStatus,
     },
 };
 
@@ -317,9 +317,10 @@ impl Limiter {
 impl AudioNodeProcessor for Limiter {
     fn process(
         &mut self,
-        buffers: ProcBuffers,
         proc_info: &ProcInfo,
-        events: &mut NodeEventList,
+        buffers: ProcBuffers,
+        events: &mut ProcEvents,
+        _: &mut ProcExtra,
     ) -> ProcessStatus {
         for patch in events.drain_patches::<LimiterNode>() {
             match patch {

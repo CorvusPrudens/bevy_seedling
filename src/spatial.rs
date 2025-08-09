@@ -237,7 +237,7 @@ pub(crate) fn update_3d_emitters(
 
         let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
 
-        spatial.offset = (emitter_pos - listener_pos) * scale;
+        spatial.offset = ((emitter_pos - listener_pos) * scale).into();
     }
 }
 
@@ -264,7 +264,7 @@ pub(crate) fn update_3d_emitters_effects(
 
         let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
 
-        spatial.offset = (emitter_pos - listener_pos) * scale;
+        spatial.offset = ((emitter_pos - listener_pos) * scale).into();
     }
 }
 

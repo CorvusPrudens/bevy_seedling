@@ -99,6 +99,7 @@ impl AudioBackend for ProfilingBackend {
                             now,
                             start - now,
                             StreamStatus::empty(),
+                            StreamStatus::empty(),
                             0,
                         );
                         std::thread::sleep(std::time::Duration::from_secs_f64(block_duration));

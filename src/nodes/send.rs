@@ -11,10 +11,10 @@ use firewheel::{
     channel_config::{ChannelConfig, ChannelCount, NonZeroChannelCount},
     diff::{Diff, Patch},
     dsp::volume::DEFAULT_AMP_EPSILON,
-    event::NodeEventList,
+    event::ProcEvents,
     node::{
         AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcInfo, ProcessStatus,
+        ProcExtra, ProcInfo, ProcessStatus,
     },
     param::smoother::{SmoothedParamBuffer, SmootherConfig},
 };
@@ -211,11 +211,10 @@ struct SendProcessor {
 impl AudioNodeProcessor for SendProcessor {
     fn process(
         &mut self,
-        ProcBuffers {
-            inputs, outputs, ..
-        }: ProcBuffers,
         proc_info: &ProcInfo,
-        events: &mut NodeEventList,
+        ProcBuffers { inputs, outputs }: ProcBuffers,
+        events: &mut ProcEvents,
+        _: &mut ProcExtra,
     ) -> ProcessStatus {
         for SendNodePatch::SendVolume(v) in events.drain_patches::<SendNode>() {
             self.gain.set_value(v.amp_clamped(DEFAULT_AMP_EPSILON));
