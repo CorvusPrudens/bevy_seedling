@@ -275,6 +275,7 @@ mod test {
     use super::*;
     use crate::{
         node::follower::FollowerOf,
+        pool::Sampler,
         prelude::*,
         test::{prepare_app, run},
     };
@@ -320,19 +321,30 @@ mod test {
             commands.spawn((
                 TestPool,
                 Transform::from_translation(position),
-                SamplePlayer::new(server.load("sine_440hz_1ms.wav")),
+                SamplePlayer::new(server.load("sine_440hz_1ms.wav")).looping(),
             ));
         });
 
-        // NOTE: why is this update necessary? shouldn't it be ready immediately?
-        app.update();
+        loop {
+            let complete = run(
+                &mut app,
+                move |player: Query<&Sampler>,
+                      effect: Query<&SpatialBasicNode, With<FollowerOf>>| {
+                    if player.iter().len() == 1 {
+                        let effect = effect.single().unwrap();
+                        assert_eq!(effect.offset, position);
+                        true
+                    } else {
+                        false
+                    }
+                },
+            );
 
-        run(
-            &mut app,
-            move |effect: Query<&SpatialBasicNode, With<FollowerOf>>| {
-                let effect = effect.single().unwrap();
-                assert_eq!(effect.offset, position);
-            },
-        );
+            if complete {
+                break;
+            }
+
+            app.update();
+        }
     }
 }
