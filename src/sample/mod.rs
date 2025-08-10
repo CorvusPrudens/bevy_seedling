@@ -11,7 +11,7 @@ use std::time::Duration;
 
 mod assets;
 
-pub use assets::{Sample, SampleLoader, SampleLoaderError};
+pub use assets::{AudioSample, SampleLoader, SampleLoaderError};
 
 /// A component that queues sample playback.
 ///
@@ -171,7 +171,7 @@ pub use assets::{Sample, SampleLoader, SampleLoaderError};
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SamplePlayer {
     /// The sample to play.
-    pub sample: Handle<Sample>,
+    pub sample: Handle<AudioSample>,
 
     /// Sets the sample's [`RepeatMode`].
     ///
@@ -214,7 +214,7 @@ impl SamplePlayer {
     /// ```
     ///
     /// This immediately queues up the sample for playback.
-    pub fn new(handle: Handle<Sample>) -> Self {
+    pub fn new(handle: Handle<AudioSample>) -> Self {
         Self {
             sample: handle,
             ..Default::default()

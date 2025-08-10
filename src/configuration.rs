@@ -10,6 +10,7 @@ use bevy_asset::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_log::prelude::*;
 use bevy_seedling_macros::{NodeLabel, PoolLabel};
+use bevy_transform::prelude::Transform;
 use core::marker::PhantomData;
 use firewheel::backend::AudioBackend;
 
@@ -63,6 +64,10 @@ where
             (initialize_stream, connect_io)
                 .chain()
                 .in_set(SeedlingStartupSystems::StreamInitialization),
+        )
+        .add_systems(
+            Last,
+            add_default_transforms.before(crate::SeedlingSystems::Acquire),
         )
         .add_observer(fetch_io::<B>)
         .add_observer(restart_audio);
@@ -255,6 +260,24 @@ pub struct OutputDeviceInfo {
 #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SpatialPool;
+
+/// For convenience, we automatically insert `Transform` components
+/// on sample players with `SpatialPool`.
+fn add_default_transforms(
+    q: Query<
+        Entity,
+        (
+            With<crate::prelude::SamplePlayer>,
+            With<SpatialPool>,
+            Without<Transform>,
+        ),
+    >,
+    mut commands: Commands,
+) {
+    for entity in &q {
+        commands.entity(entity).insert(Transform::default());
+    }
+}
 
 /// In [`GraphConfiguration::Game`], a sampler pool specifically
 /// for music is spawned.

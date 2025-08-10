@@ -12,9 +12,9 @@ use std::sync::Arc;
 /// The available containers and formats can be configured with
 /// this crate's feature flags.
 #[derive(Asset, TypePath, Clone)]
-pub struct Sample(ArcGc<dyn SampleResource>);
+pub struct AudioSample(ArcGc<dyn SampleResource>);
 
-impl Sample {
+impl AudioSample {
     /// Create a new [`Sample`] from a [`SampleResource`] loaded into memory.
     pub fn new<S: SampleResource>(sample: S) -> Self {
         Self(ArcGc::new_unsized(|| Arc::new(sample) as _))
@@ -26,7 +26,7 @@ impl Sample {
     }
 }
 
-impl core::fmt::Debug for Sample {
+impl core::fmt::Debug for AudioSample {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Sample").finish_non_exhaustive()
     }
@@ -89,7 +89,7 @@ impl SampleLoader {
 }
 
 impl AssetLoader for SampleLoader {
-    type Asset = Sample;
+    type Asset = AudioSample;
     type Settings = ();
     type Error = SampleLoaderError;
 
@@ -114,7 +114,7 @@ impl AssetLoader for SampleLoader {
             Default::default(),
         )?;
 
-        Ok(Sample(ArcGc::new_unsized(|| {
+        Ok(AudioSample(ArcGc::new_unsized(|| {
             Arc::new(source) as Arc<dyn SampleResource>
         })))
     }

@@ -7,7 +7,7 @@ use crate::{
     node::{EffectId, follower::FollowerOf},
     pool::label::PoolLabelContainer,
     prelude::DefaultPool,
-    sample::{QueuedSample, Sample, SamplePlayer, SamplePriority, SampleQueueLifetime},
+    sample::{AudioSample, QueuedSample, SamplePlayer, SamplePriority, SampleQueueLifetime},
 };
 use bevy_asset::prelude::*;
 use bevy_ecs::{entity::EntityCloner, prelude::*, relationship::Relationship};
@@ -48,7 +48,7 @@ pub(super) fn grow_pools(
         &SamplerConfig,
     )>,
     nodes: Query<Option<&SamplerOf>, With<PoolSamplerOf>>,
-    assets: Res<Assets<Sample>>,
+    assets: Res<Assets<AudioSample>>,
     mut commands: Commands,
 ) -> Result {
     let queued_samples: HashMap<_, usize> = queued_samples
@@ -149,7 +149,7 @@ pub(super) fn assign_work(
     >,
     active_samples: Query<(&SamplePlayer, &SamplePriority)>,
     mut effects: Query<&EffectId, With<EffectOf>>,
-    assets: Res<Assets<Sample>>,
+    assets: Res<Assets<AudioSample>>,
     mut commands: Commands,
 ) -> Result {
     let mut queued_samples: HashMap<_, Vec<_>> = queued_samples
@@ -522,7 +522,7 @@ pub(super) struct SkipTimer(Stopwatch);
 
 pub(super) fn mark_skipped(
     samples: Query<(Entity, &SamplePlayer), (With<QueuedSample>, Without<SkipTimer>)>,
-    assets: Res<Assets<Sample>>,
+    assets: Res<Assets<AudioSample>>,
     mut commands: Commands,
 ) {
     for (sample, player) in &samples {

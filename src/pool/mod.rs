@@ -440,7 +440,7 @@ fn apply_snapshots(
         Has<Sampler>,
     )>,
     server: Res<AssetServer>,
-    mut assets: ResMut<Assets<crate::sample::Sample>>,
+    mut assets: ResMut<Assets<crate::sample::AudioSample>>,
     mut commands: Commands,
 ) {
     let rates_changed = trigger.previous_rate != trigger.current_rate;

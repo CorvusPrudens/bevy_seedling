@@ -331,7 +331,9 @@ pub mod prelude {
         label::{DefaultPool, PoolLabel},
         sample_effects::{EffectOf, EffectsQuery, SampleEffects},
     };
-    pub use crate::sample::{OnComplete, PlaybackSettings, SamplePlayer, SamplePriority};
+    pub use crate::sample::{
+        AudioSample, OnComplete, PlaybackSettings, SamplePlayer, SamplePriority,
+    };
     pub use crate::sample_effects;
     pub use crate::spatial::{
         DefaultSpatialScale, SpatialListener2D, SpatialListener3D, SpatialScale,
@@ -434,7 +436,42 @@ where
 
 #[cfg(feature = "web_audio")]
 impl SeedlingPlugin<firewheel_web_audio::WebAudioBackend> {
-    /// Create a new default [`SeedlingPlugin`] with the `firewheel_web_audio` backend.
+    /// Create a new default [`SeedlingPlugin`] with the [`firewheel_web_audio`] backend.
+    ///
+    /// [`firewheel_web_audio`] uses Wasm multi-threading to execute its audio processing
+    /// in the browser's high-priority audio thread. This eliminates all stuttering
+    /// induced by running the audio processing in the main browser thread, which is
+    /// what the default backend, `cpal`, does.
+    ///
+    /// Wasm multi-threading requires a few
+    /// steps, including a nightly compiler, so you'll likely want to feature-gate this
+    /// backend.
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_seedling::prelude::*;
+    /// let mut app = App::new();
+    /// app.add_plugins(DefaultPlugins);
+    ///
+    /// #[cfg(not(feature = "web_audio"))]
+    /// app.add_plugins(SeedlingPlugin::default());
+    ///
+    /// #[cfg(feature = "web_audio")]
+    /// app.add_plugins(SeedlingPlugin::new_web_audio());
+    /// ```
+    ///
+    /// To build and run your app, consider using the
+    /// [Bevy CLI](https://github.com/TheBevyFlock/bevy_cli).
+    ///
+    /// ```text
+    /// bevy run --features web_audio web -U web-multi-threading
+    /// ```
+    ///
+    /// This automatically enables the required nightly features and
+    /// HTTP headers for web multi-threading. To host your game
+    /// on a site like [itch.io](itch.io), make sure you enable the
+    /// "`SharedArrayBuffer` support" checkbox. For more details,
+    /// see the [`firewheel_web_audio`] crate docs.
     pub fn new_web_audio() -> Self {
         Self {
             config: prelude::FirewheelConfig::default(),
@@ -468,7 +505,7 @@ where
             .init_resource::<edge::NodeMap>()
             .init_resource::<node::PendingRemovals>()
             .init_resource::<pool::DefaultPoolSize>()
-            .init_asset::<sample::Sample>()
+            .init_asset::<sample::AudioSample>()
             .register_node::<VolumeNode>()
             .register_node::<VolumePanNode>()
             .register_node::<SpatialBasicNode>()
