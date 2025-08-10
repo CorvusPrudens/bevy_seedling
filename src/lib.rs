@@ -453,14 +453,13 @@ impl SeedlingPlugin<firewheel_web_audio::WebAudioBackend> {
     /// ```
     /// # use bevy::prelude::*;
     /// # use bevy_seedling::prelude::*;
-    /// let mut app = App::new();
-    /// app.add_plugins(DefaultPlugins);
-    ///
+    /// # fn plugin(app: &mut App) {
     /// #[cfg(not(feature = "web_audio"))]
     /// app.add_plugins(SeedlingPlugin::default());
     ///
     /// #[cfg(feature = "web_audio")]
     /// app.add_plugins(SeedlingPlugin::new_web_audio());
+    /// # }
     /// ```
     ///
     /// To build and run your app, consider using the

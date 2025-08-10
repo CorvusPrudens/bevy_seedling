@@ -15,7 +15,7 @@ use std::sync::Arc;
 pub struct AudioSample(ArcGc<dyn SampleResource>);
 
 impl AudioSample {
-    /// Create a new [`Sample`] from a [`SampleResource`] loaded into memory.
+    /// Create a new [`AudioSample`] from a [`SampleResource`] loaded into memory.
     pub fn new<S: SampleResource>(sample: S) -> Self {
         Self(ArcGc::new_unsized(|| Arc::new(sample) as _))
     }
