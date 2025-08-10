@@ -125,7 +125,7 @@ impl SampleRate {
 /// A [`Resource`] containing the audio context's stream configuration.
 ///
 /// Mutating this resource will cause the audio stream to stop
-/// and restart to apply the latest changes.
+/// and restart, applying the latest changes.
 #[derive(Resource, Debug)]
 pub struct AudioStreamConfig<B: AudioBackend = firewheel::CpalBackend>(pub B::Config);
 

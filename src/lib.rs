@@ -351,9 +351,9 @@ pub mod prelude {
                 PlaybackSpeedQuality, PlaybackState, Playhead, RepeatMode, SamplerConfig,
                 SamplerNode,
             },
-            spatial_basic::{SpatialBasicConfig, SpatialBasicNode},
+            spatial_basic::SpatialBasicNode,
             volume::{VolumeNode, VolumeNodeConfig},
-            volume_pan::{VolumePanNode, VolumePanNodeConfig},
+            volume_pan::VolumePanNode,
         },
     };
 
@@ -362,6 +362,9 @@ pub mod prelude {
         reader::{StreamReaderConfig, StreamReaderNode},
         writer::{StreamWriterConfig, StreamWriterNode},
     };
+
+    #[cfg(feature = "hrtf")]
+    pub use firewheel_ircam_hrtf::{self as hrtf, HrtfConfig, HrtfNode};
 
     #[cfg(feature = "rand")]
     pub use crate::sample::RandomPitch;
@@ -392,7 +395,7 @@ pub enum SeedlingSystems {
 /// to inserting `bevy_seedling`'s systems
 /// and resources.
 #[derive(Debug)]
-pub struct SeedlingPlugin<B: AudioBackend = CpalBackend> {
+pub struct SeedlingPlugin<B: AudioBackend> {
     /// [`firewheel`]'s config, forwarded directly to
     /// the engine.
     ///
@@ -400,6 +403,9 @@ pub struct SeedlingPlugin<B: AudioBackend = CpalBackend> {
     pub config: prelude::FirewheelConfig,
 
     /// The stream settings, forwarded directly to the backend.
+    ///
+    /// After this plugin is added, this configuration is added
+    /// as an [`AudioStreamConfig`] resource.
     pub stream_config: B::Config,
 
     /// The initial graph configuration.
@@ -416,11 +422,24 @@ impl<B: AudioBackend> SeedlingPlugin<B>
 where
     B::Config: Default,
 {
-    /// Create a new default [`SeedlingPlugin`].
+    /// Create a new default [`SeedlingPlugin`] with the specified backend.
     pub fn new() -> Self {
         Self {
             config: prelude::FirewheelConfig::default(),
             stream_config: B::Config::default(),
+            graph_config: prelude::GraphConfiguration::default(),
+        }
+    }
+}
+
+#[cfg(feature = "web_audio")]
+impl SeedlingPlugin<firewheel_web_audio::WebAudioBackend> {
+    /// Create a new default [`SeedlingPlugin`] with the `firewheel_web_audio` backend.
+    pub fn new_web_audio() -> Self {
+        Self {
+            config: prelude::FirewheelConfig::default(),
+            stream_config: <firewheel_web_audio::WebAudioBackend as AudioBackend>::Config::default(
+            ),
             graph_config: prelude::GraphConfiguration::default(),
         }
     }
@@ -448,8 +467,7 @@ where
             .insert_resource(configuration::ConfigResource(self.graph_config))
             .init_resource::<edge::NodeMap>()
             .init_resource::<node::PendingRemovals>()
-            .init_resource::<spatial::DefaultSpatialScale>()
-            .insert_resource(pool::DefaultPoolSize(4..=32))
+            .init_resource::<pool::DefaultPoolSize>()
             .init_asset::<sample::Sample>()
             .register_node::<VolumeNode>()
             .register_node::<VolumePanNode>()
@@ -478,15 +496,6 @@ where
                 (edge::process_connections, edge::process_disconnections)
                     .chain()
                     .in_set(SeedlingSystems::Connect),
-                (
-                    spatial::update_2d_emitters,
-                    spatial::update_2d_emitters_effects,
-                    spatial::update_3d_emitters,
-                    spatial::update_3d_emitters_effects,
-                    spatial::update_itd_effects,
-                )
-                    .after(SeedlingSystems::Pool)
-                    .before(SeedlingSystems::Queue),
                 node::flush_events.in_set(SeedlingSystems::Flush),
             ),
         )
@@ -503,6 +512,7 @@ where
             configuration::SeedlingStartup::<B>::new(self.config),
             pool::SamplePoolPlugin,
             nodes::SeedlingNodesPlugin,
+            spatial::SpatialPlugin,
             #[cfg(feature = "rand")]
             sample::RandomPlugin,
         ));
@@ -571,8 +581,7 @@ where
             .register_type::<DurationSamples>()
             .register_type::<VolumeNode>()
             .register_type::<VolumeNodeConfig>()
-            .register_type::<VolumePanNode>()
-            .register_type::<VolumePanNodeConfig>();
+            .register_type::<VolumePanNode>();
     }
 }
 

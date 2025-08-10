@@ -18,7 +18,9 @@ default = ["stream", "wav", "ogg", "rand", "loudness", "reflect"]
 stream = ["firewheel/stream_nodes"]
 rand = ["dep:rand"]
 loudness = ["dep:ebur128", "dep:portable-atomic"]
-reflect = ["firewheel/bevy_reflect"]
+reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
+hrtf = ["dep:firewheel-ircam-hrtf"]
+web_audio = ["dep:firewheel-web-audio"]
 
 # formats
 wav = ["symphonium/wav", "symphonium/pcm"]
@@ -47,7 +49,7 @@ bevy_reflect = { version = "0.16", default-features = false, features = [
   "glam",
 ] }
 
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "6a001e6", features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "14c1190", features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
@@ -68,9 +70,13 @@ rand = { version = "0.8", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
+firewheel-ircam-hrtf = { path = "../firewheel-ircam-hrtf", optional = true, features = [
+  "bevy",
+] }
+firewheel-web-audio = { path = "../firewheel-web-audio", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "6a001e6", features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "14c1190", features = [
   "wasm-bindgen",
 ] }
 

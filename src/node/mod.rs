@@ -499,7 +499,7 @@ mod test {
             &mut app,
             |mut q: Query<&mut VolumeNodeConfig, With<TestMarker>>| {
                 let mut config = q.single_mut().unwrap();
-                config.smooth_secs = 0.05;
+                config.channels = NonZeroChannelCount::new(3).unwrap();
             },
         );
 

@@ -31,12 +31,38 @@
 //! simply select the closest listener for distance
 //! calculations.
 
+use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_math::prelude::*;
 use bevy_transform::prelude::*;
 use firewheel::{nodes::spatial_basic::SpatialBasicNode, vector};
 
-use crate::{nodes::itd::ItdNode, pool::sample_effects::EffectOf};
+use crate::{SeedlingSystems, nodes::itd::ItdNode, pool::sample_effects::EffectOf};
+
+pub(crate) struct SpatialPlugin;
+
+impl Plugin for SpatialPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<DefaultSpatialScale>().add_systems(
+            Last,
+            (
+                update_2d_emitters,
+                update_2d_emitters_effects,
+                update_3d_emitters,
+                update_3d_emitters_effects,
+                update_itd_effects,
+                #[cfg(feature = "hrtf")]
+                spatial_hrtf::update_hrtf_effects,
+            )
+                .after(SeedlingSystems::Pool)
+                .before(SeedlingSystems::Queue),
+        );
+
+        #[cfg(feature = "hrtf")]
+        app.register_type::<firewheel_ircam_hrtf::HrtfNode>()
+            .register_type::<firewheel_ircam_hrtf::HrtfConfig>();
+    }
+}
 
 /// A scaling factor applied to the distance between spatial listeners and emitters.
 ///
@@ -127,7 +153,7 @@ pub struct SpatialListener2D;
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SpatialListener3D;
 
-pub(crate) fn update_2d_emitters(
+fn update_2d_emitters(
     listeners: Query<&GlobalTransform, With<SpatialListener2D>>,
     mut emitters: Query<(
         &mut SpatialBasicNode,
@@ -157,7 +183,7 @@ pub(crate) fn update_2d_emitters(
 }
 
 // TODO: is there a good way to consolidate this?
-pub(crate) fn update_2d_emitters_effects(
+fn update_2d_emitters_effects(
     listeners: Query<&GlobalTransform, With<SpatialListener2D>>,
     mut emitters: Query<(&mut SpatialBasicNode, &EffectOf)>,
     effect_parents: Query<(&GlobalTransform, Option<&SpatialScale>)>,
@@ -187,7 +213,7 @@ pub(crate) fn update_2d_emitters_effects(
     }
 }
 
-pub(crate) fn update_itd_effects(
+fn update_itd_effects(
     listeners: Query<&GlobalTransform, Or<(With<SpatialListener2D>, With<SpatialListener3D>)>>,
     mut emitters: Query<(&mut ItdNode, &EffectOf)>,
     effect_parents: Query<&GlobalTransform>,
@@ -213,7 +239,7 @@ pub(crate) fn update_itd_effects(
     }
 }
 
-pub(crate) fn update_3d_emitters(
+fn update_3d_emitters(
     listeners: Query<&GlobalTransform, With<SpatialListener3D>>,
     mut emitters: Query<(
         &mut SpatialBasicNode,
@@ -241,7 +267,7 @@ pub(crate) fn update_3d_emitters(
     }
 }
 
-pub(crate) fn update_3d_emitters_effects(
+fn update_3d_emitters_effects(
     listeners: Query<&GlobalTransform, With<SpatialListener3D>>,
     mut emitters: Query<(&mut SpatialBasicNode, &EffectOf)>,
     effect_parents: Query<(&GlobalTransform, Option<&SpatialScale>)>,
@@ -292,6 +318,38 @@ fn find_closest_listener(
     }
 
     closest_listener.map(|l| l.1)
+}
+
+#[cfg(feature = "hrtf")]
+mod spatial_hrtf {
+    use super::*;
+    use crate::prelude::hrtf::HrtfNode;
+
+    pub(super) fn update_hrtf_effects(
+        listeners: Query<&GlobalTransform, Or<(With<SpatialListener2D>, With<SpatialListener3D>)>>,
+        mut emitters: Query<(&mut HrtfNode, &EffectOf)>,
+        effect_parents: Query<&GlobalTransform>,
+    ) {
+        for (mut spatial, effect_of) in emitters.iter_mut() {
+            let Ok(transform) = effect_parents.get(effect_of.0) else {
+                continue;
+            };
+
+            let emitter_pos = transform.translation();
+            let closest_listener = find_closest_listener(
+                emitter_pos,
+                listeners.iter().map(GlobalTransform::compute_transform),
+            );
+
+            let Some(listener) = closest_listener else {
+                continue;
+            };
+
+            let world_offset = emitter_pos - listener.translation;
+            let local_offset = listener.rotation.inverse() * world_offset;
+            spatial.offset = local_offset;
+        }
+    }
 }
 
 #[cfg(test)]
