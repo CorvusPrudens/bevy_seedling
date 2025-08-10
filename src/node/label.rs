@@ -27,6 +27,7 @@ use smallvec::SmallVec;
 ///     commands.spawn((
 ///         VolumeNode {
 ///             volume: Volume::Linear(0.25),
+///             ..Default::default()
 ///         },
 ///         EffectsChain,
 ///     ));
@@ -60,7 +61,13 @@ bevy_ecs::define_label!(
     /// struct EffectsChain;
     ///
     /// fn system(server: Res<AssetServer>, mut commands: Commands) {
-    ///     commands.spawn((VolumeNode { volume: Volume::Linear(0.25) }, EffectsChain));
+    ///     commands.spawn((
+    ///         VolumeNode {
+    ///             volume: Volume::Linear(0.25),
+    ///             ..Default::default()
+    ///         },
+    ///         EffectsChain,
+    ///     ));
     ///
     ///     commands
     ///         .spawn(SamplePlayer::new(server.load("my_sample.wav")))
@@ -129,7 +136,7 @@ pub type InternedNodeLabel = Interned<dyn NodeLabel>;
 /// #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
 /// struct MyLabel;
 ///
-/// commands.spawn((VolumeNode { volume: Volume::Linear(0.25) }, MyLabel));
+/// commands.spawn((VolumeNode { volume: Volume::Linear(0.25), ..Default::default() }, MyLabel));
 /// # }
 #[derive(Debug, Default, Component, Clone)]
 #[component(immutable)]

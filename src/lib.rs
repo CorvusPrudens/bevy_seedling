@@ -147,7 +147,8 @@
 //! commands.spawn((
 //!     SamplePlayer::new(server.load("my_sample.wav")),
 //!     sample_effects![VolumeNode {
-//!         volume: Volume::Decibels(-6.0)
+//!         volume: Volume::Decibels(-6.0),
+//!         ..Default::default()
 //!     }],
 //! ));
 //! # }

@@ -52,12 +52,12 @@ bevy_reflect = { version = "0.16", default-features = false, features = [
   "glam",
 ] }
 
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "14c1190", features = [
+firewheel = { git = "https://github.com/corvusprudens/Firewheel", rev = "7c9d11b", features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
   "musical_transport",
-  "glam",
+  "glam-29",
 ] }
 symphonium = { version = "0.6", default-features = false, features = [
   "opt-simd",
@@ -73,13 +73,13 @@ rand = { version = "0.8", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-firewheel-ircam-hrtf = { git = "https://github.com/CorvusPrudens/firewheel-ircam-hrtf", rev = "09ee413", optional = true, features = [
+firewheel-ircam-hrtf = { git = "https://github.com/CorvusPrudens/firewheel-ircam-hrtf", rev = "2c5f3f5", optional = true, features = [
   "bevy",
 ] }
-firewheel-web-audio = { git = "https://github.com/CorvusPrudens/firewheel-web-audio", rev = "866bc64", optional = true }
+firewheel-web-audio = { git = "https://github.com/CorvusPrudens/firewheel-web-audio", rev = "8a315e6", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "14c1190", features = [
+firewheel = { git = "https://github.com/corvusprudens/Firewheel", rev = "7c9d11b", features = [
   "wasm-bindgen",
 ] }
 

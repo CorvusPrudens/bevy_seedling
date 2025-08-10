@@ -375,7 +375,7 @@ impl RegisterNode for App {
         // Different nodes may share configuration structs, so we need
         // to make sure this isn't registered more than once.
         let mut configs = world.get_resource_or_init::<RegisteredConfigs>();
-        if configs.0.insert(TypeId::of::<T::Configuration>()) {
+        if configs.insert::<T::Configuration>() {
             world.add_observer(insert_baseline::<T::Configuration>);
         }
 
@@ -423,7 +423,7 @@ impl RegisterNode for App {
         // Different nodes may share configuration structs, so we need
         // to make sure this isn't registered more than once.
         let mut configs = world.get_resource_or_init::<RegisteredConfigs>();
-        if configs.0.insert(TypeId::of::<T::Configuration>()) {
+        if configs.insert::<T::Configuration>() {
             world.add_observer(insert_baseline::<T::Configuration>);
         }
 

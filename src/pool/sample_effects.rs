@@ -39,6 +39,7 @@ pub struct EffectOf(pub Entity);
 ///     // You can always provide arbitrary initial values.
 ///     sample_effects![VolumeNode {
 ///         volume: Volume::Decibels(-6.0),
+///         ..Default::default()
 ///     }],
 /// ));
 /// # }
@@ -71,6 +72,7 @@ pub struct EffectOf(pub Entity);
 ///         // sample player unless explicitly overwritten.
 ///         VolumeNode {
 ///             volume: Volume::Decibels(-3.0),
+///             ..Default::default()
 ///         },
 ///         SpatialBasicNode::default(),
 ///     ],
@@ -84,6 +86,7 @@ pub struct EffectOf(pub Entity);
 ///     SamplePlayer::new(server.load("my_other_sample.wav")),
 ///     sample_effects![VolumeNode {
 ///         volume: Volume::Decibels(-6.0),
+///         ..Default::default()
 ///     }],
 /// ));
 /// # }

@@ -346,6 +346,8 @@ mod spatial_hrtf {
 
             let world_offset = emitter_pos - listener.translation;
             let local_offset = listener.rotation.inverse() * world_offset;
+            let local_offset = local_offset * scale;
+
             spatial.offset = local_offset * scale;
         }
     }
