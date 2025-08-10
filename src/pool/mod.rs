@@ -549,6 +549,11 @@ fn spawn_chain(
     effects: &[Entity],
     commands: &mut Commands,
 ) -> Entity {
+    let connections = config.as_ref().map(|c| {
+        let channels = c.channels.get().get();
+        (0..channels).map(|i| (i, i)).collect()
+    });
+
     let sampler = commands
         .spawn((
             SamplerNode::default(),
@@ -579,7 +584,7 @@ fn spawn_chain(
             .entry::<PendingConnections>()
             .or_default()
             .into_mut()
-            .push(PendingEdge::new(chain[0], None));
+            .push(PendingEdge::new(chain[0], connections.clone()));
 
         for pair in chain.windows(2) {
             world
@@ -587,7 +592,7 @@ fn spawn_chain(
                 .entry::<PendingConnections>()
                 .or_default()
                 .into_mut()
-                .push(PendingEdge::new(pair[1], None));
+                .push(PendingEdge::new(pair[1], connections.clone()));
         }
 
         Ok(())

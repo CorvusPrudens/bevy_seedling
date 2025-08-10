@@ -57,10 +57,6 @@ impl Plugin for SpatialPlugin {
                 .after(SeedlingSystems::Pool)
                 .before(SeedlingSystems::Queue),
         );
-
-        #[cfg(feature = "hrtf")]
-        app.register_type::<firewheel_ircam_hrtf::HrtfNode>()
-            .register_type::<firewheel_ircam_hrtf::HrtfConfig>();
     }
 }
 
@@ -185,12 +181,12 @@ fn update_2d_emitters(
 // TODO: is there a good way to consolidate this?
 fn update_2d_emitters_effects(
     listeners: Query<&GlobalTransform, With<SpatialListener2D>>,
-    mut emitters: Query<(&mut SpatialBasicNode, &EffectOf)>,
-    effect_parents: Query<(&GlobalTransform, Option<&SpatialScale>)>,
+    mut emitters: Query<(&mut SpatialBasicNode, Option<&SpatialScale>, &EffectOf)>,
+    effect_parents: Query<&GlobalTransform>,
     default_scale: Res<DefaultSpatialScale>,
 ) {
-    for (mut spatial, effect_of) in emitters.iter_mut() {
-        let Ok((transform, scale)) = effect_parents.get(effect_of.0) else {
+    for (mut spatial, scale, effect_of) in emitters.iter_mut() {
+        let Ok(transform) = effect_parents.get(effect_of.0) else {
             continue;
         };
 
@@ -269,12 +265,12 @@ fn update_3d_emitters(
 
 fn update_3d_emitters_effects(
     listeners: Query<&GlobalTransform, With<SpatialListener3D>>,
-    mut emitters: Query<(&mut SpatialBasicNode, &EffectOf)>,
-    effect_parents: Query<(&GlobalTransform, Option<&SpatialScale>)>,
+    mut emitters: Query<(&mut SpatialBasicNode, Option<&SpatialScale>, &EffectOf)>,
+    effect_parents: Query<&GlobalTransform>,
     default_scale: Res<DefaultSpatialScale>,
 ) {
-    for (mut spatial, effect_of) in emitters.iter_mut() {
-        let Ok((transform, scale)) = effect_parents.get(effect_of.0) else {
+    for (mut spatial, scale, effect_of) in emitters.iter_mut() {
+        let Ok(transform) = effect_parents.get(effect_of.0) else {
             continue;
         };
 
@@ -327,10 +323,11 @@ mod spatial_hrtf {
 
     pub(super) fn update_hrtf_effects(
         listeners: Query<&GlobalTransform, Or<(With<SpatialListener2D>, With<SpatialListener3D>)>>,
-        mut emitters: Query<(&mut HrtfNode, &EffectOf)>,
+        mut emitters: Query<(&mut HrtfNode, Option<&SpatialScale>, &EffectOf)>,
         effect_parents: Query<&GlobalTransform>,
+        default_scale: Res<DefaultSpatialScale>,
     ) {
-        for (mut spatial, effect_of) in emitters.iter_mut() {
+        for (mut spatial, scale, effect_of) in emitters.iter_mut() {
             let Ok(transform) = effect_parents.get(effect_of.0) else {
                 continue;
             };
@@ -345,9 +342,11 @@ mod spatial_hrtf {
                 continue;
             };
 
+            let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
+
             let world_offset = emitter_pos - listener.translation;
             let local_offset = listener.rotation.inverse() * world_offset;
-            spatial.offset = local_offset;
+            spatial.offset = local_offset * scale;
         }
     }
 }

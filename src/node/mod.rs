@@ -209,7 +209,28 @@ fn insert_baseline<T: Component + Clone>(
 }
 
 #[derive(Resource, Default)]
+struct RegisteredNodes(HashSet<TypeId>);
+
+impl RegisteredNodes {
+    /// Insert the `TypeId` of `T`.
+    ///
+    /// Returns `true` if the ID wasn't already present.
+    fn insert<T: core::any::Any>(&mut self) -> bool {
+        self.0.insert(TypeId::of::<T>())
+    }
+}
+
+#[derive(Resource, Default)]
 struct RegisteredConfigs(HashSet<TypeId>);
+
+impl RegisteredConfigs {
+    /// Insert the `TypeId` of `T`.
+    ///
+    /// Returns `true` if the ID wasn't already present.
+    fn insert<T: core::any::Any>(&mut self) -> bool {
+        self.0.insert(TypeId::of::<T>())
+    }
+}
 
 /// Register audio nodes in the ECS.
 ///
@@ -302,6 +323,7 @@ pub trait RegisterNode {
 }
 
 impl RegisterNode for App {
+    #[cfg_attr(debug_assertions, track_caller)]
     fn register_node<T>(&mut self) -> &mut Self
     where
         T: AudioNode<Configuration: Component + Clone + PartialEq>
@@ -311,18 +333,36 @@ impl RegisterNode for App {
             + Clone,
     {
         let world = self.world_mut();
+        let mut nodes = world.get_resource_or_init::<RegisteredNodes>();
 
-        world.register_component_hooks::<T>().on_insert(
-            |mut world: DeferredWorld, context: HookContext| {
-                let value = world.get::<T>(context.entity).unwrap().clone();
-                world
-                    .commands()
-                    .entity(context.entity)
-                    .insert((Baseline(value), EffectId(context.component_id)));
-            },
-        );
-        world.register_required_components::<T, Events>();
-        world.register_required_components::<T, T::Configuration>();
+        if nodes.insert::<T>() {
+            world.register_component_hooks::<T>().on_insert(
+                |mut world: DeferredWorld, context: HookContext| {
+                    let value = world.get::<T>(context.entity).unwrap().clone();
+                    world
+                        .commands()
+                        .entity(context.entity)
+                        .insert((Baseline(value), EffectId(context.component_id)));
+                },
+            );
+            world.register_required_components::<T, Events>();
+            world.register_required_components::<T, T::Configuration>();
+        } else {
+            #[cfg(debug_assertions)]
+            {
+                bevy_log::warn!(
+                    "Audio node `{}` was registered more than once at {}",
+                    core::any::type_name::<T>(),
+                    std::panic::Location::caller(),
+                );
+            }
+
+            #[cfg(not(debug_assertions))]
+            bevy_log::warn!(
+                "Audio node `{}` was registered more than once",
+                core::any::type_name::<T>(),
+            );
+        }
 
         // Different nodes may share configuration structs, so we need
         // to make sure this isn't registered more than once.
@@ -344,13 +384,33 @@ impl RegisterNode for App {
         )
     }
 
+    #[cfg_attr(debug_assertions, track_caller)]
     fn register_simple_node<T>(&mut self) -> &mut Self
     where
         T: AudioNode<Configuration: Component + Clone + PartialEq> + Component + Clone,
     {
         let world = self.world_mut();
-        world.register_required_components::<T, Events>();
-        world.register_required_components::<T, T::Configuration>();
+        let mut nodes = world.get_resource_or_init::<RegisteredNodes>();
+
+        if nodes.insert::<T>() {
+            world.register_required_components::<T, Events>();
+            world.register_required_components::<T, T::Configuration>();
+        } else {
+            #[cfg(debug_assertions)]
+            {
+                bevy_log::warn!(
+                    "Audio node `{}` was registered more than once at {}",
+                    core::any::type_name::<T>(),
+                    std::panic::Location::caller(),
+                );
+            }
+
+            #[cfg(not(debug_assertions))]
+            bevy_log::warn!(
+                "Audio node `{}` was registered more than once",
+                core::any::type_name::<T>(),
+            );
+        }
 
         // Different nodes may share configuration structs, so we need
         // to make sure this isn't registered more than once.

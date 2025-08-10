@@ -19,8 +19,11 @@ stream = ["firewheel/stream_nodes"]
 rand = ["dep:rand"]
 loudness = ["dep:ebur128", "dep:portable-atomic"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
-hrtf = ["dep:firewheel-ircam-hrtf"]
 web_audio = ["dep:firewheel-web-audio"]
+
+hrtf = ["dep:firewheel-ircam-hrtf"]
+# embed all HRTF subjects
+hrtf_subjects = ["firewheel-ircam-hrtf?/all_subjects"]
 
 # formats
 wav = ["symphonium/wav", "symphonium/pcm"]
@@ -81,6 +84,7 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "14c1190", fea
 ] }
 
 [dev-dependencies]
+bevy_seedling = { path = ".", features = ["hrtf"] }
 bevy = { version = "0.16", default-features = false, features = [
   "bevy_debug_stepping",
   "bevy_asset",

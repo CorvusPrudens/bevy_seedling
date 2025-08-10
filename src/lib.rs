@@ -293,6 +293,7 @@ pub mod error;
 pub mod fixed_vec;
 pub mod node;
 pub mod nodes;
+pub mod perceptual_volume;
 pub mod pool;
 pub mod sample;
 pub mod spatial;
@@ -325,6 +326,7 @@ pub mod prelude {
         lpf::{LowPassConfig, LowPassNode},
         send::{SendConfig, SendNode},
     };
+    pub use crate::perceptual_volume::PerceptualVolume;
     pub use crate::pool::{
         DefaultPoolSize, PlaybackCompletionEvent, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
         dynamic::DynamicBus,
@@ -511,10 +513,6 @@ where
             .register_node::<SpatialBasicNode>()
             .register_simple_node::<StereoToMonoNode>();
 
-        #[cfg(feature = "stream")]
-        app.register_simple_node::<StreamReaderNode>()
-            .register_simple_node::<StreamWriterNode>();
-
         app.configure_sets(
             Last,
             (
@@ -554,8 +552,20 @@ where
             sample::RandomPlugin,
         ));
 
-        #[cfg(all(feature = "reflect", feature = "loudness"))]
-        app.register_type::<LoudnessNode>();
+        #[cfg(feature = "stream")]
+        app.register_simple_node::<StreamReaderNode>()
+            .register_simple_node::<StreamWriterNode>();
+
+        #[cfg(all(feature = "reflect", feature = "stream"))]
+        app.register_type::<StreamReaderNode>()
+            .register_type::<StreamWriterNode>();
+
+        #[cfg(feature = "hrtf")]
+        app.register_node::<HrtfNode>();
+
+        #[cfg(all(feature = "reflect", feature = "hrtf"))]
+        app.register_type::<HrtfNode>()
+            .register_type::<HrtfConfig>();
 
         #[cfg(all(feature = "reflect", feature = "rand"))]
         app.register_type::<RandomPitch>();

@@ -41,7 +41,7 @@ fn main() {
 
 fn setup(mut master: Single<&mut VolumeNode, With<MainBus>>, mut commands: Commands) {
     // Let's reduce the master volume a bit.
-    master.volume = Volume::Linear(0.7);
+    master.volume = CONVERTER.perceptual_to_volume(0.7);
 
     commands.spawn(Camera2d);
 
@@ -105,16 +105,22 @@ fn play_sfx(_: Trigger<Pointer<Click>>, mut commands: Commands, server: Res<Asse
 
 //  ============================ Control Knob Observers ============================ //
 
+const CONVERTER: PerceptualVolume = PerceptualVolume::new();
+
 const MIN_VOLUME: f32 = 0.0;
-const MAX_VOLUME: f32 = 3.0;
+const MAX_VOLUME: f32 = 2.0;
 const STEP: f32 = 0.1;
 
 fn increment_volume(volume: Volume) -> Volume {
-    Volume::Linear((volume.linear() + STEP).min(MAX_VOLUME))
+    let perceptual = CONVERTER.volume_to_perceptual(volume);
+    let new_perceptual = (perceptual + STEP).min(MAX_VOLUME);
+    CONVERTER.perceptual_to_volume(new_perceptual)
 }
 
 fn decrement_volume(volume: Volume) -> Volume {
-    Volume::Linear((volume.linear() - STEP).max(MIN_VOLUME))
+    let perceptual = CONVERTER.volume_to_perceptual(volume);
+    let new_perceptual = (perceptual - STEP).max(MIN_VOLUME);
+    CONVERTER.perceptual_to_volume(new_perceptual)
 }
 
 // Master
@@ -130,8 +136,8 @@ fn update_master_volume_label(
     mut label: Single<&mut Text, With<MasterVolumeLabel>>,
     master: Single<&VolumeNode, (With<MainBus>, Changed<VolumeNode>)>,
 ) {
-    let percent = (master.volume.linear() * 100.0).round();
-    let text = format!("{percent}%");
+    let percent = CONVERTER.volume_to_perceptual(master.volume) * 100.0;
+    let text = format!("{}%", percent.round());
     label.0 = text;
 }
 
@@ -154,8 +160,8 @@ fn update_music_volume_label(
     mut label: Single<&mut Text, With<MusicVolumeLabel>>,
     music: Single<&VolumeNode, (With<SamplerPool<MusicPool>>, Changed<VolumeNode>)>,
 ) {
-    let percent = (music.volume.linear() * 100.0).round();
-    let text = format!("{percent}%");
+    let percent = CONVERTER.volume_to_perceptual(music.volume) * 100.0;
+    let text = format!("{}%", percent.round());
     label.0 = text;
 }
 
@@ -172,8 +178,8 @@ fn update_sfx_volume_label(
     mut label: Single<&mut Text, With<SfxVolumeLabel>>,
     sfx: Single<&VolumeNode, (With<SfxBus>, Changed<VolumeNode>)>,
 ) {
-    let percent = (sfx.volume.linear() * 100.0).round();
-    let text = format!("{percent}%");
+    let percent = CONVERTER.volume_to_perceptual(sfx.volume) * 100.0;
+    let text = format!("{}%", percent.round());
     label.0 = text;
 }
 

@@ -50,20 +50,41 @@ pub struct ItdConfig {
     /// Defaults to `0.22` (22 cm).
     pub inter_ear_distance: f32,
 
-    /// The number of input channels.
+    /// The input configuration.
     ///
-    /// The inputs are downmixed to a mono signal
-    /// before spatialization is applied.
-    ///
-    /// Defaults to [`NonZeroChannelCount::STEREO`].
-    pub input_channels: NonZeroChannelCount,
+    /// Defaults to [`InputConfig::Stereo`].
+    pub input_config: InputConfig,
 }
 
 impl Default for ItdConfig {
     fn default() -> Self {
         Self {
             inter_ear_distance: 0.22,
-            input_channels: NonZeroChannelCount::STEREO,
+            input_config: InputConfig::Stereo,
+        }
+    }
+}
+
+/// The input configuration.
+///
+/// Defaults to [`NonZeroChannelCount::STEREO`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub enum InputConfig {
+    /// Delay the left and right channels without downmixing.
+    ///
+    /// This is useful for composing spatial effects.
+    Stereo,
+    /// Downmix the signal to mono, then delay the left and right channels.
+    Downmixed(NonZeroChannelCount),
+}
+
+impl InputConfig {
+    /// Get the number of input channels.
+    pub fn input_channels(&self) -> NonZeroChannelCount {
+        match self {
+            Self::Stereo => NonZeroChannelCount::STEREO,
+            Self::Downmixed(c) => *c,
         }
     }
 }
@@ -72,6 +93,7 @@ struct ItdProcessor {
     left: DelayLine,
     right: DelayLine,
     inter_ear_distance: f32,
+    input_config: InputConfig,
 }
 
 impl AudioNode for ItdNode {
@@ -80,7 +102,10 @@ impl AudioNode for ItdNode {
     fn info(&self, config: &Self::Configuration) -> AudioNodeInfo {
         AudioNodeInfo::new()
             .debug_name("itd node")
-            .channel_config(ChannelConfig::new(config.input_channels.get(), 2))
+            .channel_config(ChannelConfig::new(
+                config.input_config.input_channels().get(),
+                2,
+            ))
     }
 
     fn construct_processor(
@@ -97,6 +122,7 @@ impl AudioNode for ItdNode {
             left: DelayLine::new(maximum_samples),
             right: DelayLine::new(maximum_samples),
             inter_ear_distance: configuration.inter_ear_distance,
+            input_config: configuration.input_config,
         }
     }
 }
@@ -138,18 +164,40 @@ impl AudioNodeProcessor for ItdProcessor {
             return ProcessStatus::ClearAllOutputs;
         }
 
-        for frame in 0..proc_info.frames {
-            let mut downmixed = 0.0;
-            for channel in inputs {
-                downmixed += channel[frame];
+        match self.input_config {
+            InputConfig::Stereo => {
+                // Remove bounds checks inside loop
+                let in_left = &inputs[0][..proc_info.frames];
+                let in_right = &inputs[1][..proc_info.frames];
+
+                let (out_left, rest) = outputs.split_first_mut().unwrap();
+
+                let out_left = &mut out_left[..proc_info.frames];
+                let out_right = &mut rest[0][..proc_info.frames];
+
+                for frame in 0..proc_info.frames {
+                    self.left.write(in_left[frame]);
+                    self.right.write(in_right[frame]);
+
+                    out_left[frame] = self.left.read();
+                    out_right[frame] = self.right.read();
+                }
             }
-            downmixed /= inputs.len() as f32;
+            InputConfig::Downmixed(_) => {
+                for frame in 0..proc_info.frames {
+                    let mut downmixed = 0.0;
+                    for channel in inputs {
+                        downmixed += channel[frame];
+                    }
+                    downmixed /= inputs.len() as f32;
 
-            self.left.write(downmixed);
-            self.right.write(downmixed);
+                    self.left.write(downmixed);
+                    self.right.write(downmixed);
 
-            outputs[0][frame] = self.left.read();
-            outputs[1][frame] = self.right.read();
+                    outputs[0][frame] = self.left.read();
+                    outputs[1][frame] = self.right.read();
+                }
+            }
         }
 
         ProcessStatus::outputs_not_silent()

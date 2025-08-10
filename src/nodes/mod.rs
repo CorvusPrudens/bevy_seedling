@@ -32,5 +32,8 @@ impl Plugin for SeedlingNodesPlugin {
 
         #[cfg(feature = "loudness")]
         app.register_simple_node::<loudness::LoudnessNode>();
+
+        #[cfg(all(feature = "reflect", feature = "loudness"))]
+        app.register_type::<loudness::LoudnessNode>();
     }
 }
