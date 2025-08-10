@@ -73,10 +73,10 @@ rand = { version = "0.8", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-firewheel-ircam-hrtf = { path = "../firewheel-ircam-hrtf", optional = true, features = [
+firewheel-ircam-hrtf = { git = "https://github.com/CorvusPrudens/firewheel-ircam-hrtf", rev = "09ee413", optional = true, features = [
   "bevy",
 ] }
-firewheel-web-audio = { path = "../firewheel-web-audio", optional = true }
+firewheel-web-audio = { git = "https://github.com/CorvusPrudens/firewheel-web-audio", rev = "866bc64", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "14c1190", features = [

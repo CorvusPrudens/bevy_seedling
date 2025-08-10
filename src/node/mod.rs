@@ -298,6 +298,14 @@ impl RegisteredConfigs {
 /// Diffing occurs in the [`SeedlingSystems::Queue`] system set during
 /// the [`Last`] schedule. Diffing will only be applied to nodes that have
 /// been mutated according to Bevy's [`Changed`] filter.
+///
+/// ## Audio node configuration
+///
+/// All Firewheel nodes have a configuration struct: the [`AudioNode::Configuration`]
+/// associated type. When you register a node, its configuration
+/// is added as a required component. Following the initial insertion
+/// of the processor, any changes to the configuration component will
+/// trigger automatic recreation and reinsertion.
 pub trait RegisterNode {
     /// Register an audio node with automatic diffing.
     ///

@@ -265,7 +265,7 @@
 //! ### [Pool][crate::prelude::SamplerPool]
 //!
 //! A _pool_ (or sampler pool) is a group of [`SamplerNode`]s connected
-//! to a local bus. Sampler pools are roughly analagous to `bevy_kira_audio`'s
+//! to a local bus. Sampler pools are roughly analogous to `bevy_kira_audio`'s
 //! [tracks](https://docs.rs/bevy_kira_audio/latest/bevy_kira_audio/type.Audio.html),
 //! where both allow you to play sounds in the same "place" in the audio graph.
 //!

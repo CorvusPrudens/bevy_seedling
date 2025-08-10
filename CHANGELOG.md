@@ -1,3 +1,143 @@
+# 0.5.0
+
+## Features
+
+### Reflection
+
+`bevy_seedling` now features reflection for all public, ECS-facing
+types. Since many `bevy_seedling` types are actually just Firewheel
+types, we've extended reflection to many of Firewheel's types as well.
+
+Reflection can be enabled with the `reflect` feature, now enabled
+by default.
+
+### New audio nodes
+
+0.5 features a few new audio nodes:
+
+- `HrtfNode`, for HRTF-based spatialization, a more advanced
+  and convincing effect than `SpatialBasicNode` (at the cost of
+  more expensive computation).
+- `ItdNode`, a simple, cheap spatialization technique that can
+  help make the basic panning spatialization of `SpatialBasicNode`
+  a bit more convincing.
+- `LimiterNode`, a dynamic limiter, which eliminates jarring distortion
+  when things get too loud. This is automatically applied to the output
+  of the new default graph configuration.
+- `LufsNode`, a LUFS analyzer, which helps sound designers monitor the
+  overall loudness and consistency of a Bevy app's sound.
+
+### Configurable initial graph
+
+The initial graph now features a few built-in configurations.
+The default configuration creates a simple, common game setup,
+facilitating straightforward SFX/Music/Master volume configuration.
+The other two offer increasingly minimal setups for those who know
+exactly what they want.
+
+#### Migration guide
+
+To ease into the new setup, you can start with the `Minimal` configuration,
+which matches `0.4`'s setup:
+
+```rs
+// 0.4
+app.insert_plugins(SeedlingPlugin::default());
+
+// 0.5
+app.insert_plugins(SeedlingPlugin {
+    graph_config: GraphConfiguration::Minimal,
+    ..Default::default()
+});
+```
+
+The `SeedlingPlugin::spawn_default_pool` field has been absorbed by the
+new `GraphConfiguration`. To achieve something similar, you'll probably
+want the `Empty` configuration.
+
+```rs
+// 0.4
+app.insert_plugins(SeedlingPlugin {
+    spawn_default_pool: false,
+    ..Default::default()
+});
+
+// 0.5
+app.insert_plugins(SeedlingPlugin {
+    graph_config: GraphConfiguration::Minimal,
+    ..Default::default()
+});
+
+fn minimal_setup(mut commands: Commands) {
+    commands
+        .spawn((MainBus, VolumeNode::default()))
+        .connect(AudioGraphOutput);
+
+    commands.spawn((
+        bevy_seedling::pool::dynamic::DynamicBus,
+        VolumeNode::default(),
+    ));
+}
+```
+
+### Default pool size
+
+The default pool size is now configured purely as a resource.
+
+#### Migration guide
+
+```rs
+// 0.4
+app.insert_plugins(SeedlingPlugin {
+    pool_size: 4..=32,
+    ..Default::default()
+});
+
+// 0.5
+app
+  .insert_plugins(SeedlingPlugin::default())
+  .insert_resource(DefaultPoolSize(4..=32));
+```
+
+### Dynamic bus
+
+Dynamic pools are now routed to the `DynamicBus`, giving you
+a bit more control over where they go. To completely disabled
+dynamic pool creation, simply despawn this bus, or use an initial
+graph configuration that doesn't create it.
+
+### Automatic node configuration updates
+
+All Firewheel nodes have a configuration struct: the `Config` associated
+type of the `AudioNode` trait. When you register a node, the configuration
+is added as a required component. This configuration is used once
+when the node is created and inserted into the graph. In 0.4, further
+changes would do nothing. In 0.5, we now automatically recreate and
+reinsert the node when its configuration changes.
+
+### `Sample` -> `AudioSample`
+
+The `Sample` type, the primary asset for playing sounds, has been renamed
+to `AudioSample` and is now re-exported in the prelude.
+
+#### Migration guide
+
+```rs
+// 0.4
+use bevy_seedling::{prelude::*, sample::Sample};
+
+fn play_sound(source: Handle<Sample>) -> impl Bundle {
+    SamplePlayer::new(source)
+}
+
+// 0.5
+use bevy_seedling::prelude::*;
+
+fn play_sound(source: Handle<AudioSample>) -> impl Bundle {
+    SamplePlayer::new(source)
+}
+```
+
 # 0.4.4
 
 ## Fixes
