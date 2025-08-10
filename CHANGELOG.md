@@ -2,6 +2,22 @@
 
 ## Features
 
+### Improved I/O configuration
+
+Initialization and I/O configuration have been significantly improved.
+Firewheel's audio backend configuration is now inserted as a resource, `AudioStreamConfig`.
+This resource can be configured during the `Startup` schedule. In `PostStartup`,
+`AudioStreamConfig` is used to initialize the stream.
+
+After `Startup`, any mutations to `AudioStreamConfig` will cause the stream
+to stop and restart with the new configuration. This can be used to
+easily change input/output devices and settings.
+
+`bevy_seedling` will also spawn entities with `InputDeviceInfo` and `OutputDeviceInfo`
+components before the `Startup` schedule. These can be used to configure
+the `AudioStreamConfig`, although they don't yet provide very detailed information.
+To update these entities, you can trigger the `FetchAudioIoEvent` event.
+
 ### Reflection
 
 `bevy_seedling` now features reflection for all public, ECS-facing
@@ -42,10 +58,10 @@ which matches `0.4`'s setup:
 
 ```rs
 // 0.4
-app.insert_plugins(SeedlingPlugin::default());
+app.add_plugins(SeedlingPlugin::default());
 
 // 0.5
-app.insert_plugins(SeedlingPlugin {
+app.add_plugins(SeedlingPlugin {
     graph_config: GraphConfiguration::Minimal,
     ..Default::default()
 });
@@ -57,13 +73,13 @@ want the `Empty` configuration.
 
 ```rs
 // 0.4
-app.insert_plugins(SeedlingPlugin {
+app.add_plugins(SeedlingPlugin {
     spawn_default_pool: false,
     ..Default::default()
 });
 
 // 0.5
-app.insert_plugins(SeedlingPlugin {
+app.add_plugins(SeedlingPlugin {
     graph_config: GraphConfiguration::Minimal,
     ..Default::default()
 });
@@ -88,21 +104,21 @@ The default pool size is now configured purely as a resource.
 
 ```rs
 // 0.4
-app.insert_plugins(SeedlingPlugin {
+app.add_plugins(SeedlingPlugin {
     pool_size: 4..=32,
     ..Default::default()
 });
 
 // 0.5
 app
-  .insert_plugins(SeedlingPlugin::default())
+  .add_plugins(SeedlingPlugin::default())
   .insert_resource(DefaultPoolSize(4..=32));
 ```
 
 ### Dynamic bus
 
 Dynamic pools are now routed to the `DynamicBus`, giving you
-a bit more control over where they go. To completely disabled
+a bit more control over where they go. To completely disable
 dynamic pool creation, simply despawn this bus, or use an initial
 graph configuration that doesn't create it.
 
