@@ -115,6 +115,29 @@ when the node is created and inserted into the graph. In 0.4, further
 changes would do nothing. In 0.5, we now automatically recreate and
 reinsert the node when its configuration changes.
 
+### `PitchRange` -> `RandomPitch`
+
+The `PitchRange` component has been renamed to `RandomPitch` to better
+communicate its intent. The RNG source has also been made public, allowing
+for custom sources. Finally, `RandomPitch` has received a convenience constructor
+that creates a uniform range about `1.0`.
+
+#### Migration guide
+
+```rs
+// 0.4
+commands.spawn((
+    SamplePlayer::new(server.load("sample.wav")),
+    PitchRange(0.95..1.05),
+));
+
+// 0.5
+commands.spawn((
+    SamplePlayer::new(server.load("sample.wav")),
+    RandomPitch::new(0.05),
+));
+```
+
 ### `Sample` -> `AudioSample`
 
 The `Sample` type, the primary asset for playing sounds, has been renamed
