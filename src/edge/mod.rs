@@ -1,5 +1,6 @@
 //! Node connection and disconnection utilities.
 
+use crate::context::AudioContext;
 use crate::node::label::InternedNodeLabel;
 use crate::prelude::{FirewheelNode, MainBus, NodeLabel};
 use bevy_ecs::prelude::*;
@@ -165,11 +166,30 @@ impl core::ops::DerefMut for NodeMap {
 }
 
 /// Automatically connect nodes without manual connections to the main bus.
+///
+/// Importantly, this should _only_ apply connections to nodes that have
+/// outputs.
 pub(crate) fn auto_connect(
-    nodes: Query<Entity, (With<FirewheelNode>, Without<PendingConnections>)>,
+    nodes: Query<(Entity, &FirewheelNode), Without<PendingConnections>>,
+    mut context: ResMut<AudioContext>,
     mut commands: Commands,
 ) {
-    for node in nodes.iter() {
-        commands.entity(node).connect(MainBus);
+    if nodes.iter().len() == 0 {
+        return;
     }
+
+    context.with(|context| {
+        for (entity, node) in nodes.iter() {
+            let Some(info) = context.node_info(node.0) else {
+                continue;
+            };
+
+            let outputs = info.info.channel_config.num_outputs.get();
+            if outputs == 0 {
+                continue;
+            }
+
+            commands.entity(entity).connect(MainBus);
+        }
+    });
 }

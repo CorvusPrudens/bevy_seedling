@@ -4,13 +4,12 @@
 A sprouting integration of the [Firewheel](https://github.com/BillyDM/firewheel)
 audio engine for [Bevy](https://bevyengine.org/).
 
-`bevy_seedling` is powerful, flexible, and extensible.
-You can play sounds, apply effects,
+`bevy_seedling` is powerful, flexible, and
+[fast](https://github.com/CorvusPrudens/rust-audio-demo?tab=readme-ov-file#performance).
+You can play sounds apply effects,
 and route audio anywhere. Creating
-and integrating custom audio processors is simple.
-To top it all off, `bevy_seedling` is _fast_,
-[beating other crates](https://github.com/CorvusPrudens/rust-audio-demo?tab=readme-ov-file#performance)
-by a factor of 2.5-3 on realistic workloads.
+and integrating custom audio processors
+is simple.
 
 ## Getting started
 
@@ -91,22 +90,27 @@ should help you get up to speed on common usage patterns.
 
 ## Feature flags
 
-| Flag     | Description                                | Default feature |
-| -------- | ------------------------------------------ | --------------- |
-| `rand`   | Enable the `PitchRange` component.         | Yes             |
-| `wav`    | Enable WAV format and PCM encoding.        | Yes             |
-| `ogg`    | Enable Ogg format and Vorbis encoding.     | Yes             |
-| `mp3`    | Enable mp3 format and encoding.            | No              |
-| `mkv`    | Enable mkv format.                         | No              |
-| `adpcm`  | Enable adpcm encoding.                     | No              |
-| `flac`   | Enable FLAC format and encoding.           | No              |
-| `stream` | Enable CPAL input and output stream nodes. | Yes             |
+| Flag            | Description                                | Default |
+| --------------- | ------------------------------------------ | ------- |
+| `reflect`       | Enable `bevy_reflect` derive macros.       | Yes     |
+| `rand`          | Enable the `RandomPitch` component.        | Yes     |
+| `wav`           | Enable WAV format and PCM encoding.        | Yes     |
+| `ogg`           | Enable Ogg format and Vorbis encoding.     | Yes     |
+| `mp3`           | Enable mp3 format and encoding.            | No      |
+| `mkv`           | Enable mkv format.                         | No      |
+| `adpcm`         | Enable adpcm encoding.                     | No      |
+| `flac`          | Enable FLAC format and encoding.           | No      |
+| `web_audio`     | Enable the multi-threading web backend.    | No      |
+| `hrtf`          | Enable HRTF Spatialization.                | No      |
+| `hrtf_subjects` | Enable all HRTF embedded data.             | No      |
+| `loudness`      | Enable LUFS analyzer node.                 | Yes     |
+| `stream`        | Enable CPAL input and output stream nodes. | Yes     |
 
 ## Bevy version compatibility
 
 | `bevy` | `bevy_seedling` |
 | ------ | --------------- |
-| 0.16   | 0.4             |
+| 0.16   | 0.4, 0.5        |
 | 0.15   | 0.3             |
 
 #### License

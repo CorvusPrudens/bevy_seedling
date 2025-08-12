@@ -2,20 +2,19 @@
 //! Firewheel node.
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
-use bevy_seedling::{pool::sample_effects::SampleEffects, prelude::*};
-use std::time::Duration;
-
-// You'll need to depend on firewheel directly when defining
-// custom nodes.
-use firewheel::{
-    channel_config::{ChannelConfig, NonZeroChannelCount},
-    diff::{Diff, Patch},
-    event::ProcEvents,
-    node::{
-        AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcExtra, ProcInfo, ProcessStatus,
+use bevy_seedling::prelude::{
+    firewheel::{
+        channel_config::{ChannelConfig, NonZeroChannelCount},
+        diff::{Diff, Patch},
+        event::ProcEvents,
+        node::{
+            AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
+            ProcExtra, ProcInfo, ProcessStatus,
+        },
     },
+    *,
 };
+use std::time::Duration;
 
 fn main() {
     App::new()
@@ -48,7 +47,7 @@ pub struct CustomVolumeNode {
     pub volume: Volume,
 }
 
-// Most nodes with have a configuration struct,
+// Most nodes have a configuration struct,
 // which allows users to define additional parameters
 // that are only required once during construction.
 #[derive(Debug, Component, Clone, PartialEq)]
@@ -124,7 +123,7 @@ impl AudioNodeProcessor for VolumeProcessor {
         }
 
         // We only need to calculate this once per audio block.
-        let gain = self.params.volume.amp();
+        let amplitude = self.params.volume.amp();
 
         // Here we simply iterate over all samples in every channel and
         // apply our volume. Firewheel's nodes typically utilize more
@@ -132,7 +131,7 @@ impl AudioNodeProcessor for VolumeProcessor {
         // in most scenarios.
         for (input, output) in inputs.iter().zip(outputs.iter_mut()) {
             for (input_sample, output_sample) in input.iter().zip(output.iter_mut()) {
-                *output_sample = *input_sample * gain;
+                *output_sample = *input_sample * amplitude;
             }
         }
 

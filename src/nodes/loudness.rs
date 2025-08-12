@@ -6,15 +6,28 @@ use ebur128::{Channel, EbuR128, Mode};
 use firewheel::{
     channel_config::{ChannelConfig, ChannelCount},
     collector::ArcGc,
+    diff::{Diff, Notify, Patch},
     event::ProcEvents,
     node::{AudioNode, AudioNodeProcessor, ProcBuffers, ProcExtra, ProcInfo},
 };
 use portable_atomic::AtomicF64;
 
+// TODO: implement RealtimeClone for `()`
+
 /// A node that analyzes the loudness of an incoming signal.
-#[derive(Debug, Default, Clone, Component)]
+#[derive(Debug, Default, Clone, Component, Diff, Patch)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-pub struct LoudnessNode;
+pub struct LoudnessNode {
+    /// Reset the measurement.
+    ///
+    /// Touching the field is sufficient to trigger a reset.
+    /// ```
+    /// # use bevy_seedling::prelude::*;
+    /// # let mut loudness = LoudnessNode::default();
+    /// loudness.reset.notify();
+    /// ```
+    pub reset: Notify<bool>,
+}
 
 /// Configuration for [`LoudnessNode`].
 #[derive(Debug, Default, Clone, Component, PartialEq)]
@@ -183,9 +196,13 @@ impl AudioNodeProcessor for LoudnessProcessor {
         &mut self,
         proc_info: &ProcInfo,
         buffers: ProcBuffers,
-        _: &mut ProcEvents,
+        events: &mut ProcEvents,
         _: &mut ProcExtra,
     ) -> firewheel::node::ProcessStatus {
+        for LoudnessNodePatch::Reset(_) in events.drain_patches::<LoudnessNode>() {
+            self.analyzer.reset();
+        }
+
         if self.ignore_silence
             && proc_info
                 .in_silence_mask

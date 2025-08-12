@@ -1,10 +1,9 @@
 use super::{
     PlaybackCompletionEvent, PoolSamplerOf, PoolSamplers, PoolShape, PoolSize, SamplerOf,
-    SamplerStateWrapper,
     sample_effects::{EffectOf, SampleEffects},
 };
 use crate::{
-    node::{EffectId, follower::FollowerOf},
+    node::{EffectId, NodeState, follower::FollowerOf},
     pool::label::PoolLabelContainer,
     prelude::DefaultPool,
     sample::{AudioSample, QueuedSample, SamplePlayer, SamplePriority, SampleQueueLifetime},
@@ -14,7 +13,7 @@ use bevy_ecs::{entity::EntityCloner, prelude::*, relationship::Relationship};
 use bevy_log::prelude::*;
 use bevy_platform::collections::HashMap;
 use bevy_time::{Stopwatch, Time};
-use firewheel::nodes::sampler::{RepeatMode, SamplerConfig, SamplerNode};
+use firewheel::nodes::sampler::{RepeatMode, SamplerConfig, SamplerNode, SamplerState};
 use std::ops::Deref;
 
 #[derive(PartialEq, Debug, Eq, PartialOrd, Ord, Copy, Clone)]
@@ -142,7 +141,7 @@ pub(super) fn assign_work(
         (
             Entity,
             &mut SamplerNode,
-            &SamplerStateWrapper,
+            &NodeState<SamplerState>,
             Option<&SamplerOf>,
         ),
         With<PoolSamplerOf>,

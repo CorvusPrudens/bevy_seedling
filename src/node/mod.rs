@@ -208,6 +208,43 @@ fn insert_baseline<T: Component + Clone>(
     Ok(())
 }
 
+/// A container for an audio node's state type.
+#[derive(Debug, Component)]
+// TODO: manage reflect
+// #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub struct NodeState<T>(pub T);
+
+fn fetch_state<T, S>(
+    q: Query<(Entity, &FirewheelNode), (Changed<FirewheelNode>, With<T>)>,
+    mut context: ResMut<AudioContext>,
+    mut commands: Commands,
+) where
+    T: AudioNode + Component,
+    S: Clone + Send + Sync + 'static,
+{
+    // likely not expensive enough to matter, relative to context switching
+    if q.iter().count() == 0 {
+        return;
+    }
+
+    context.with(|context| {
+        for (entity, node) in q.iter() {
+            match context.node_state::<S>(node.0) {
+                Some(state) => {
+                    commands.entity(entity).insert(NodeState(state.clone()));
+                }
+                None => {
+                    bevy_log::error!(
+                        "Failed to fetch state `{}` for node `{}`",
+                        core::any::type_name::<S>(),
+                        core::any::type_name::<T>(),
+                    );
+                }
+            }
+        }
+    });
+}
+
 #[derive(Resource, Default)]
 struct RegisteredNodes(HashSet<TypeId>);
 
@@ -229,6 +266,18 @@ impl RegisteredConfigs {
     /// Returns `true` if the ID wasn't already present.
     fn insert<T: core::any::Any>(&mut self) -> bool {
         self.0.insert(TypeId::of::<T>())
+    }
+}
+
+#[derive(Resource, Default)]
+struct RegisteredState(HashSet<(TypeId, TypeId)>);
+
+impl RegisteredState {
+    /// Insert the `TypeId` of `T` and `U`.
+    ///
+    /// Returns `true` if the tuple wasn't already present.
+    fn insert<T: core::any::Any, U: core::any::Any>(&mut self) -> bool {
+        self.0.insert((TypeId::of::<T>(), TypeId::of::<U>()))
     }
 }
 
@@ -328,6 +377,23 @@ pub trait RegisterNode {
     fn register_simple_node<T>(&mut self) -> &mut Self
     where
         T: AudioNode<Configuration: Component + Clone + PartialEq> + Component + Clone;
+
+    /// Register a state type for an audio node.
+    ///
+    /// After a node is inserted into the audio graph, its state is fetched and
+    /// inserted on the node component in a [`NodeState`] wrapper.
+    ///
+    /// A node's state is constructed in Firewheel's [AudioNode::construct_processor]
+    /// trait method, and subsequently inserted into the audio context. Nodes like
+    /// [`SamplerNode`] and [`LoudnessNode`] use their state as a container for
+    /// atomics that communicate their current state in the audio graph.
+    ///
+    /// [`SamplerNode`]: crate::prelude::SamplerNode
+    /// [`LoudnessNode`]: crate::prelude::LoudnessNode
+    fn register_node_state<T, S>(&mut self) -> &mut Self
+    where
+        T: AudioNode + Component,
+        S: Clone + Send + Sync + 'static;
 }
 
 impl RegisterNode for App {
@@ -356,6 +422,8 @@ impl RegisterNode for App {
             world.register_required_components::<T, Events>();
             world.register_required_components::<T, T::Configuration>();
         } else {
+            // TODO: we'll need to be more careful about getting type names
+            // for upstreaming.
             #[cfg(debug_assertions)]
             {
                 bevy_log::warn!(
@@ -370,6 +438,8 @@ impl RegisterNode for App {
                 "Audio node `{}` was registered more than once",
                 core::any::type_name::<T>(),
             );
+
+            return self;
         }
 
         // Different nodes may share configuration structs, so we need
@@ -418,6 +488,8 @@ impl RegisterNode for App {
                 "Audio node `{}` was registered more than once",
                 core::any::type_name::<T>(),
             );
+
+            return self;
         }
 
         // Different nodes may share configuration structs, so we need
@@ -432,6 +504,44 @@ impl RegisterNode for App {
             (acquire_id::<T>, handle_configuration_changes::<T>)
                 .chain()
                 .in_set(SeedlingSystems::Acquire),
+        )
+    }
+
+    #[cfg_attr(debug_assertions, track_caller)]
+    fn register_node_state<T, S>(&mut self) -> &mut Self
+    where
+        T: AudioNode + Component,
+        S: Clone + Send + Sync + 'static,
+    {
+        let world = self.world_mut();
+        let mut nodes = world.get_resource_or_init::<RegisteredState>();
+
+        if !nodes.insert::<T, S>() {
+            #[cfg(debug_assertions)]
+            {
+                bevy_log::warn!(
+                    "State `{}` was registered for node `{}` at {}",
+                    core::any::type_name::<S>(),
+                    core::any::type_name::<T>(),
+                    std::panic::Location::caller(),
+                );
+            }
+
+            #[cfg(not(debug_assertions))]
+            bevy_log::warn!(
+                "State `{}` registered more than once for node `{}`",
+                core::any::type_name::<S>(),
+                core::any::type_name::<T>(),
+            );
+
+            return self;
+        }
+
+        self.add_systems(
+            Last,
+            fetch_state::<T, S>
+                .after(SeedlingSystems::Acquire)
+                .before(SeedlingSystems::Connect),
         )
     }
 }
