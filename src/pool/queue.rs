@@ -3,7 +3,7 @@ use super::{
     sample_effects::{EffectOf, SampleEffects},
 };
 use crate::{
-    node::{EffectId, NodeState, follower::FollowerOf},
+    node::{AudioState, EffectId, follower::FollowerOf},
     pool::label::PoolLabelContainer,
     prelude::DefaultPool,
     sample::{AudioSample, QueuedSample, SamplePlayer, SamplePriority, SampleQueueLifetime},
@@ -141,7 +141,7 @@ pub(super) fn assign_work(
         (
             Entity,
             &mut SamplerNode,
-            &NodeState<SamplerState>,
+            &AudioState<SamplerState>,
             Option<&SamplerOf>,
         ),
         With<PoolSamplerOf>,

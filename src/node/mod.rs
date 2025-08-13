@@ -212,7 +212,7 @@ fn insert_baseline<T: Component + Clone>(
 #[derive(Debug, Component)]
 // TODO: manage reflect
 // #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-pub struct NodeState<T>(pub T);
+pub struct AudioState<T>(pub T);
 
 fn fetch_state<T, S>(
     q: Query<(Entity, &FirewheelNode), (Changed<FirewheelNode>, With<T>)>,
@@ -231,7 +231,7 @@ fn fetch_state<T, S>(
         for (entity, node) in q.iter() {
             match context.node_state::<S>(node.0) {
                 Some(state) => {
-                    commands.entity(entity).insert(NodeState(state.clone()));
+                    commands.entity(entity).insert(AudioState(state.clone()));
                 }
                 None => {
                     bevy_log::error!(

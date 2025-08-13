@@ -1,7 +1,7 @@
 //! This example demonstrates how to use the `LoudnessNode`.
 
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_seedling::{node::NodeState, prelude::*};
+use bevy_seedling::{node::AudioState, prelude::*};
 use bevy_time::common_conditions::on_timer;
 use std::time::Duration;
 
@@ -39,7 +39,7 @@ fn startup(main: Single<Entity, With<MainBus>>, server: Res<AssetServer>, mut co
     commands.entity(*main).chain_node(LoudnessNode::default());
 }
 
-fn monitor(loudness: Single<&NodeState<LoudnessState>>) {
+fn monitor(loudness: Single<&AudioState<LoudnessState>>) {
     let integrated = loudness.0.integrated();
     let momentary = loudness.0.momentary();
     let short_term = loudness.0.short_term();

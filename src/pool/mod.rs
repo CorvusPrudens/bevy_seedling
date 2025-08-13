@@ -5,7 +5,7 @@ use crate::{
     context::{PreStreamRestartEvent, SampleRate, StreamRestartEvent},
     edge::{PendingConnections, PendingEdge},
     error::SeedlingError,
-    node::{EffectId, FirewheelNode, NodeState, RegisterNode},
+    node::{AudioState, EffectId, FirewheelNode, RegisterNode},
     pool::label::PoolLabelContainer,
     prelude::PoolLabel,
     sample::{OnComplete, PlaybackSettings, QueuedSample, SamplePlayer},
@@ -393,7 +393,7 @@ impl Sampler {
         // We'll attempt to eagerly fill the state here, otherwise falling
         // back to `retrieve_state` when it's not ready.
         if let Some(state) = world
-            .get::<NodeState<SamplerState>>(sampler)
+            .get::<AudioState<SamplerState>>(sampler)
             .map(|s| s.0.clone())
         {
             let mut sampler = world.get_mut::<Sampler>(context.entity).unwrap();
@@ -743,7 +743,7 @@ fn remove_finished(
 /// Automatically remove or despawn sample players when their
 /// sample has finished playing.
 fn poll_finished(
-    nodes: Query<(&SamplerNode, &SamplerOf, &NodeState<SamplerState>)>,
+    nodes: Query<(&SamplerNode, &SamplerOf, &AudioState<SamplerState>)>,
     mut commands: Commands,
 ) {
     for (node, active, state) in nodes.iter() {

@@ -6,7 +6,7 @@ audio engine for [Bevy](https://bevyengine.org/).
 
 `bevy_seedling` is powerful, flexible, and
 [fast](https://github.com/CorvusPrudens/rust-audio-demo?tab=readme-ov-file#performance).
-You can play sounds apply effects,
+You can play sounds, apply effects,
 and route audio anywhere. Creating
 and integrating custom audio processors
 is simple.
@@ -55,7 +55,7 @@ bevy = { version = "0.16", default-features = false, features = [
 ] }
 ```
 
-Then, you'll need to add the [`SeedlingPlugin`] to your app.
+Then, you'll need to add the `SeedlingPlugin` to your app.
 
 ```rs
 use bevy::prelude::*;
