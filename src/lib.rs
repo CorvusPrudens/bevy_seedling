@@ -271,6 +271,48 @@
 //! where both allow you to play sounds in the same "place" in the audio graph.
 //!
 //! [`SamplerNode`]: prelude::firewheel::nodes::sampler::SamplerNode
+//!
+//! ### Routing
+//!
+//! Digital audio is a relentless stream of discrete values. _Routing_ allows us to
+//! direct this stream though various stages (or nodes, in Firewheel's case). Each
+//! node has some number of input and output channels, to and from which we can arbitrarily route
+//! audio.
+//!
+//! In the simplest case, we'd route the output of a source like [`SamplerNode`] directly
+//! to the graph's output. If we want to change the volume, we could insert a [`VolumeNode`]
+//! in between the sampler and the output. If we wanted to add reverb, we could also route
+//! the [`SamplerNode`] to a [`FreeverbNode`].
+//!
+//!```text
+//! ┌─────────────┐
+//! │SamplerNode  │
+//! └┬───────────┬┘
+//! ┌▽─────────┐┌▽───────────┐
+//! │VolumeNode││FreeverbNode│
+//! └┬─────────┘└┬───────────┘
+//! ┌▽───────────▽┐
+//! │GraphOutput  │
+//! └─────────────┘
+//! ```
+//!
+//! As you can see, this routing is very powerful!
+//!
+//! [`VolumeNode`]: prelude::VolumeNode
+//! [`FreeverbNode`]: prelude::FreeverbNode
+//!
+//! ### Sample
+//!
+//! In `bevy_seedling`, _sample_ primarily refers to a piece of recorded sound,
+//! like an audio file. Samples aren't limited to audio files, however; anything
+//! implementing [`SampleResource`] can work with [`AudioSample`].
+//!
+//! Note that "sample" can also refer to the individual amplitude measurements
+//! that make up a sound. "Sample rate," often 44.1kHz or 48kHz, refers to these
+//! measurements.
+//!
+//! [`SampleResource`]: prelude::firewheel::core::sample_resource::SampleResource
+//! [`AudioSample`]: prelude::AudioSample
 
 #![allow(clippy::type_complexity)]
 #![expect(clippy::needless_doctest_main)]

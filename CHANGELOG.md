@@ -80,7 +80,7 @@ app.add_plugins(SeedlingPlugin {
 
 // 0.5
 app.add_plugins(SeedlingPlugin {
-    graph_config: GraphConfiguration::Minimal,
+    graph_config: GraphConfiguration::Empty,
     ..Default::default()
 });
 
