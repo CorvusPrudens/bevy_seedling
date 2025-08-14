@@ -328,6 +328,9 @@ use bevy_ecs::prelude::*;
 use context::AudioStreamConfig;
 use firewheel::{CpalBackend, backend::AudioBackend, dsp::pan_law::PanLaw};
 
+// We re-export Firewheel here for convenience.
+pub use firewheel;
+
 pub mod configuration;
 pub mod context;
 pub mod edge;
@@ -387,7 +390,7 @@ pub mod prelude {
     pub use crate::time::Audio;
 
     pub use firewheel::{
-        self, CpalBackend, FirewheelConfig, Volume,
+        CpalBackend, FirewheelConfig, Volume,
         channel_config::{ChannelCount, NonZeroChannelCount},
         clock::{
             DurationMusical, DurationSamples, DurationSeconds, InstantMusical, InstantSamples,
