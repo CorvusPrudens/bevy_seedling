@@ -1,7 +1,5 @@
 //! Audio node registration and management.
 
-use std::any::TypeId;
-
 use crate::edge::NodeMap;
 use crate::error::SeedlingError;
 use crate::pool::sample_effects::EffectOf;
@@ -20,10 +18,14 @@ use firewheel::{
     event::{NodeEvent, NodeEventType},
     node::{AudioNode, NodeID},
 };
+use std::any::TypeId;
+use std::ops::DerefMut;
 
+pub mod events;
 pub mod follower;
 pub mod label;
 
+use events::AudioEvents;
 use label::NodeLabels;
 
 /// A node's baseline instance.
@@ -37,37 +39,6 @@ pub(crate) struct Baseline<T>(pub(crate) T);
 /// This is used for sample pool bookkeeping.
 #[derive(Component, Clone, Copy)]
 pub(crate) struct EffectId(pub(crate) ComponentId);
-
-/// An event queue.
-///
-/// When inserted into an entity that contains a [FirewheelNode],
-/// these events will automatically be drained and sent
-/// to the audio context in the [SeedlingSystems::Flush] set.
-#[derive(Component, Default)]
-pub struct Events(Vec<NodeEventType>);
-
-// Not ideal, but we're waiting for Firewheel to implement debug.
-impl core::fmt::Debug for Events {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_list()
-            .entries((0..self.0.len()).map(|_| ()))
-            .finish()
-    }
-}
-
-impl Events {
-    /// Push a new event.
-    pub fn push(&mut self, event: NodeEventType) {
-        self.0.push(event);
-    }
-
-    /// Push a custom event.
-    ///
-    /// `value` is boxed and wrapped in [NodeEventType::Custom].
-    pub fn push_custom<T: Send + Sync + 'static>(&mut self, value: T) {
-        self.0.push(NodeEventType::custom(value));
-    }
-}
 
 fn apply_patch<T: Patch>(value: &mut T, event: &NodeEventType) -> Result {
     let NodeEventType::Param { data, path } = event else {
@@ -85,17 +56,17 @@ fn apply_patch<T: Patch>(value: &mut T, event: &NodeEventType) -> Result {
 }
 
 fn generate_param_events<T: Diff + Patch + Component + Clone>(
-    mut nodes: Query<(&T, &mut Baseline<T>, &mut Events), (Changed<T>, Without<EffectOf>)>,
+    mut nodes: Query<(&T, &mut Baseline<T>, &mut AudioEvents), (Changed<T>, Without<EffectOf>)>,
 ) -> Result {
     for (params, mut baseline, mut events) in nodes.iter_mut() {
         // This ensures we only apply patches that were generated here.
         // I'm not sure this is correct in all cases, though.
-        let starting_len = events.0.len();
+        let starting_len = events.queue.len();
 
-        params.diff(&baseline.0, Default::default(), &mut events.0);
+        params.diff(&baseline.0, Default::default(), events.deref_mut());
 
         // Patch the baseline.
-        for event in &events.0[starting_len..] {
+        for (_, event) in &events.queue[starting_len..] {
             apply_patch(&mut baseline.0, event)?;
         }
     }
@@ -419,7 +390,7 @@ impl RegisterNode for App {
                         .insert((Baseline(value), EffectId(context.component_id)));
                 },
             );
-            world.register_required_components::<T, Events>();
+            world.register_required_components::<T, AudioEvents>();
             world.register_required_components::<T, T::Configuration>();
         } else {
             // TODO: we'll need to be more careful about getting type names
@@ -471,7 +442,7 @@ impl RegisterNode for App {
         let mut nodes = world.get_resource_or_init::<RegisteredNodes>();
 
         if nodes.insert::<T>() {
-            world.register_required_components::<T, Events>();
+            world.register_required_components::<T, AudioEvents>();
             world.register_required_components::<T, T::Configuration>();
         } else {
             #[cfg(debug_assertions)]
@@ -584,7 +555,7 @@ impl PendingRemovals {
 }
 
 pub(crate) fn flush_events(
-    mut nodes: Query<(&FirewheelNode, &mut Events)>,
+    mut nodes: Query<(&FirewheelNode, &mut AudioEvents)>,
     mut removals: ResMut<PendingRemovals>,
     mut context: ResMut<AudioContext>,
     mut commands: Commands,
@@ -596,14 +567,12 @@ pub(crate) fn flush_events(
             }
         }
 
-        let now = context.audio_clock_corrected().seconds;
-
         for (node, mut events) in nodes.iter_mut() {
-            for event in events.0.drain(..) {
+            for (time, event) in events.queue.drain(..) {
                 context.queue_event(NodeEvent {
                     node_id: node.0,
                     event,
-                    time: Some(firewheel::clock::EventInstant::Seconds(now)),
+                    time,
                 });
             }
         }

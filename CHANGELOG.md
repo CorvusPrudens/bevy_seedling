@@ -2,6 +2,14 @@
 
 ## Features
 
+### Precise event scheduling
+
+All audio events in `bevy_seedling` can now be precisely scheduled
+down to the sample with `AudioEvents`. Events scheduled in the future are applied to
+both the audio engine and the ECS representation when the scheduled moment
+elapses. To support this scheduling, `bevy_seedling` also now provides
+a `Time<Audio>` resource.
+
 ### Improved I/O configuration
 
 Initialization and I/O configuration have been significantly improved.

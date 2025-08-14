@@ -340,6 +340,7 @@ pub mod perceptual_volume;
 pub mod pool;
 pub mod sample;
 pub mod spatial;
+pub mod time;
 pub mod timeline;
 
 #[cfg(any(feature = "profiling", test))]
@@ -383,6 +384,7 @@ pub mod prelude {
     pub use crate::spatial::{
         DefaultSpatialScale, SpatialListener2D, SpatialListener3D, SpatialScale,
     };
+    pub use crate::time::Audio;
 
     pub use firewheel::{
         self, CpalBackend, FirewheelConfig, Volume,
@@ -589,7 +591,9 @@ where
             configuration::SeedlingStartup::<B>::new(self.config),
             pool::SamplePoolPlugin,
             nodes::SeedlingNodesPlugin,
+            node::events::EventsPlugin,
             spatial::SpatialPlugin,
+            time::TimePlugin,
             #[cfg(feature = "rand")]
             sample::RandomPlugin,
         ));
