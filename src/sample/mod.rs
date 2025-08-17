@@ -1,9 +1,10 @@
 //! Audio sample components.
 
-use crate::prelude::Volume;
+use crate::prelude::{AudioEvents, Volume};
 use bevy_asset::Handle;
 use bevy_ecs::prelude::*;
 use firewheel::{
+    clock::InstantSeconds,
     diff::Notify,
     nodes::sampler::{PlaybackState, Playhead, RepeatMode},
 };
@@ -166,7 +167,13 @@ pub use assets::{AudioSample, SampleLoader, SampleLoaderError};
 /// will be inserted, which provides information about the
 /// playhead position and playback status.
 #[derive(Debug, Component, Clone)]
-#[require(PlaybackSettings, SamplePriority, SampleQueueLifetime, QueuedSample)]
+#[require(
+    PlaybackSettings,
+    SamplePriority,
+    SampleQueueLifetime,
+    QueuedSample,
+    AudioEvents
+)]
 #[component(immutable)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SamplePlayer {
@@ -351,7 +358,7 @@ pub enum OnComplete {
 ///     ));
 /// }
 /// ```
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct PlaybackSettings {
     /// Sets the playback state, allowing you to play, pause or stop samples.
@@ -369,6 +376,29 @@ pub struct PlaybackSettings {
 }
 
 impl PlaybackSettings {
+    pub fn play_at(
+        &self,
+        playhead: Option<Playhead>,
+        time: InstantSeconds,
+        events: &mut AudioEvents,
+    ) {
+        events.schedule(time, self, |settings| {
+            *settings.playback = PlaybackState::Play { playhead };
+        });
+    }
+
+    pub fn pause_at(&self, time: InstantSeconds, events: &mut AudioEvents) {
+        events.schedule(time, self, |settings| {
+            *settings.playback = PlaybackState::Pause;
+        });
+    }
+
+    pub fn stop_at(&self, time: InstantSeconds, events: &mut AudioEvents) {
+        events.schedule(time, self, |settings| {
+            *settings.playback = PlaybackState::Stop;
+        });
+    }
+
     /// Start or resume playback.
     ///
     /// ```
@@ -427,6 +457,41 @@ impl Default for PlaybackSettings {
             }),
             speed: 1.0,
             on_complete: OnComplete::Despawn,
+        }
+    }
+}
+
+// NOTE: this is specifically designed to produce Firewheel's
+// `SamplerNodePatch` value. This is so we can leverage the event
+// scheduling system as if this were a real node.
+impl firewheel::diff::Diff for PlaybackSettings {
+    fn diff<E: firewheel::diff::EventQueue>(
+        &self,
+        baseline: &Self,
+        path: firewheel::diff::PathBuilder,
+        event_queue: &mut E,
+    ) {
+        self.playback
+            .diff(&baseline.playback, path.with(2), event_queue);
+        self.speed.diff(&baseline.speed, path.with(4), event_queue);
+    }
+}
+
+impl firewheel::diff::Patch for PlaybackSettings {
+    type Patch = firewheel::nodes::sampler::SamplerNodePatch;
+
+    fn patch(
+        data: &firewheel::event::ParamData,
+        path: &[u32],
+    ) -> std::result::Result<Self::Patch, firewheel::diff::PatchError> {
+        firewheel::nodes::sampler::SamplerNode::patch(data, path)
+    }
+
+    fn apply(&mut self, patch: Self::Patch) {
+        match patch {
+            firewheel::nodes::sampler::SamplerNodePatch::Playback(p) => self.playback = p,
+            firewheel::nodes::sampler::SamplerNodePatch::Speed(s) => self.speed = s,
+            _ => {}
         }
     }
 }

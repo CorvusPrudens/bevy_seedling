@@ -3,6 +3,7 @@
 use crate::edge::NodeMap;
 use crate::error::SeedlingError;
 use crate::pool::sample_effects::EffectOf;
+use crate::time::{Audio, AudioTime};
 use crate::{SeedlingSystems, prelude::AudioContext};
 use bevy_app::prelude::*;
 use bevy_ecs::{
@@ -12,6 +13,7 @@ use bevy_ecs::{
 };
 use bevy_log::prelude::*;
 use bevy_platform::collections::HashSet;
+use firewheel::clock::{DurationSeconds, EventInstant, InstantSeconds};
 use firewheel::error::UpdateError;
 use firewheel::{
     diff::{Diff, Patch},
@@ -55,20 +57,31 @@ fn apply_patch<T: Patch>(value: &mut T, event: &NodeEventType) -> Result {
     Ok(())
 }
 
-fn generate_param_events<T: Diff + Patch + Component + Clone>(
-    mut nodes: Query<(&T, &mut Baseline<T>, &mut AudioEvents), (Changed<T>, Without<EffectOf>)>,
+fn generate_param_events<T: Diff + Patch + Component<Mutability = Mutable> + Clone>(
+    mut nodes: Query<(Mut<T>, &mut Baseline<T>, &mut AudioEvents, Has<EffectOf>)>,
+    time: Res<bevy_time::Time<Audio>>,
 ) -> Result {
-    for (params, mut baseline, mut events) in nodes.iter_mut() {
-        // This ensures we only apply patches that were generated here.
-        // I'm not sure this is correct in all cases, though.
-        let starting_len = events.queue.len();
+    let render_range = time.render_range();
 
-        params.diff(&baseline.0, Default::default(), events.deref_mut());
+    for (mut params, mut baseline, mut events, effect) in nodes.iter_mut() {
+        if params.is_changed() && !effect {
+            // This ensures we only apply patches that were generated here.
+            // I'm not sure this is correct in all cases, though.
+            let starting_len = events.queue.len();
 
-        // Patch the baseline.
-        for (_, event) in &events.queue[starting_len..] {
-            apply_patch(&mut baseline.0, event)?;
+            params.diff(&baseline.0, Default::default(), events.deref_mut());
+
+            // Patch the baseline.
+            for event in &events.queue[starting_len..] {
+                apply_patch(&mut baseline.0, event)?;
+            }
         }
+
+        // Finally, render any scheduled change, removing any
+        // expired events.
+        events.clear_elapsed_events(render_range.start);
+        events.value_at(render_range.start, render_range.end, params.as_mut());
+        events.value_at(render_range.start, render_range.end, &mut baseline.0);
     }
 
     Ok(())
@@ -558,6 +571,7 @@ pub(crate) fn flush_events(
     mut nodes: Query<(&FirewheelNode, &mut AudioEvents)>,
     mut removals: ResMut<PendingRemovals>,
     mut context: ResMut<AudioContext>,
+    time: Res<bevy_time::Time<Audio>>,
     mut commands: Commands,
 ) {
     context.with(|context| {
@@ -567,13 +581,41 @@ pub(crate) fn flush_events(
             }
         }
 
+        let now = context.audio_clock().seconds;
+        let range_to_render = InstantSeconds(0.0)..now + DurationSeconds(0.1);
         for (node, mut events) in nodes.iter_mut() {
-            for (time, event) in events.queue.drain(..) {
+            for event in events.queue.drain(..) {
                 context.queue_event(NodeEvent {
                     node_id: node.0,
                     event,
-                    time,
+                    // TODO: should these have a time by default?
+                    time: Some(EventInstant::Seconds(time.now())),
                 });
+            }
+
+            for event in &mut events.timeline {
+                let Some(render_range) = event.render_range(range_to_render.clone()) else {
+                    continue;
+                };
+
+                let mut func = |event: NodeEventType, instant: InstantSeconds| {
+                    context.queue_event(NodeEvent {
+                        node_id: node.0,
+                        event,
+                        time: Some(EventInstant::Seconds(instant)),
+                    });
+                };
+                let queue = events::TimelineQueue::new(render_range.start, &mut func);
+
+                event
+                    .tween
+                    .render(render_range.start, render_range.end, queue);
+
+                event.render_progress.range.end =
+                    InstantSeconds(event.tween.time_range().end.0.min(render_range.end.0));
+                if event.render_progress.range.is_empty() {
+                    event.render_progress.complete = true;
+                }
             }
         }
 

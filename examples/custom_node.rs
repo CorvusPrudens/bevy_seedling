@@ -2,18 +2,16 @@
 //! Firewheel node.
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
-use bevy_seedling::prelude::{
-    firewheel::{
-        channel_config::{ChannelConfig, NonZeroChannelCount},
-        diff::{Diff, Patch},
-        event::ProcEvents,
-        node::{
-            AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-            ProcExtra, ProcInfo, ProcessStatus,
-        },
+use bevy_seedling::firewheel::{
+    channel_config::{ChannelConfig, NonZeroChannelCount},
+    diff::{Diff, Patch},
+    event::ProcEvents,
+    node::{
+        AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
+        ProcExtra, ProcInfo, ProcessStatus,
     },
-    *,
 };
+use bevy_seedling::prelude::*;
 use std::time::Duration;
 
 fn main() {

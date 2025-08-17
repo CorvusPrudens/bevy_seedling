@@ -317,7 +317,7 @@
 #![allow(clippy::type_complexity)]
 #![expect(clippy::needless_doctest_main)]
 #![warn(missing_debug_implementations)]
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 // Naming trick to facilitate straightforward internal macro usage.
 extern crate self as bevy_seedling;
@@ -361,6 +361,7 @@ pub mod prelude {
     pub use crate::edge::{AudioGraphInput, AudioGraphOutput, Connect, Disconnect, EdgeTarget};
     pub use crate::node::{
         FirewheelNode, RegisterNode,
+        events::AudioEvents,
         label::{MainBus, NodeLabel},
     };
     #[cfg(feature = "loudness")]
@@ -387,7 +388,7 @@ pub mod prelude {
     pub use crate::spatial::{
         DefaultSpatialScale, SpatialListener2D, SpatialListener3D, SpatialScale,
     };
-    pub use crate::time::Audio;
+    pub use crate::time::{Audio, AudioTime};
 
     pub use firewheel::{
         CpalBackend, FirewheelConfig, Volume,

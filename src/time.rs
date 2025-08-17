@@ -1,11 +1,10 @@
 //! A DSP clock.
 
-use std::time::Duration;
-
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_time::{Time, TimeSystem};
-use firewheel::clock::InstantSeconds;
+use firewheel::clock::{DurationSeconds, InstantSeconds};
+use std::time::Duration;
 
 use crate::context::AudioContext;
 
@@ -46,4 +45,38 @@ fn update_time(mut time: ResMut<Time<Audio>>, context: Option<ResMut<AudioContex
     let delta = Duration::from_secs_f64(delta);
     time.advance_by(delta);
     time.context_mut().instant = now.seconds;
+}
+
+/// A trait that provides a frame's audio render range.
+///
+/// This can be used for rendering timeline events with [`AudioEvents`].
+///
+/// [`AudioEvents`]: crate::prelude::AudioEvents
+pub trait AudioTime {
+    fn now(&self) -> InstantSeconds;
+
+    fn delay(&self, duration: DurationSeconds) -> InstantSeconds;
+
+    /// A frame's audio render range.
+    ///
+    /// This describes the time elapsed since the last frame from
+    /// the perspective of the audio thread.
+    fn render_range(&self) -> core::ops::Range<InstantSeconds>;
+}
+
+impl AudioTime for Time<Audio> {
+    fn now(&self) -> InstantSeconds {
+        self.context().instant()
+    }
+
+    fn delay(&self, duration: DurationSeconds) -> InstantSeconds {
+        self.now() + duration
+    }
+
+    fn render_range(&self) -> core::ops::Range<InstantSeconds> {
+        let now = self.context().instant();
+        let last = self.delta_secs_f64();
+
+        InstantSeconds(now.0 - last)..now
+    }
 }

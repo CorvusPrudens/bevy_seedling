@@ -7,8 +7,9 @@ use crate::{
     error::SeedlingError,
     node::{AudioState, EffectId, FirewheelNode, RegisterNode},
     pool::label::PoolLabelContainer,
-    prelude::PoolLabel,
+    prelude::{AudioEvents, PoolLabel},
     sample::{OnComplete, PlaybackSettings, QueuedSample, SamplePlayer},
+    time::{Audio, AudioTime},
 };
 use bevy_app::prelude::*;
 use bevy_asset::prelude::*;
@@ -492,53 +493,22 @@ fn fetch_effect_ids(
     Ok(effect_ids)
 }
 
-// TODO: make sure the state management is robust, even if the context
-// is temporarily unavailable.
-// fn retrieve_state(
-//     q: Query<
-//         (Entity, &FirewheelNode, Option<&SamplerOf>),
-//         (With<SamplerNode>, Without<SamplerStateWrapper>),
-//     >,
-//     mut samples: Query<&mut Sampler>,
-//     mut commands: Commands,
-//     mut context: ResMut<AudioContext>,
-// ) -> Result {
-//     if q.iter().len() == 0 {
-//         return Ok(());
-//     }
-//
-//     context.with(|ctx| {
-//         for (entity, node_id, sampler_of) in q.iter() {
-//             let Some(state) = ctx.node_state::<SamplerState>(node_id.0) else {
-//                 continue;
-//             };
-//             commands
-//                 .entity(entity)
-//                 .insert(SamplerStateWrapper(state.clone()));
-//
-//             // If the sampler already has an assignment, we'll need to
-//             // provide the state here since it couldn't have been eagerly
-//             // fetched.
-//             if let Some(sampler_of) = sampler_of {
-//                 let mut source = samples.get_mut(sampler_of.0)?;
-//                 source.state = Some(state.clone());
-//             }
-//         }
-//
-//         Ok(())
-//     })
-// }
-
 /// A kind of specialization of [`FollowerOf`][crate::node::follower::FollowerOf] for
 /// sampler nodes.
 fn watch_sample_players(
-    mut q: Query<(&mut SamplerNode, &SamplerOf)>,
-    samples: Query<&PlaybackSettings>,
+    mut q: Query<(&mut SamplerNode, &mut AudioEvents, &SamplerOf)>,
+    mut samples: Query<(&mut PlaybackSettings, &mut AudioEvents), Without<SamplerOf>>,
+    time: Res<bevy_time::Time<Audio>>,
 ) {
-    for (mut sampler_node, sample) in q.iter_mut() {
-        let Ok(settings) = samples.get(sample.0) else {
+    let render_range = time.render_range();
+
+    for (mut sampler_node, mut events, sample) in q.iter_mut() {
+        let Ok((mut settings, mut source_events)) = samples.get_mut(sample.0) else {
             continue;
         };
+
+        source_events.value_at(render_range.start, render_range.end, settings.as_mut());
+        events.merge_timelines_and_clear(&mut source_events, time.now());
 
         sampler_node.playback = settings.playback;
         sampler_node.speed = settings.speed;
