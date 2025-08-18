@@ -5,14 +5,13 @@ use bevy_time::{Time, TimeSystem};
 use firewheel::{
     Volume,
     clock::{DurationSeconds, InstantSeconds},
-    diff::{Diff, EventQueue, Patch, PathBuilder},
-    event::NodeEventType,
+    diff::{Diff, EventQueue, ParamPath, Patch, PatchError, PathBuilder},
+    event::{NodeEventType, ParamData},
     nodes::volume::VolumeNode,
 };
 use portable_atomic::AtomicU64;
-use std::sync::Arc;
 
-use crate::time::Audio;
+use crate::{error::SeedlingError, time::Audio};
 
 pub(crate) struct EventsPlugin;
 
@@ -100,11 +99,19 @@ impl AudioEvents {
         let mut new_value = initial_value.clone();
         change(&mut new_value);
 
-        self.timeline.push(TimelineEvent::new(SingleEvent {
-            before: initial_value,
-            after: new_value,
-            instant: time,
-        }));
+        let mut events = Vec::new();
+        let mut func = |ev, time| match ev {
+            NodeEventType::Param { data, path } => {
+                events.push(TimelineParam { data, path, time });
+            }
+            _ => {
+                bevy_log::warn!("failed to schedule audio event: invalid event type");
+            }
+        };
+        let mut queue = TimelineQueue::new(time, &mut func);
+        new_value.diff(&initial_value, Default::default(), &mut queue);
+
+        self.timeline.push(TimelineEvent::new(events));
     }
 
     /// Schedule a tween with a custom interpolator.
@@ -118,48 +125,62 @@ impl AudioEvents {
         interpolate: F,
     ) where
         T: Diff + Patch + Send + Sync + Clone + 'static,
-        F: Fn(&T, &T, f32) -> T + Send + Sync + 'static,
+        F: Fn(&T, &T, f32) -> T,
     {
-        self.timeline.push(TimelineEvent::new(TweenEvent {
-            start: (start, start_value),
-            end: (end, end_value),
-            total_events,
-            interpolate: Box::new(interpolate),
-        }))
+        let mut events = Vec::new();
+        let mut func = |ev, time| match ev {
+            NodeEventType::Param { data, path } => {
+                events.push(TimelineParam { data, path, time });
+            }
+            _ => {
+                bevy_log::warn!("failed to schedule audio event: invalid event type");
+            }
+        };
+        let mut queue = TimelineQueue::new(start, &mut func);
+
+        let duration = (end - start).0;
+        for i in 1..=total_events {
+            let proportion = i as f64 / total_events as f64;
+            let instant = start.0 + proportion * duration;
+
+            queue.instant = InstantSeconds(instant);
+            let new_value = (interpolate)(&start_value, &end_value, proportion as f32);
+            new_value.diff(&start_value, PathBuilder::default(), &mut queue);
+        }
+
+        self.timeline.push(TimelineEvent::new(events));
     }
 
-    /// Schedule an event at an absolute time without applying previous patches.
-    pub fn schedule_immediate<T, F>(&mut self, time: InstantSeconds, value: &T, change: F)
-    where
-        T: Diff + Patch + Send + Sync + Clone + 'static,
-        F: FnOnce(&mut T),
-    {
-        let mut new_value = value.clone();
-        change(&mut new_value);
+    pub fn active_within(&self, start: InstantSeconds, end: InstantSeconds) -> bool {
+        for event in &self.timeline {
+            if event.active_within(start..=end) {
+                return true;
+            }
+        }
 
-        self.timeline.push(TimelineEvent::new(SingleEvent {
-            before: value.clone(),
-            after: new_value,
-            instant: time,
-        }));
+        false
     }
 
     /// Apply all scheduled events before `Instant` in this event queue to `value`.
-    pub fn value_at<T>(&self, start: InstantSeconds, end: InstantSeconds, value: &mut T)
+    pub fn value_at<T>(
+        &self,
+        start: InstantSeconds,
+        end: InstantSeconds,
+        value: &mut T,
+    ) -> Result<(), SeedlingError>
     where
         T: Diff + Patch + Clone,
     {
-        // Since we're rendering these on-the-fly, there's no need to
-        // push them to a temporary queue. Just apply them directly!
-        let mut func = |event: NodeEventType, _| {
-            if let Some(patch) = T::patch_event(&event) {
-                value.apply(patch);
-            }
-        };
         for event in &self.timeline {
-            let queue = TimelineQueue::new(start, &mut func);
-            event.tween.render(start, end, queue);
+            event
+                .apply(start..=end, value)
+                .map_err(|e| SeedlingError::PatchError {
+                    ty: core::any::type_name::<T>(),
+                    error: e,
+                })?;
         }
+
+        Ok(())
     }
 
     /// Apply all scheduled events before `Instant` in this event queue to `value`.
@@ -168,7 +189,8 @@ impl AudioEvents {
         T: Diff + Patch + Clone,
     {
         let mut new_value = value.clone();
-        self.value_at(InstantSeconds(0.0), instant, &mut new_value);
+        // TODO: consider handling
+        let _ = self.value_at(InstantSeconds(0.0), instant, &mut new_value);
         new_value
     }
 }
@@ -220,11 +242,18 @@ pub trait TimelineTween: Send + Sync + 'static {
 
 static TIMELINE_ID: AtomicU64 = AtomicU64::new(0);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TimelineEvent {
-    pub tween: Arc<dyn TimelineTween>,
+    tween: Vec<TimelineParam>,
     pub render_progress: RenderProgress,
     id: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct TimelineParam {
+    pub data: ParamData,
+    pub path: ParamPath,
+    pub time: InstantSeconds,
 }
 
 #[derive(Clone, Debug)]
@@ -242,27 +271,31 @@ impl RenderProgress {
     }
 }
 
+fn time_range(events: &[TimelineParam]) -> core::ops::Range<InstantSeconds> {
+    match events {
+        [] => panic!("unexpected empty event"),
+        &[TimelineParam { time, .. }] => time..time,
+        &[
+            TimelineParam { time: start, .. },
+            ..,
+            TimelineParam { time: end, .. },
+        ] => start..end,
+    }
+}
+
 impl TimelineEvent {
-    pub fn new<T>(event: T) -> Self
-    where
-        T: TimelineTween,
-    {
-        fn new(event: Arc<dyn TimelineTween>) -> TimelineEvent {
-            let render_start = event.time_range().start;
-            let render_progress = RenderProgress::new(render_start..render_start);
+    pub fn new(tween: Vec<TimelineParam>) -> Self {
+        let render_progress = RenderProgress::new(time_range(&tween));
 
-            TimelineEvent {
-                tween: event,
-                render_progress,
-                id: TIMELINE_ID.fetch_add(1, core::sync::atomic::Ordering::Relaxed),
-            }
+        TimelineEvent {
+            tween,
+            render_progress,
+            id: TIMELINE_ID.fetch_add(1, core::sync::atomic::Ordering::Relaxed),
         }
-
-        new(Arc::new(event))
     }
 
     pub fn completely_elapsed(&self, now: InstantSeconds) -> bool {
-        self.tween.time_range().end < now
+        self.time_range().end < now
     }
 
     pub fn id(&self) -> u64 {
@@ -277,23 +310,84 @@ impl TimelineEvent {
             return None;
         }
 
-        let range = self.tween.time_range();
-        let new_start = self.render_progress.range.end.0.max(full_range.start.0);
+        let range = self.time_range();
+        let new_start = self.render_progress.range.start.0.max(full_range.start.0);
         let new_end = range.end.0.min(full_range.end.0);
 
         Some(InstantSeconds(new_start)..InstantSeconds(new_end))
     }
-}
 
-impl core::fmt::Debug for TimelineEvent {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TimelineEvent")
-            .field("tween", &())
-            .field("render_progress", &self.render_progress)
-            .field("id", &self.id)
-            .finish()
+    pub fn time_range(&self) -> core::ops::Range<InstantSeconds> {
+        time_range(&self.tween)
+    }
+
+    pub fn active_within(&self, probe: core::ops::RangeInclusive<InstantSeconds>) -> bool {
+        let range = self.time_range();
+
+        range.start <= *probe.end() && range.end >= *probe.start()
+    }
+
+    pub fn params(
+        &self,
+        range: core::ops::RangeInclusive<InstantSeconds>,
+    ) -> impl Iterator<Item = &TimelineParam> {
+        self.tween.iter().filter(move |p| range.contains(&p.time))
+    }
+
+    pub fn apply<T: Patch>(
+        &self,
+        range: core::ops::RangeInclusive<InstantSeconds>,
+        value: &mut T,
+    ) -> Result<(), PatchError> {
+        for TimelineParam { data, path, .. } in self.params(range) {
+            let patch = T::patch(data, path)?;
+            value.apply(patch);
+        }
+
+        Ok(())
+    }
+
+    /// Render out this event's steps, advancing the progress.
+    pub fn render<F>(
+        &mut self,
+        start: InstantSeconds,
+        end: InstantSeconds,
+        mut buffer: F,
+    ) -> Result<(), SeedlingError>
+    where
+        F: FnMut(NodeEventType, InstantSeconds),
+    {
+        let Some(render_range) = self.render_range(start..end) else {
+            return Ok(());
+        };
+
+        for param in self.params(render_range.start..=render_range.end) {
+            let event = NodeEventType::Param {
+                data: param.data.clone(),
+                path: param.path.clone(),
+            };
+
+            buffer(event, param.time);
+        }
+
+        self.render_progress.range.start = render_range.end;
+        if self.render_progress.range.is_empty() {
+            self.render_progress.complete = true;
+        }
+
+        Ok(())
     }
 }
+
+// impl core::fmt::Debug for TimelineEvent {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         f.debug_struct("TimelineEvent")
+//             .field("tween", &())
+//             .field("render_progress", &self.render_progress)
+//             .field("id", &self.id)
+//             .finish()
+//     }
+// }
 
 struct SingleEvent<T> {
     before: T,

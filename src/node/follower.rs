@@ -72,10 +72,12 @@ pub(crate) fn param_follower<T: Diff + Patch + Component<Mutability = Mutable> +
         };
 
         // TODO: the ordering here might not be totally correct
-        source_events.value_at(render_range.start, render_range.end, source.as_mut());
-        events.merge_timelines_and_clear(&mut source_events, time.now());
-
         source.diff(&params, PathBuilder::default(), &mut event_queue);
+
+        if source_events.active_within(render_range.start, render_range.end) {
+            source_events.value_at(render_range.start, render_range.end, source.as_mut())?;
+        }
+        events.merge_timelines_and_clear(&mut source_events, time.now());
 
         for event in event_queue.drain(..) {
             super::apply_patch(params.as_mut(), &event)?;

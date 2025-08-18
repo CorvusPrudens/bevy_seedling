@@ -499,7 +499,7 @@ fn watch_sample_players(
     mut q: Query<(&mut SamplerNode, &mut AudioEvents, &SamplerOf)>,
     mut samples: Query<(&mut PlaybackSettings, &mut AudioEvents), Without<SamplerOf>>,
     time: Res<bevy_time::Time<Audio>>,
-) {
+) -> Result {
     let render_range = time.render_range();
 
     for (mut sampler_node, mut events, sample) in q.iter_mut() {
@@ -507,12 +507,17 @@ fn watch_sample_players(
             continue;
         };
 
-        source_events.value_at(render_range.start, render_range.end, settings.as_mut());
+        // TODO: consider collecting these errors
+        if source_events.active_within(render_range.start, render_range.end) {
+            source_events.value_at(render_range.start, render_range.end, settings.as_mut())?;
+        }
         events.merge_timelines_and_clear(&mut source_events, time.now());
 
         sampler_node.playback = settings.playback;
         sampler_node.speed = settings.speed;
     }
+
+    Ok(())
 }
 
 fn spawn_chain(

@@ -80,8 +80,13 @@ fn generate_param_events<T: Diff + Patch + Component<Mutability = Mutable> + Clo
         // Finally, render any scheduled change, removing any
         // expired events.
         events.clear_elapsed_events(render_range.start);
-        events.value_at(render_range.start, render_range.end, params.as_mut());
-        events.value_at(render_range.start, render_range.end, &mut baseline.0);
+        // TODO: this change-detection guarding is still more coarse than it needs to be.
+        // Often, no events within an active range will occur on a given frame.
+        if events.active_within(render_range.start, render_range.end) {
+            // TODO: consider collecting these errors
+            events.value_at(render_range.start, render_range.end, params.as_mut())?;
+            events.value_at(render_range.start, render_range.end, &mut baseline.0)?;
+        }
     }
 
     Ok(())
@@ -594,27 +599,21 @@ pub(crate) fn flush_events(
             }
 
             for event in &mut events.timeline {
-                let Some(render_range) = event.render_range(range_to_render.clone()) else {
-                    continue;
-                };
+                if let Err(e) =
+                    event.render(range_to_render.start, range_to_render.end, |event, time| {
+                        // if let NodeEventType::Param { data, path } = &event {
+                        //     bevy_log::info!("param: {data:#?}, path: {path:?}, time: {time:?}");
+                        // }
 
-                let mut func = |event: NodeEventType, instant: InstantSeconds| {
-                    context.queue_event(NodeEvent {
-                        node_id: node.0,
-                        event,
-                        time: Some(EventInstant::Seconds(instant)),
-                    });
-                };
-                let queue = events::TimelineQueue::new(render_range.start, &mut func);
-
-                event
-                    .tween
-                    .render(render_range.start, render_range.end, queue);
-
-                event.render_progress.range.end =
-                    InstantSeconds(event.tween.time_range().end.0.min(render_range.end.0));
-                if event.render_progress.range.is_empty() {
-                    event.render_progress.complete = true;
+                        context.queue_event(NodeEvent {
+                            node_id: node.0,
+                            event,
+                            time: Some(EventInstant::Seconds(time)),
+                        })
+                    })
+                {
+                    // TODO: improve this
+                    bevy_log::error!("failed to apply animation patch: {e:?}");
                 }
             }
         }
