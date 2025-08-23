@@ -27,7 +27,7 @@ fn main() {
         )
         .add_systems(
             Update,
-            precise_scheduling.run_if(once_after_delay(Duration::from_secs_f32(72.0))),
+            fade_out.run_if(once_after_delay(Duration::from_secs_f32(72.0))),
         )
         .add_observer(on_complete)
         .run();
@@ -55,13 +55,12 @@ fn startup(server: Res<AssetServer>, time: Res<Time<Audio>>, mut commands: Comma
     commands.spawn((
         events,
         settings,
-        SamplePlayer::new(server.load("midir-sketch.wav")),
-        // TODO: this breaks the initial scheduling?
+        SamplePlayer::new(server.load("midir-chip.ogg")).with_volume(Volume::Decibels(-8.0)),
         sample_effects![fade_in(2.5, &time)],
     ));
 }
 
-// Here's how you might build a composaable fade in function.
+// Here's how you might build a composable fade in function.
 fn fade_in(seconds: f32, time: &Time<Audio>) -> impl Bundle {
     let mut events = AudioEvents::new(time);
     let volume = VolumeNode {
@@ -78,7 +77,7 @@ fn fade_in(seconds: f32, time: &Time<Audio>) -> impl Bundle {
     (volume, events)
 }
 
-fn precise_scheduling(
+fn fade_out(
     player: Single<(&SampleEffects, &PlaybackSettings, &mut AudioEvents)>,
     mut volume: Query<(&VolumeNode, &mut AudioEvents), Without<SampleEffects>>,
     time: Res<Time<Audio>>,
@@ -86,9 +85,11 @@ fn precise_scheduling(
     let (effects, settings, mut settings_events) = player.into_inner();
     let (volume, mut volume_events) = volume.get_effect_mut(effects)?;
 
-    // Fade out, then stop the music.
-    volume.fade_to(Volume::SILENT, DurationSeconds(5.0), &mut volume_events);
-    settings.stop_at(time.delay(DurationSeconds(5.0)), &mut settings_events);
+    // Fade out with a little pitch falloff, then stop the music.
+    let fade_duration = DurationSeconds(5.0);
+    volume.fade_to(Volume::SILENT, fade_duration, &mut volume_events);
+    settings.speed_to(0.95, fade_duration, &mut settings_events);
+    settings.stop_at(time.delay(fade_duration), &mut settings_events);
 
     Ok(())
 }

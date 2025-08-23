@@ -553,6 +553,7 @@ where
         app.insert_resource(context::AudioStreamConfig::<B>(self.stream_config.clone()))
             .insert_resource(configuration::ConfigResource(self.graph_config))
             .init_resource::<edge::NodeMap>()
+            .init_resource::<node::ScheduleDiffing>()
             .init_resource::<node::PendingRemovals>()
             .init_resource::<pool::DefaultPoolSize>()
             .init_asset::<sample::AudioSample>()
@@ -589,7 +590,8 @@ where
                 .run_if(resource_changed_without_insert::<AudioStreamConfig<B>>),
         )
         .add_observer(node::label::NodeLabels::on_add_observer)
-        .add_observer(node::label::NodeLabels::on_replace_observer);
+        .add_observer(node::label::NodeLabels::on_replace_observer)
+        .add_observer(sample::observe_player_insert);
 
         app.add_plugins((
             configuration::SeedlingStartup::<B>::new(self.config),
@@ -662,6 +664,7 @@ where
             .register_type::<SamplerPool<configuration::MusicPool>>()
             .register_type::<configuration::SpatialPool>()
             .register_type::<SamplerPool<configuration::SpatialPool>>()
+            .register_type::<node::ScheduleDiffing>()
             .register_type::<NonZeroChannelCount>()
             .register_type::<SamplerConfig>()
             .register_type::<PlaybackState>()

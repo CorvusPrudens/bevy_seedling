@@ -1,10 +1,15 @@
 //! Audio sample components.
 
-use crate::prelude::{AudioEvents, Volume};
+use crate::{
+    node::DiffTimestamp,
+    prelude::{AudioEvents, Volume},
+    time::Audio,
+};
 use bevy_asset::Handle;
 use bevy_ecs::prelude::*;
+use bevy_math::FloatExt;
 use firewheel::{
-    clock::InstantSeconds,
+    clock::{DurationSeconds, InstantSeconds},
     diff::Notify,
     nodes::sampler::{PlaybackState, Playhead, RepeatMode},
 };
@@ -268,6 +273,22 @@ impl SamplePlayer {
     }
 }
 
+/// We use this to, by default, ensure samples play "when they should."
+///
+/// In practice, this means that samples which take a long time to load
+/// will skip the time spent loading. If you notice this in your game,
+/// consider preloading your sound assets, or simply disable all
+/// automatic scheduling with [`ScheduleDiffing`][crate::node::ScheduleDiffing].
+pub(super) fn observe_player_insert(
+    player: Trigger<OnInsert, SamplePlayer>,
+    time: Res<bevy_time::Time<Audio>>,
+    mut commands: Commands,
+) {
+    commands
+        .entity(player.target())
+        .insert(DiffTimestamp::new(&time));
+}
+
 /// Provide explicit priorities for samples.
 ///
 /// Samples with higher priorities are queued before, and cannot
@@ -397,6 +418,41 @@ impl PlaybackSettings {
         events.schedule(time, self, |settings| {
             *settings.playback = PlaybackState::Stop;
         });
+    }
+
+    pub fn speed_to(&self, speed: f64, duration: DurationSeconds, events: &mut AudioEvents) {
+        self.speed_at(speed, events.now(), events.now() + duration, events)
+    }
+
+    pub fn speed_at(
+        &self,
+        speed: f64,
+        start: InstantSeconds,
+        end: InstantSeconds,
+        events: &mut AudioEvents,
+    ) {
+        let start_value = events.get_value_at(start, self);
+        let mut end_value = start_value.clone();
+        end_value.speed = speed;
+
+        // This, too, is a very rough JND estimate.
+        let pitch_span = (end_value.speed - start_value.speed).abs();
+        let total_events = (pitch_span / 0.001).max(1.0) as usize;
+        let total_events =
+            crate::node::events::max_event_rate(end.0 - start.0, 0.001).min(total_events);
+
+        events.schedule_tween(
+            start,
+            end,
+            start_value,
+            end_value,
+            total_events,
+            |a, b, t| {
+                let mut output = a.clone();
+                output.speed = a.speed.lerp(b.speed, t as f64);
+                output
+            },
+        );
     }
 
     /// Start or resume playback.

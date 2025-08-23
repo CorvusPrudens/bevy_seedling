@@ -12,8 +12,6 @@ use firewheel::{
 };
 use portable_atomic::AtomicF64;
 
-// TODO: implement RealtimeClone for `()`
-
 /// A node that analyzes the loudness of an incoming signal.
 #[derive(Debug, Default, Clone, Component, Diff, Patch)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]

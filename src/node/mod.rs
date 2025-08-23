@@ -36,6 +36,39 @@ use label::NodeLabels;
 #[derive(Component)]
 pub(crate) struct Baseline<T>(pub(crate) T);
 
+/// A timestamp to apply to automatically generated events.
+///
+/// This can help correctly correlate manually scheduled events with
+/// generated events when the diffing may be deferred, such as when loading
+/// sample assets.
+#[derive(Debug, Component, Clone)]
+pub struct DiffTimestamp(pub(crate) InstantSeconds);
+
+impl DiffTimestamp {
+    /// Create a new timestamp at the current instant.
+    pub fn new(time: &bevy_time::Time<Audio>) -> Self {
+        Self(time.context().instant())
+    }
+}
+
+/// A resource that enables scheduling for automatic, diff-based events.
+///
+/// Always scheduling these events can improve the correctness and
+/// stability of generated events with respect to manually scheduled ones.
+/// This can also increase the pressure on the audio thread, which may
+/// lead to worse performance.
+///
+/// This defaults to `true`.
+#[derive(Resource, Debug)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub struct ScheduleDiffing(pub bool);
+
+impl Default for ScheduleDiffing {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
 /// A component that communicates an effect is present on an entity.
 ///
 /// This is used for sample pool bookkeeping.
@@ -573,10 +606,16 @@ impl PendingRemovals {
 }
 
 pub(crate) fn flush_events(
-    mut nodes: Query<(&FirewheelNode, &mut AudioEvents)>,
+    mut nodes: Query<(
+        Entity,
+        &FirewheelNode,
+        &mut AudioEvents,
+        Option<&DiffTimestamp>,
+    )>,
     mut removals: ResMut<PendingRemovals>,
     mut context: ResMut<AudioContext>,
     time: Res<bevy_time::Time<Audio>>,
+    should_schedule: Res<ScheduleDiffing>,
     mut commands: Commands,
 ) {
     context.with(|context| {
@@ -586,15 +625,25 @@ pub(crate) fn flush_events(
             }
         }
 
-        let now = context.audio_clock().seconds;
+        // We use the start-of-frame time here to ensure these events
+        // line up with the overall frame, even if it has already fallen
+        // behind the audio thread at this point in the frame.
+        let now = time.now();
         let range_to_render = InstantSeconds(0.0)..now + DurationSeconds(0.1);
-        for (node, mut events) in nodes.iter_mut() {
+        for (node_entity, node, mut events, timestamp) in nodes.iter_mut() {
             for event in events.queue.drain(..) {
+                let time = should_schedule.0.then(|| match timestamp {
+                    Some(t) => {
+                        commands.entity(node_entity).remove::<DiffTimestamp>();
+                        EventInstant::Seconds(t.0)
+                    }
+                    None => EventInstant::Seconds(now),
+                });
+
                 context.queue_event(NodeEvent {
                     node_id: node.0,
                     event,
-                    // TODO: should these have a time by default?
-                    time: Some(EventInstant::Seconds(time.now())),
+                    time,
                 });
             }
 
@@ -602,6 +651,7 @@ pub(crate) fn flush_events(
                 if let Err(e) =
                     event.render(range_to_render.start, range_to_render.end, |event, time| {
                         // if let NodeEventType::Param { data, path } = &event {
+                        //     bevy_log::info!("now: {now:?}");
                         //     bevy_log::info!("param: {data:#?}, path: {path:?}, time: {time:?}");
                         // }
 

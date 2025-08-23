@@ -5,7 +5,7 @@ use crate::{
     context::{PreStreamRestartEvent, SampleRate, StreamRestartEvent},
     edge::{PendingConnections, PendingEdge},
     error::SeedlingError,
-    node::{AudioState, EffectId, FirewheelNode, RegisterNode},
+    node::{AudioState, Baseline, DiffTimestamp, EffectId, FirewheelNode, RegisterNode},
     pool::label::PoolLabelContainer,
     prelude::{AudioEvents, PoolLabel},
     sample::{OnComplete, PlaybackSettings, QueuedSample, SamplePlayer},
@@ -23,8 +23,11 @@ use bevy_ecs::{
 use core::ops::{Deref, RangeInclusive};
 use firewheel::{
     clock::{DurationSamples, DurationSeconds},
+    diff::Patch,
     nodes::{
-        sampler::{PlaybackState, Playhead, SamplerConfig, SamplerNode, SamplerState},
+        sampler::{
+            PlaybackState, Playhead, SamplerConfig, SamplerNode, SamplerNodePatch, SamplerState,
+        },
         volume::VolumeNode,
     },
 };
@@ -40,6 +43,18 @@ pub(crate) struct SamplePoolPlugin;
 
 impl Plugin for SamplePoolPlugin {
     fn build(&self, app: &mut App) {
+        let world = app.world_mut();
+
+        // world.register_component_hooks::<SamplerNode>().on_insert(
+        //     |mut world: DeferredWorld, context: HookContext| {
+        //         let value = world.get::<SamplerNode>(context.entity).unwrap().clone();
+        //         world
+        //             .commands()
+        //             .entity(context.entity)
+        //             .insert((Baseline(value), EffectId(context.component_id)));
+        //     },
+        // );
+
         app.register_node::<SamplerNode>()
             .register_node_state::<SamplerNode, SamplerState>()
             .add_systems(
@@ -496,16 +511,31 @@ fn fetch_effect_ids(
 /// A kind of specialization of [`FollowerOf`][crate::node::follower::FollowerOf] for
 /// sampler nodes.
 fn watch_sample_players(
-    mut q: Query<(&mut SamplerNode, &mut AudioEvents, &SamplerOf)>,
-    mut samples: Query<(&mut PlaybackSettings, &mut AudioEvents), Without<SamplerOf>>,
+    mut q: Query<(Entity, &mut SamplerNode, &mut AudioEvents, &SamplerOf)>,
+    mut samples: Query<
+        (
+            &mut PlaybackSettings,
+            &mut AudioEvents,
+            Option<&DiffTimestamp>,
+        ),
+        Without<SamplerOf>,
+    >,
     time: Res<bevy_time::Time<Audio>>,
+    mut commands: Commands,
 ) -> Result {
     let render_range = time.render_range();
 
-    for (mut sampler_node, mut events, sample) in q.iter_mut() {
-        let Ok((mut settings, mut source_events)) = samples.get_mut(sample.0) else {
+    for (sampler_entity, mut sampler_node, mut events, sample) in q.iter_mut() {
+        let Ok((mut settings, mut source_events, timestamp)) = samples.get_mut(sample.0) else {
             continue;
         };
+
+        // The order here is very important!
+        // If we applied the scheduled events before this, the
+        // sampler itself would call `value_at` afterwards, meaning we'd
+        // produce incorrectly duplicated, potentially unscheduled events.
+        sampler_node.playback = settings.playback;
+        sampler_node.speed = settings.speed;
 
         // TODO: consider collecting these errors
         if source_events.active_within(render_range.start, render_range.end) {
@@ -513,8 +543,10 @@ fn watch_sample_players(
         }
         events.merge_timelines_and_clear(&mut source_events, time.now());
 
-        sampler_node.playback = settings.playback;
-        sampler_node.speed = settings.speed;
+        if let Some(timestamp) = timestamp {
+            commands.entity(sampler_entity).insert(timestamp.clone());
+            commands.entity(sample.0).remove::<DiffTimestamp>();
+        }
     }
 
     Ok(())

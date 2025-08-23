@@ -143,8 +143,7 @@ pub trait SeedlingContextWrapper: core::any::Any {
     /// help protect the system's speakers.
     ///
     /// Note that most operating systems already hard clip the output,
-    /// so this is usually not needed (TODO: Do research to see if this
-    /// assumption is true.)
+    /// so this is usually not needed.
     ///
     /// If the message channel is full, then this will return an error.
     fn set_hard_clip_outputs(

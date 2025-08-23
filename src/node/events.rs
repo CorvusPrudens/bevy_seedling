@@ -53,6 +53,10 @@ impl AudioEvents {
         }
     }
 
+    pub fn now(&self) -> InstantSeconds {
+        self.now
+    }
+
     /// Clone any timeline events from `other` that aren't present in `self`.
     pub fn merge_timelines(&mut self, other: &Self) {
         for event in &other.timeline {
@@ -115,7 +119,7 @@ impl AudioEvents {
     }
 
     /// Schedule a tween with a custom interpolator.
-    fn schedule_tween<T, F>(
+    pub fn schedule_tween<T, F>(
         &mut self,
         start: InstantSeconds,
         end: InstantSeconds,
@@ -327,7 +331,11 @@ impl TimelineEvent {
         range.start <= *probe.end() && range.end >= *probe.start()
     }
 
-    pub fn params(
+    pub fn params(&self) -> &[TimelineParam] {
+        &self.tween
+    }
+
+    pub fn params_in(
         &self,
         range: core::ops::RangeInclusive<InstantSeconds>,
     ) -> impl Iterator<Item = &TimelineParam> {
@@ -339,7 +347,7 @@ impl TimelineEvent {
         range: core::ops::RangeInclusive<InstantSeconds>,
         value: &mut T,
     ) -> Result<(), PatchError> {
-        for TimelineParam { data, path, .. } in self.params(range) {
+        for TimelineParam { data, path, .. } in self.params_in(range) {
             let patch = T::patch(data, path)?;
             value.apply(patch);
         }
@@ -361,7 +369,7 @@ impl TimelineEvent {
             return Ok(());
         };
 
-        for param in self.params(render_range.start..=render_range.end) {
+        for param in self.params_in(render_range.start..=render_range.end) {
             let event = NodeEventType::Param {
                 data: param.data.clone(),
                 path: param.path.clone(),
@@ -489,10 +497,9 @@ pub trait VolumeFade {
     );
 }
 
-// Limit fades to one event per millisecond.
-fn max_rate(duration: f64) -> usize {
-    let max_rate = 0.001;
-    (duration / max_rate).ceil() as usize
+// Limit events to one per time step in seconds.
+pub(crate) fn max_event_rate(duration: f64, time_step: f64) -> usize {
+    (duration / time_step).ceil() as usize
 }
 
 impl VolumeFade for VolumeNode {
@@ -507,7 +514,7 @@ impl VolumeFade for VolumeNode {
         // how many total steps we need. We give a bit of margin just in case.
         let db_span = (clamp(start_value.volume.decibels()) - clamp(target.decibels())).abs();
         let total_events = (db_span * 1.25).max(1.0) as usize;
-        let total_events = max_rate(duration.0).min(total_events);
+        let total_events = max_event_rate(duration.0, 0.001).min(total_events);
 
         events.schedule_tween(
             start,
@@ -538,7 +545,7 @@ impl VolumeFade for VolumeNode {
         // how many total steps we need. We give a bit of margin just in case.
         let db_span = (clamp(start_value.volume.decibels()) - clamp(target.decibels())).abs();
         let total_events = (db_span * 1.25).max(1.0) as usize;
-        let total_events = max_rate(end.0 - start.0).min(total_events);
+        let total_events = max_event_rate(end.0 - start.0, 0.001).min(total_events);
 
         events.schedule_tween(
             start,

@@ -216,11 +216,6 @@ pub(super) fn assign_work(
                 params.sample = Some(asset.get());
                 params.volume = player.volume;
                 params.repeat_mode = player.repeat_mode;
-                // params.playback = sett
-
-                // commands
-                //     .entity(sample_entity)
-                //     .insert(crate::prelude::SampleState(state.0.clone()));
                 state.0.clear_finished();
 
                 // normalize sample effects
@@ -389,9 +384,6 @@ pub(super) fn assign_work(
             params.sample = Some(asset.get());
             params.volume = player.volume;
             params.repeat_mode = player.repeat_mode;
-            // commands
-            //     .entity(sample_entity)
-            //     .insert(crate::prelude::SampleState(state.0.clone()));
             state.0.clear_finished();
 
             // normalize sample effects
