@@ -722,6 +722,7 @@ fn remove_finished(
                     Sampler,
                     QueuedSample,
                     SkipTimer,
+                    AudioEvents,
                 )>();
         }
         OnComplete::Despawn => {

@@ -568,15 +568,18 @@ fn observe_node_insertion<T: Component + Clone>(
     mut commands: Commands,
 ) -> Result {
     let value = node.get(trigger.target())?.clone();
-    commands.entity(trigger.target()).insert((
-        Baseline(value),
-        EffectId(
+    commands
+        .entity(trigger.target())
+        .insert(EffectId(
             components
                 .component_id::<T>()
                 .expect("`ComponentId` must be available"),
-        ),
-        AudioEvents::new(&time),
-    ));
+        ))
+        .insert_if_new((
+            // Replacing the baseline could lose information.
+            Baseline(value),
+            AudioEvents::new(&time),
+        ));
 
     Ok(())
 }

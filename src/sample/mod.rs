@@ -277,7 +277,8 @@ pub(super) fn observe_player_insert(
 ) {
     commands
         .entity(player.target())
-        .insert((DiffTimestamp::new(&time), AudioEvents::new(&time)));
+        .insert(DiffTimestamp::new(&time))
+        .insert_if_new(AudioEvents::new(&time));
 }
 
 /// Provide explicit priorities for samples.

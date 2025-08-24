@@ -85,7 +85,7 @@ pub trait AudioTime {
     /// ```
     /// # use bevy::prelude::*;
     /// # use bevy_seedling::prelude::*;
-    /// # fn delay(duration: DurationSeconds, time: Res<Time<AudioTime>>) -> InstantSeconds {
+    /// # fn delay(duration: DurationSeconds, time: Res<Time<Audio>>) -> InstantSeconds {
     /// time.now() + duration
     /// # }
     /// ```

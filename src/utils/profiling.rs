@@ -93,14 +93,23 @@ impl AudioBackend for ProfilingBackend {
                         processor.process_interleaved(
                             &input,
                             &mut output,
-                            CHANNELS,
-                            CHANNELS,
-                            BLOCK_SIZE,
-                            now,
-                            start - now,
-                            StreamStatus::empty(),
-                            StreamStatus::empty(),
-                            0,
+                            firewheel::backend::BackendProcessInfo {
+                                num_in_channels: CHANNELS,
+                                num_out_channels: CHANNELS,
+                                frames: BLOCK_SIZE,
+                                process_timestamp: now,
+                                duration_since_stream_start: start - now,
+                                input_stream_status: StreamStatus::empty(),
+                                output_stream_status: StreamStatus::empty(),
+                                dropped_frames: 0,
+                            }, // CHANNELS,
+                               // CHANNELS,
+                               // BLOCK_SIZE,
+                               // now,
+                               // start - now,
+                               // StreamStatus::empty(),
+                               // StreamStatus::empty(),
+                               // 0,
                         );
                         std::thread::sleep(std::time::Duration::from_secs_f64(block_duration));
                         seconds.0 += block_duration;

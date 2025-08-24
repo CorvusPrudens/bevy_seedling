@@ -5,7 +5,7 @@ use firewheel::{
     backend::{AudioBackend, DeviceInfo},
     channel_config::ChannelConfig,
     clock::{AudioClock, TransportState},
-    error::{AddEdgeError, UpdateError},
+    error::{AddEdgeError, RemoveNodeError, UpdateError},
     event::{NodeEvent, NodeEventType},
     graph::{Edge, EdgeID, NodeEntry, PortIdx},
     node::{AudioNode, Constructor, DynAudioNode, NodeID},
@@ -176,8 +176,7 @@ pub trait SeedlingContextWrapper: core::any::Any {
     /// This will return an error if a node with the given ID does not
     /// exist in the graph, or if the ID is of the graph input or graph
     /// output node.
-    #[allow(clippy::result_unit_err)]
-    fn remove_node(&mut self, node_id: NodeID) -> Result<SmallVec<[EdgeID; 4]>, ()>;
+    fn remove_node(&mut self, node_id: NodeID) -> Result<SmallVec<[EdgeID; 4]>, RemoveNodeError>;
 
     /// Get information about a node in the graph.
     fn node_info(&self, id: NodeID) -> Option<&NodeEntry>;
@@ -346,7 +345,7 @@ where
         <FirewheelCtx<B>>::add_dyn_node(self, node)
     }
 
-    fn remove_node(&mut self, node_id: NodeID) -> Result<SmallVec<[EdgeID; 4]>, ()> {
+    fn remove_node(&mut self, node_id: NodeID) -> Result<SmallVec<[EdgeID; 4]>, RemoveNodeError> {
         <FirewheelCtx<B>>::remove_node(self, node_id)
     }
 
