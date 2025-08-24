@@ -1,4 +1,18 @@
 //! Audio graph and I/O initialization.
+//!
+//! `bevy_seedling` initializes audio in two stages.
+//!
+//! 1. In [`PreStartup`], the selected [`GraphConfiguration`] is
+//!    established and [`InputDeviceInfo`] and [`OutputDeviceInfo`] entities
+//!    are spawned.
+//! 2. In [`PostUpdate`], the [`AudioStreamConfig`] resource is used to
+//!    start the audio stream.
+//!
+//! This two-stage initialization allows systems in [`Startup`] to query
+//! for device information and configure the audio stream before it's
+//! initialized. Following this initialization in [`PostStartup`], any
+//! further changes to [`AudioStreamConfig`] will cause the stream to
+//! stop and restart with the new configuration.
 
 use crate::{
     context::AudioStreamConfig,

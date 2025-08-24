@@ -4,7 +4,7 @@ use crate::prelude::*;
 use bevy_ecs::component::Component;
 use bevy_math::prelude::*;
 
-/// Helper for converting a simple \[0.0, 1.0\] range to [`Volume`].
+/// Helper for converting a simple `[0.0, 1.0]` range to [`Volume`].
 ///
 /// Since we perceive volume logarithmically, a simple linear mapping
 /// between a slider and a sound's amplitude will produce awkward results;

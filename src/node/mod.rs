@@ -71,6 +71,32 @@ impl Default for ScheduleDiffing {
     }
 }
 
+/// A resource that determines how soon scheduled events are sent to the
+/// audio thread.
+///
+/// `bevy_seedling` does not eagerly send all scheduled events to the audio thread.
+/// This could easily overwhelm the audio thread's event queue, especially when
+/// frequently scheduling animations.
+///
+/// Instead, scheduled events are sent when the audio clock is "close enough"
+/// to the target time. To account for potental hitches or framerate-to-audio-processing-rate
+/// mismatches, "close enough" should generally be at least a few frames in advance.
+///
+/// [`AudioScheduleLookahead`] determines this buffer period. That is for each frame, any remaining
+/// events scheduled between the start of the app and `now` + [`AudioScheduleLookahead`]
+/// are sent.
+///
+/// Defaults to `DurationSeconds(0.1)` (100ms).
+#[derive(Resource, Debug)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub struct AudioScheduleLookahead(pub DurationSeconds);
+
+impl Default for AudioScheduleLookahead {
+    fn default() -> Self {
+        Self(DurationSeconds(0.1))
+    }
+}
+
 /// A component that communicates an effect is present on an entity.
 ///
 /// This is used for sample pool bookkeeping.
@@ -405,7 +431,7 @@ pub trait RegisterNode {
     /// Register a state type for an audio node.
     ///
     /// After a node is inserted into the audio graph, its state is fetched and
-    /// inserted on the node component in a [`NodeState`] wrapper.
+    /// inserted on the node component in a [`AudioState`] wrapper.
     ///
     /// A node's state is constructed in Firewheel's [AudioNode::construct_processor]
     /// trait method, and subsequently inserted into the audio context. Nodes like
@@ -632,6 +658,7 @@ pub(crate) fn flush_events(
     mut context: ResMut<AudioContext>,
     time: Res<bevy_time::Time<Audio>>,
     should_schedule: Res<ScheduleDiffing>,
+    lookahead: Res<AudioScheduleLookahead>,
     mut commands: Commands,
 ) {
     context.with(|context| {
@@ -645,7 +672,7 @@ pub(crate) fn flush_events(
         // line up with the overall frame, even if it has already fallen
         // behind the audio thread at this point in the frame.
         let now = time.now();
-        let range_to_render = InstantSeconds(0.0)..now + DurationSeconds(0.1);
+        let range_to_render = InstantSeconds(0.0)..now + lookahead.0;
         for (node_entity, node, mut events, timestamp) in nodes.iter_mut() {
             for event in events.queue.drain(..) {
                 let time = should_schedule.0.then(|| match timestamp {
@@ -666,11 +693,6 @@ pub(crate) fn flush_events(
             for event in &mut events.timeline {
                 if let Err(e) =
                     event.render(range_to_render.start, range_to_render.end, |event, time| {
-                        // if let NodeEventType::Param { data, path } = &event {
-                        //     bevy_log::info!("now: {now:?}");
-                        //     bevy_log::info!("param: {data:#?}, path: {path:?}, time: {time:?}");
-                        // }
-
                         context.queue_event(NodeEvent {
                             node_id: node.0,
                             event,

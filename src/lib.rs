@@ -93,7 +93,7 @@
 //! arranged to ease you into `bevy_seedling`'s features.
 //!
 //! ### Playing samples
-//! - [The `SamplePlayer` type][prelude::SamplePlayer]
+//! - [The `SamplePlayer` component][prelude::SamplePlayer]
 //! - [Controlling playback][prelude::PlaybackSettings]
 //! - [The sample lifecycle][prelude::SamplePlayer#lifecycle]
 //! - [Applying effects][prelude::SamplePlayer#applying-effects]
@@ -106,11 +106,18 @@
 //!   - [Pool architecture][prelude::SamplerPool#architecture]
 //! - [The default pool][prelude::DefaultPool]
 //!
-//! ### Routing audio
-//! - [Connecting nodes][crate::edge::Connect]
-//! - [Disconnecting nodes][crate::edge::Disconnect]
-//! - [Sends][prelude::SendNode]
-//! - [The main bus][prelude::MainBus]
+//! ### The audio graph
+//! - Routing audio
+//!   - [Connecting nodes][crate::edge::Connect]
+//!   - [Disconnecting nodes][crate::edge::Disconnect]
+//!   - [Sends][prelude::SendNode]
+//!   - [The main bus][prelude::MainBus]
+//! - [Stream configuration][crate::configuration]
+//! - [Graph configuration][crate::configuration::GraphConfiguration]
+//!
+//! ### Event scheduling
+//! - [The `AudioEvents` component][crate::prelude::AudioEvents]
+//! - [The audio clock][crate::time]
 //!
 //! ### Custom nodes
 //! - [Creating and registering nodes][prelude::RegisterNode#creating-and-registering-nodes]
@@ -118,16 +125,23 @@
 //!
 //! ## Feature flags
 //!
-//! | Flag | Description | Default feature |
-//! | ---  | ----------- | --------------- |
-//! | `rand` | Enable the [`RandomPitch`][crate::prelude::RandomPitch] component. | Yes |
-//! | `wav` | Enable WAV format and PCM encoding. | Yes |
-//! | `ogg` | Enable Ogg format and Vorbis encoding. | Yes |
-//! | `mp3` | Enable mp3 format and encoding. | No |
-//! | `mkv` | Enable mkv format. | No |
-//! | `adpcm` | Enable adpcm encoding. | No |
-//! | `flac` | Enable FLAC format and encoding. | No |
-//! | `stream` | Enable CPAL input and output stream nodes. | Yes |
+//! | Flag            | Description                                | Default |
+//! | --------------- | ------------------------------------------ | ------- |
+//! | `reflect`       | Enable [`bevy_reflect`] derive macros.     | Yes     |
+//! | `rand`          | Enable the [`RandomPitch`] component.      | Yes     |
+//! | `wav`           | Enable WAV format and PCM encoding.        | Yes     |
+//! | `ogg`           | Enable Ogg format and Vorbis encoding.     | Yes     |
+//! | `mp3`           | Enable mp3 format and encoding.            | No      |
+//! | `mkv`           | Enable mkv format.                         | No      |
+//! | `adpcm`         | Enable adpcm encoding.                     | No      |
+//! | `flac`          | Enable FLAC format and encoding.           | No      |
+//! | `web_audio`     | Enable the multi-threading web backend.    | No      |
+//! | `hrtf`          | Enable HRTF Spatialization.                | No      |
+//! | `hrtf_subjects` | Enable all HRTF embedded data.             | No      |
+//! | `loudness`      | Enable LUFS analyzer node.                 | Yes     |
+//! | `stream`        | Enable CPAL input and output stream nodes. | Yes     |
+//!
+//! [`RandomPitch`]: crate::prelude::RandomPitch
 //!
 //! ## Frequently asked questions
 //!
@@ -270,7 +284,7 @@
 //! [tracks](https://docs.rs/bevy_kira_audio/latest/bevy_kira_audio/type.Audio.html),
 //! where both allow you to play sounds in the same "place" in the audio graph.
 //!
-//! [`SamplerNode`]: prelude::firewheel::nodes::sampler::SamplerNode
+//! [`SamplerNode`]: prelude::SamplerNode
 //!
 //! ### Routing
 //!
@@ -311,7 +325,7 @@
 //! that make up a sound. "Sample rate," often 44.1kHz or 48kHz, refers to these
 //! measurements.
 //!
-//! [`SampleResource`]: prelude::firewheel::core::sample_resource::SampleResource
+//! [`SampleResource`]: firewheel::core::sample_resource::SampleResource
 //! [`AudioSample`]: prelude::AudioSample
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
@@ -549,6 +563,7 @@ where
             .insert_resource(configuration::ConfigResource(self.graph_config))
             .init_resource::<edge::NodeMap>()
             .init_resource::<node::ScheduleDiffing>()
+            .init_resource::<node::AudioScheduleLookahead>()
             .init_resource::<node::PendingRemovals>()
             .init_resource::<pool::DefaultPoolSize>()
             .init_asset::<sample::AudioSample>()
@@ -660,6 +675,7 @@ where
             .register_type::<configuration::SpatialPool>()
             .register_type::<SamplerPool<configuration::SpatialPool>>()
             .register_type::<node::ScheduleDiffing>()
+            .register_type::<node::AudioScheduleLookahead>()
             .register_type::<NonZeroChannelCount>()
             .register_type::<SamplerConfig>()
             .register_type::<PlaybackState>()

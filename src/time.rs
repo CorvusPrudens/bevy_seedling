@@ -1,4 +1,31 @@
-//! A DSP clock.
+//! The audio DSP clock.
+//!
+//! [`Audio`] provides a clock driven by the audio processing thread.
+//! The timing it provides can be used for precise audio scheduling
+//! and coordinating the ECS with audio events.
+//!
+//! ```
+//! # use bevy::prelude::*;
+//! # use bevy_seedling::prelude::*;
+//! fn scheduling(
+//!     main: Single<(&VolumeNode, &mut AudioEvents), With<MainBus>>,
+//!     time: Res<Time<Audio>>,
+//! ) {
+//!     // Fade out the main bus, silencing all sound.
+//!     let (volume, mut events) = main.into_inner();
+//!     volume.fade_at(
+//!         Volume::SILENT,
+//!         time.now(),
+//!         time.delay(DurationSeconds(2.5)),
+//!         &mut events,
+//!     );
+//! }
+//! ```
+//!
+//! The `Time<Audio>` resource does not have privileged access to timing
+//! information; it simply reads from the [`AudioContext`] once at the
+//! beginning of each frame in the [`First`] schedule. If you need more
+//! up-to-date timings, consider fetching the time in each system with [`AudioContext::now`].
 
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
@@ -47,11 +74,10 @@ fn update_time(mut time: ResMut<Time<Audio>>, context: Option<ResMut<AudioContex
     time.context_mut().instant = now.seconds;
 }
 
-/// A trait that provides a frame's audio render range.
+/// An extension trait for `Time<Audio>`.
 ///
-/// This can be used for rendering timeline events with [`AudioEvents`].
-///
-/// [`AudioEvents`]: crate::prelude::AudioEvents
+/// This provides convenience methods for working with
+/// audio timings.
 pub trait AudioTime {
     /// Get the audio processing thread's compensated current time.
     ///
@@ -67,7 +93,7 @@ pub trait AudioTime {
     ///     main: Single<(&VolumeNode, &mut AudioEvents), With<MainBus>>,
     ///     time: Res<Time<Audio>>,
     /// ) {
-    ///     // fade out the main bus, silencing all sound
+    ///     // Fade out the main bus, silencing all sound.
     ///     let (volume, mut events) = main.into_inner();
     ///     volume.fade_at(
     ///         Volume::SILENT,
