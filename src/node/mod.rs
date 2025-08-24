@@ -79,7 +79,7 @@ impl Default for ScheduleDiffing {
 /// frequently scheduling animations.
 ///
 /// Instead, scheduled events are sent when the audio clock is "close enough"
-/// to the target time. To account for potental hitches or framerate-to-audio-processing-rate
+/// to the target time. To account for potential hitches or framerate-to-audio-processing-rate
 /// mismatches, "close enough" should generally be at least a few frames in advance.
 ///
 /// [`AudioScheduleLookahead`] determines this buffer period. That is for each frame, any remaining

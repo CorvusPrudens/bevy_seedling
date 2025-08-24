@@ -342,7 +342,7 @@ struct TimelineParam {
 /// An event's audio rendering progress.
 ///
 /// This tracks what's been sent to the audio thread
-/// indepedently of the ECS changes, since we generally
+/// independently of the ECS changes, since we generally
 /// want to send the events a bit in advance. This helps
 /// bridge the gap between the likely different update rates
 /// of the ECS and audio thread, and can smooth over frame rate
@@ -395,7 +395,7 @@ impl EventTimeline {
         }
     }
 
-    /// Report whether this event has completely elasped by `now`.
+    /// Report whether this event has completely elapsed by `now`.
     pub fn completely_elapsed(&self, now: InstantSeconds) -> bool {
         self.time_range().end < now
     }
