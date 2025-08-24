@@ -13,6 +13,7 @@ use std::{
 };
 
 /// A very simple backend for testing and profiling.
+#[allow(dead_code)]
 pub struct ProfilingBackend {
     processor: mpsc::Sender<FirewheelProcessor<Self>>,
 }
