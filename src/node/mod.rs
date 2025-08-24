@@ -6,6 +6,7 @@ use crate::pool::sample_effects::EffectOf;
 use crate::time::{Audio, AudioTime};
 use crate::{SeedlingSystems, prelude::AudioContext};
 use bevy_app::prelude::*;
+use bevy_ecs::component::Components;
 use bevy_ecs::{
     component::{ComponentId, HookContext, Mutable},
     prelude::*,
@@ -13,6 +14,7 @@ use bevy_ecs::{
 };
 use bevy_log::prelude::*;
 use bevy_platform::collections::HashSet;
+use bevy_time::Time;
 use firewheel::clock::{DurationSeconds, EventInstant, InstantSeconds};
 use firewheel::error::UpdateError;
 use firewheel::{
@@ -432,16 +434,7 @@ impl RegisterNode for App {
         let mut nodes = world.get_resource_or_init::<RegisteredNodes>();
 
         if nodes.insert::<T>() {
-            world.register_component_hooks::<T>().on_insert(
-                |mut world: DeferredWorld, context: HookContext| {
-                    let value = world.get::<T>(context.entity).unwrap().clone();
-                    world
-                        .commands()
-                        .entity(context.entity)
-                        .insert((Baseline(value), EffectId(context.component_id)));
-                },
-            );
-            world.register_required_components::<T, AudioEvents>();
+            world.add_observer(observe_node_insertion::<T>);
             world.register_required_components::<T, T::Configuration>();
         } else {
             // TODO: we'll need to be more careful about getting type names
@@ -493,7 +486,6 @@ impl RegisterNode for App {
         let mut nodes = world.get_resource_or_init::<RegisteredNodes>();
 
         if nodes.insert::<T>() {
-            world.register_required_components::<T, AudioEvents>();
             world.register_required_components::<T, T::Configuration>();
         } else {
             #[cfg(debug_assertions)]
@@ -566,6 +558,27 @@ impl RegisterNode for App {
                 .before(SeedlingSystems::Connect),
         )
     }
+}
+
+fn observe_node_insertion<T: Component + Clone>(
+    trigger: Trigger<OnInsert, T>,
+    node: Query<&T>,
+    components: &Components,
+    time: Res<Time<Audio>>,
+    mut commands: Commands,
+) -> Result {
+    let value = node.get(trigger.target())?.clone();
+    commands.entity(trigger.target()).insert((
+        Baseline(value),
+        EffectId(
+            components
+                .component_id::<T>()
+                .expect("`ComponentId` must be available"),
+        ),
+        AudioEvents::new(&time),
+    ));
+
+    Ok(())
 }
 
 /// An ECS handle for an audio node.

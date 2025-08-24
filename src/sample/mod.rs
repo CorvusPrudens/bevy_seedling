@@ -169,13 +169,7 @@ pub use assets::{AudioSample, SampleLoader, SampleLoaderError};
 /// will be inserted, which provides information about the
 /// playhead position and playback status.
 #[derive(Debug, Component, Clone)]
-#[require(
-    PlaybackSettings,
-    SamplePriority,
-    SampleQueueLifetime,
-    QueuedSample,
-    AudioEvents
-)]
+#[require(PlaybackSettings, SamplePriority, SampleQueueLifetime, QueuedSample)]
 #[component(immutable)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SamplePlayer {
@@ -283,7 +277,7 @@ pub(super) fn observe_player_insert(
 ) {
     commands
         .entity(player.target())
-        .insert(DiffTimestamp::new(&time));
+        .insert((DiffTimestamp::new(&time), AudioEvents::new(&time)));
 }
 
 /// Provide explicit priorities for samples.

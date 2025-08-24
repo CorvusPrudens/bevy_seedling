@@ -346,7 +346,6 @@ pub mod utils;
 pub mod prelude {
     //! All `bevy_seedlings`'s important types and traits.
 
-    pub use crate::SeedlingPlugin;
     pub use crate::configuration::{
         GraphConfiguration, InputDeviceInfo, MusicPool, OutputDeviceInfo, SeedlingStartupSystems,
         SfxBus, SpatialPool,
@@ -383,6 +382,7 @@ pub mod prelude {
     };
     pub use crate::time::{Audio, AudioTime};
     pub use crate::utils::perceptual_volume::PerceptualVolume;
+    pub use crate::{SeedlingPlugin, SeedlingSystems};
 
     pub use firewheel::{
         CpalBackend, FirewheelConfig, Volume,

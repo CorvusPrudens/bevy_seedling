@@ -63,7 +63,10 @@ pub trait AudioTime {
     /// ```
     /// # use bevy::prelude::*;
     /// # use bevy_seedling::prelude::*;
-    /// fn scheduling(main: Single<(&VolumeNode, &mut AudioEvents)>, time: Res<Time<Audio>>) {
+    /// fn scheduling(
+    ///     main: Single<(&VolumeNode, &mut AudioEvents), With<MainBus>>,
+    ///     time: Res<Time<Audio>>,
+    /// ) {
     ///     // fade out the main bus, silencing all sound
     ///     let (volume, mut events) = main.into_inner();
     ///     volume.fade_at(

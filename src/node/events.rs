@@ -23,12 +23,22 @@ impl Plugin for EventsPlugin {
     }
 }
 
-/// An audio event queue.
+/// The audio event queue.
 ///
-/// When inserted into an entity that contains a [FirewheelNode],
+/// When inserted into an entity that contains a [`FirewheelNode`],
 /// these events will automatically be drained and sent
-/// to the audio context in the [SeedlingSystems::Flush] set.
-#[derive(Component, Default)]
+/// to the audio context in the [`SeedlingSystems::Flush`] set.
+///
+/// This component also handles scheduled events, like precise playback
+/// times or volume fades. Scheduled events form a timeline, accessible
+/// via [`AudioEvents::timeline`], which manages synchronization with both
+/// the ECS and the audio thread. When an event in the timeline elapses,
+/// the value is sent to the audio thread _and_ written to the value in the
+/// ECS. The scheduled event it subsequently removed from the timeline.
+///
+/// [`FirewheelNode`]: crate::prelude::FirewheelNode
+/// [`SeedlingSystems::Flush`]: crate::prelude::SeedlingSystems::Flush
+#[derive(Component)]
 pub struct AudioEvents {
     pub(super) queue: Vec<NodeEventType>,
     /// We keep a timeline like this because a simple queue of rendered events is not sufficient.
@@ -39,8 +49,7 @@ pub struct AudioEvents {
     ///
     /// If we can instead render the events on-demand, we can fetch them whenever we need.
     /// It's also much easier to detect overlapping events.
-    pub(super) timeline: Vec<TimelineEvent>,
-    // TODO: This doesn't work great when manually constructing the events.
+    pub(super) timeline: Vec<EventTimeline>,
     now: InstantSeconds,
 }
 
@@ -95,7 +104,8 @@ impl AudioEvents {
     /// These events are used to provide scheduled events directly to
     /// the audio thread and animate values in the ECS. Events that
     /// have elapsed are automatically removed in the [`Last`] schedule.
-    pub fn timeline(&self) -> &[TimelineEvent] {
+    #[expect(unused)]
+    fn timeline(&self) -> &[EventTimeline] {
         &self.timeline
     }
 
@@ -126,7 +136,7 @@ impl AudioEvents {
         let mut queue = TimelineQueue::new(time, &mut func);
         new_value.diff(&initial_value, Default::default(), &mut queue);
 
-        self.timeline.push(TimelineEvent::new(events));
+        self.timeline.push(EventTimeline::new(events));
     }
 
     /// Schedule a tween with a custom interpolator.
@@ -163,10 +173,10 @@ impl AudioEvents {
             new_value.diff(&start_value, PathBuilder::default(), &mut queue);
         }
 
-        self.timeline.push(TimelineEvent::new(events));
+        self.timeline.push(EventTimeline::new(events));
     }
 
-    pub fn active_within(&self, start: InstantSeconds, end: InstantSeconds) -> bool {
+    pub(crate) fn active_within(&self, start: InstantSeconds, end: InstantSeconds) -> bool {
         for event in &self.timeline {
             if event.active_within(start..=end) {
                 return true;
@@ -226,7 +236,9 @@ impl core::fmt::Debug for AudioEvents {
     }
 }
 
-pub struct TimelineQueue<'a> {
+/// A queue providing an easily modifiable `instant` for
+/// scheduled patches.
+struct TimelineQueue<'a> {
     queue: &'a mut dyn FnMut(NodeEventType, InstantSeconds),
     pub instant: InstantSeconds,
 }
@@ -257,35 +269,49 @@ impl EventQueue for TimelineQueue<'_> {
     }
 }
 
-pub trait TimelineTween: Send + Sync + 'static {
-    fn render(&self, start: InstantSeconds, end: InstantSeconds, queue: TimelineQueue);
-
-    fn time_range(&self) -> core::ops::Range<InstantSeconds>;
-}
-
 static TIMELINE_ID: AtomicU64 = AtomicU64::new(0);
 
+/// A distinct timeline event, composed of
+/// one or more [`TimelineParam`]s.
 #[derive(Clone, Debug)]
-pub struct TimelineEvent {
+pub(super) struct EventTimeline {
     tween: Vec<TimelineParam>,
+    /// The current render progress.
     pub render_progress: RenderProgress,
     id: u64,
 }
 
 #[derive(Clone, Debug)]
-pub struct TimelineParam {
+struct TimelineParam {
     pub data: ParamData,
     pub path: ParamPath,
     pub time: InstantSeconds,
 }
 
+/// An event's audio rendering progress.
+///
+/// This tracks what's been sent to the audio thread
+/// indepedently of the ECS changes, since we generally
+/// want to send the events a bit in advance. This helps
+/// bridge the gap between the likely different update rates
+/// of the ECS and audio thread, and can smooth over frame rate
+/// hitches.
 #[derive(Clone, Debug)]
 pub struct RenderProgress {
+    /// The rendered range.
+    ///
+    /// As the rendering advances, the beginning of this range
+    /// marches forward, until the range is empty.
     pub range: core::ops::Range<InstantSeconds>,
+    /// Tracks whether the rendering is complete.
+    ///
+    /// This is distinct from simple tracking an empty range because a single
+    /// event will start with an empty range.
     pub complete: bool,
 }
 
 impl RenderProgress {
+    /// Construct a new [`RenderProgress`].
     pub fn new(range: core::ops::Range<InstantSeconds>) -> Self {
         Self {
             range,
@@ -296,7 +322,7 @@ impl RenderProgress {
 
 fn time_range(events: &[TimelineParam]) -> core::ops::Range<InstantSeconds> {
     match events {
-        [] => panic!("unexpected empty event"),
+        [] => panic!("an event timeline should never be empty"),
         &[TimelineParam { time, .. }] => time..time,
         &[
             TimelineParam { time: start, .. },
@@ -306,26 +332,34 @@ fn time_range(events: &[TimelineParam]) -> core::ops::Range<InstantSeconds> {
     }
 }
 
-impl TimelineEvent {
-    pub fn new(tween: Vec<TimelineParam>) -> Self {
+impl EventTimeline {
+    /// Construct a new [`TimelineEvent`] from a collection of params.
+    fn new(tween: Vec<TimelineParam>) -> Self {
         let render_progress = RenderProgress::new(time_range(&tween));
 
-        TimelineEvent {
+        EventTimeline {
             tween,
             render_progress,
             id: TIMELINE_ID.fetch_add(1, core::sync::atomic::Ordering::Relaxed),
         }
     }
 
+    /// Report whether this event has completely elasped by `now`.
     pub fn completely_elapsed(&self, now: InstantSeconds) -> bool {
         self.time_range().end < now
     }
 
+    /// Get this event's unique ID.
+    ///
+    /// This accelerates event merging for [`FollowerOf`] relationships.
+    ///
+    /// [`FollowerOf`]: crate::node::follower::FollowerOf
     pub fn id(&self) -> u64 {
         self.id
     }
 
-    pub fn render_range(
+    /// Provides the subset of `full_range` that has not yet been rendered.
+    fn render_range(
         &self,
         full_range: core::ops::Range<InstantSeconds>,
     ) -> Option<core::ops::Range<InstantSeconds>> {
@@ -340,27 +374,27 @@ impl TimelineEvent {
         Some(InstantSeconds(new_start)..InstantSeconds(new_end))
     }
 
+    /// Get the full span of this event's timeline.
     pub fn time_range(&self) -> core::ops::Range<InstantSeconds> {
         time_range(&self.tween)
     }
 
-    pub fn active_within(&self, probe: core::ops::RangeInclusive<InstantSeconds>) -> bool {
+    /// Indicates whether the timeline contains any events within `probe`.
+    fn active_within(&self, probe: core::ops::RangeInclusive<InstantSeconds>) -> bool {
         let range = self.time_range();
 
         range.start <= *probe.end() && range.end >= *probe.start()
     }
 
-    pub fn params(&self) -> &[TimelineParam] {
-        &self.tween
-    }
-
-    pub fn params_in(
+    /// Returns an iterator over the parameters contained within `range`.
+    fn params_in(
         &self,
         range: core::ops::RangeInclusive<InstantSeconds>,
     ) -> impl Iterator<Item = &TimelineParam> {
         self.tween.iter().filter(move |p| range.contains(&p.time))
     }
 
+    /// Apply the events within `range` to `value`.
     pub fn apply<T: Patch>(
         &self,
         range: core::ops::RangeInclusive<InstantSeconds>,
@@ -431,11 +465,66 @@ impl AudioLerp for Volume {
     }
 }
 
+/// An extension trait that provides convenience methods for volume animation.
 pub trait VolumeFade {
-    fn fade_to(&self, target: Volume, duration: DurationSeconds, events: &mut AudioEvents);
+    /// Linearly interpolate a [`VolumeNode`]'s volume from its current value to `volume`.
+    ///
+    /// The interpolation will favor the [`Volume::Decibels`] variant, meaning if either
+    /// the start or end value is in decibels, the opposite value will be converted to
+    /// decibels before interpolating. Linear interpolation in each space will produce
+    /// distinct perceptual changes.
+    ///
+    /// The interpolation uses an approximation of the average just noticeable
+    /// different (JND) for amplitude to calculate how many events are required to
+    /// sound perfectly smooth. Since we are not especially sensitive to changes in
+    /// amplitude, this generates relatively few events.
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_seedling::prelude::*;
+    /// fn fade_to(main: Single<(&VolumeNode, &mut AudioEvents), With<MainBus>>) {
+    ///     let (volume, mut events) = main.into_inner();
+    ///
+    ///     // Fade the main bus to zero, silencing all sound.
+    ///     volume.fade_to(Volume::SILENT, DurationSeconds(2.5), &mut events);
+    /// }
+    /// ```
+    fn fade_to(&self, volume: Volume, duration: DurationSeconds, events: &mut AudioEvents);
+
+    /// Linearly interpolate a [`VolumeNode`]'s volume from its value at `start` to `volume`.
+    ///
+    /// The interpolation will favor the [`Volume::Decibels`] variant, meaning if either
+    /// the start or end value is in decibels, the opposite value will be converted to
+    /// decibels before interpolating. Linear interpolation in each space will produce
+    /// distinct perceptual changes.
+    ///
+    /// The interpolation uses an approximation of the average just noticeable
+    /// different (JND) for amplitude to calculate how many events are required to
+    /// sound perfectly smooth. Since we are not especially sensitive to changes in
+    /// amplitude, this generates relatively few events.
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_seedling::prelude::*;
+    /// fn fade_to(
+    ///     main: Single<(&VolumeNode, &mut AudioEvents), With<MainBus>>,
+    ///     time: Res<Time<Audio>>,
+    /// ) {
+    ///     let (volume, mut events) = main.into_inner();
+    ///
+    ///     // Fade the main bus to zero starting exactly one
+    ///     // second from now.
+    ///     volume.fade_at(
+    ///         Volume::SILENT,
+    ///         time.now() + DurationSeconds(1.0),
+    ///         time.now() + DurationSeconds(3.5),
+    ///         &mut events,
+    ///     );
+    /// }
+    /// ```
     fn fade_at(
         &self,
-        target: Volume,
+        volume: Volume,
         start: InstantSeconds,
         end: InstantSeconds,
         events: &mut AudioEvents,
