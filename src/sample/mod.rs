@@ -63,10 +63,7 @@ pub use assets::{AudioSample, SampleLoader, SampleLoaderError};
 /// ) {
 ///     commands.entity(*player).insert((
 ///         SamplePlayer::new(server.load("my_sample.wav")),
-///         PlaybackSettings {
-///             on_complete: OnComplete::Remove,
-///             ..Default::default()
-///         },
+///         PlaybackSettings::default().remove(),
 ///     ));
 /// }
 /// ```
@@ -361,21 +358,15 @@ pub enum OnComplete {
 ///     commands.spawn((
 ///         SamplePlayer::new(server.load("my_sample.wav")),
 ///         // You can start one second in
-///         PlaybackSettings {
-///             playback: Notify::new(PlaybackState::Play {
-///                 playhead: Some(Playhead::Seconds(1.0)),
-///             }),
-///             ..Default::default()
-///         },
+///         PlaybackSettings::default().with_playback(PlaybackState::Play {
+///             playhead: Some(Playhead::Seconds(1.0)),
+///         }),
 ///     ));
 ///
 ///     commands.spawn((
 ///         SamplePlayer::new(server.load("my_sample.wav")),
 ///         // Or even spawn with paused playback
-///         PlaybackSettings {
-///             playback: Notify::new(PlaybackState::Pause),
-///             ..Default::default()
-///         },
+///         PlaybackSettings::default().with_playback(PlaybackState::Pause),
 ///     ));
 /// }
 /// ```
@@ -390,6 +381,15 @@ pub struct PlaybackSettings {
     pub playback: Notify<PlaybackState>,
 
     /// Sets the playback speed.
+    ///
+    /// This is a factor, meaning `1.0` is normal speed, `2.0` is twice
+    /// as fast, and `0.5` is half as fast.
+    ///
+    /// The speed of a sample is also inherently linked to its pitch. A
+    /// sample played twice as fast will sound an octave higher
+    /// (i.e. a fair bit higher-pitched). This can be a relatively cheap way
+    /// to break up the monotony of repeated sounds. The [`RandomPitch`]
+    /// component is an easy way to get started with this technique.
     pub speed: f64,
 
     /// Determines this sample's behavior on playback completion.
@@ -397,6 +397,75 @@ pub struct PlaybackSettings {
 }
 
 impl PlaybackSettings {
+    /// Set the [`PlaybackState`].
+    pub fn with_playback(self, playback: PlaybackState) -> Self {
+        Self {
+            playback: Notify::new(playback),
+            ..self
+        }
+    }
+
+    /// Set the sample speed.
+    pub fn with_speed(self, speed: f64) -> Self {
+        Self { speed, ..self }
+    }
+
+    /// Set the [`OnComplete`] behavior.
+    pub fn with_on_complete(self, on_complete: OnComplete) -> Self {
+        Self {
+            on_complete,
+            ..self
+        }
+    }
+
+    /// Set [`PlaybackSettings::on_complete`] to [`OnComplete::Preserve`].
+    pub fn preserve(self) -> Self {
+        Self {
+            on_complete: OnComplete::Preserve,
+            ..self
+        }
+    }
+
+    /// Set [`PlaybackSettings::on_complete`] to [`OnComplete::Remove`].
+    pub fn remove(self) -> Self {
+        Self {
+            on_complete: OnComplete::Remove,
+            ..self
+        }
+    }
+
+    /// Set [`PlaybackSettings::on_complete`] to [`OnComplete::Despawn`].
+    ///
+    /// Note that this is the default value.
+    pub fn despawn(self) -> Self {
+        Self {
+            on_complete: OnComplete::Despawn,
+            ..self
+        }
+    }
+
+    /// Begin playing a sample at `time`.
+    ///
+    /// This can also be used to seek within a playing
+    /// sample by providing a [`Playhead`].
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_seedling::prelude::*;
+    /// fn play_at(time: Res<Time<Audio>>, server: Res<AssetServer>, mut commands: Commands) {
+    ///     let mut events = AudioEvents::new(&time);
+    ///     let settings = PlaybackSettings::default().with_playback(PlaybackState::Pause);
+    ///
+    ///     // Start playing exactly one second from now.
+    ///     settings.play_at(None, time.delay(DurationSeconds(1.0)), &mut events);
+    ///
+    ///     commands.spawn((
+    ///         events,
+    ///         settings,
+    ///         SamplePlayer::new(server.load("my_sample.wav")),
+    ///     ));
+    /// }
+    /// ```
     pub fn play_at(
         &self,
         playhead: Option<Playhead>,
@@ -408,22 +477,117 @@ impl PlaybackSettings {
         });
     }
 
+    /// Pause a sample at `time`.
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_seedling::prelude::*;
+    /// fn pause(time: Res<Time<Audio>>, server: Res<AssetServer>, mut commands: Commands) {
+    ///     let mut events = AudioEvents::new(&time);
+    ///     let settings = PlaybackSettings::default();
+    ///
+    ///     // Allow the sample to start playing, but pause at exactly
+    ///     // one second from now.
+    ///     settings.pause_at(time.delay(DurationSeconds(1.0)), &mut events);
+    ///
+    ///     commands.spawn((
+    ///         events,
+    ///         settings,
+    ///         SamplePlayer::new(server.load("my_sample.wav")),
+    ///     ));
+    /// }
+    /// ```
     pub fn pause_at(&self, time: InstantSeconds, events: &mut AudioEvents) {
         events.schedule(time, self, |settings| {
             *settings.playback = PlaybackState::Pause;
         });
     }
 
+    /// Stop a sample at `time`.
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_seedling::prelude::*;
+    /// fn stop_at(time: Res<Time<Audio>>, server: Res<AssetServer>, mut commands: Commands) {
+    ///     let mut events = AudioEvents::new(&time);
+    ///     let settings = PlaybackSettings::default();
+    ///
+    ///     // Allow the sample to start playing, but stop at exactly
+    ///     // one second from now.
+    ///     settings.stop_at(time.delay(DurationSeconds(1.0)), &mut events);
+    ///
+    ///     commands.spawn((
+    ///         events,
+    ///         settings,
+    ///         SamplePlayer::new(server.load("my_sample.wav")),
+    ///     ));
+    /// }
+    /// ```
     pub fn stop_at(&self, time: InstantSeconds, events: &mut AudioEvents) {
         events.schedule(time, self, |settings| {
             *settings.playback = PlaybackState::Stop;
         });
     }
 
+    /// Linearly interpolate a sample's speed from its current value to `speed`.
+    ///
+    /// The interpolation uses an approximation of the average just noticeable
+    /// different (JND) for pitch to calculate how many events are required to
+    /// sound perfectly smooth. Since we are sensitive to changes in pitch,
+    /// this will usually generate many more events than volume animation.
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_seedling::prelude::*;
+    /// fn speed_to(time: Res<Time<Audio>>, server: Res<AssetServer>, mut commands: Commands) {
+    ///     let mut events = AudioEvents::new(&time);
+    ///     let settings = PlaybackSettings::default();
+    ///
+    ///     // As soon as the sample starts playing, slow it down to half its
+    ///     // speed over one second.
+    ///     settings.speed_to(0.5, DurationSeconds(1.0), &mut events);
+    ///
+    ///     commands.spawn((
+    ///         events,
+    ///         settings,
+    ///         SamplePlayer::new(server.load("my_sample.wav")),
+    ///     ));
+    /// }
+    /// ```
     pub fn speed_to(&self, speed: f64, duration: DurationSeconds, events: &mut AudioEvents) {
         self.speed_at(speed, events.now(), events.now() + duration, events)
     }
 
+    /// Linearly interpolate a sample's speed from its value at `start` to `speed`.
+    ///
+    /// The interpolation uses an approximation of the average just noticeable
+    /// different (JND) for pitch to calculate how many events are required to
+    /// sound perfectly smooth. Since we are sensitive to changes in pitch,
+    /// this will usually generate many more events than volume animation.
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_seedling::prelude::*;
+    /// fn speed_at(time: Res<Time<Audio>>, server: Res<AssetServer>, mut commands: Commands) {
+    ///     let mut events = AudioEvents::new(&time);
+    ///     let settings = PlaybackSettings::default();
+    ///
+    ///     // A second after the sample starts playing, slow it down to half its
+    ///     // speed over another second.
+    ///     settings.speed_at(
+    ///         0.5,
+    ///         time.now() + DurationSeconds(1.0),
+    ///         time.now() + DurationSeconds(2.0),
+    ///         &mut events,
+    ///     );
+    ///
+    ///     commands.spawn((
+    ///         events,
+    ///         settings,
+    ///         SamplePlayer::new(server.load("my_sample.wav")),
+    ///     ));
+    /// }
+    /// ```
     pub fn speed_at(
         &self,
         speed: f64,

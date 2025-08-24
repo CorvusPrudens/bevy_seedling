@@ -915,10 +915,7 @@ mod test {
             commands.spawn((
                 SamplePlayer::new(server.load("sine_440hz_1ms.wav")),
                 EmptyComponent,
-                PlaybackSettings {
-                    on_complete: OnComplete::Remove,
-                    ..Default::default()
-                },
+                PlaybackSettings::default().remove(),
                 sample_effects![LowPassNode::default()],
             ));
         });

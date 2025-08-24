@@ -355,7 +355,7 @@ pub mod prelude {
     pub use crate::edge::{AudioGraphInput, AudioGraphOutput, Connect, Disconnect, EdgeTarget};
     pub use crate::node::{
         FirewheelNode, RegisterNode,
-        events::AudioEvents,
+        events::{AudioEvents, VolumeFade},
         label::{MainBus, NodeLabel},
     };
     #[cfg(feature = "loudness")]

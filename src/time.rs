@@ -53,8 +53,39 @@ fn update_time(mut time: ResMut<Time<Audio>>, context: Option<ResMut<AudioContex
 ///
 /// [`AudioEvents`]: crate::prelude::AudioEvents
 pub trait AudioTime {
+    /// Get the audio processing thread's compensated current time.
+    ///
+    /// This instant is measured from the moment the audio thread begins processing,
+    /// monotonically counting up. Note that this instant is updated once per frame in the
+    /// [`First`] schedule, meaning it may slip behind the audio processing later in the
+    /// frame. If you need more precision, prefer reading the exact time from [`AudioContext`].
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_seedling::prelude::*;
+    /// fn scheduling(main: Single<(&VolumeNode, &mut AudioEvents)>, time: Res<Time<Audio>>) {
+    ///     // fade out the main bus, silencing all sound
+    ///     let (volume, mut events) = main.into_inner();
+    ///     volume.fade_at(
+    ///         Volume::SILENT,
+    ///         time.now(),
+    ///         time.delay(DurationSeconds(2.5)),
+    ///         &mut events,
+    ///     );
+    /// }
+    /// ```
     fn now(&self) -> InstantSeconds;
 
+    /// Calculate an instant delayed from [`AudioTime::now`] by `duration`.
+    ///
+    /// Equivalent to
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_seedling::prelude::*;
+    /// # fn delay(duration: DurationSeconds, time: Res<Time<AudioTime>>) -> InstantSeconds {
+    /// time.now() + duration
+    /// # }
+    /// ```
     fn delay(&self, duration: DurationSeconds) -> InstantSeconds;
 
     /// A frame's audio render range.

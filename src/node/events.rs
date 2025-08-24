@@ -1,3 +1,5 @@
+//! Events that synchronize the ECS and audio thread.
+
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_math::FloatExt;
@@ -53,7 +55,11 @@ impl AudioEvents {
         }
     }
 
-    pub fn now(&self) -> InstantSeconds {
+    /// Essentially a duplicate of [`AudioTime::now`][crate::time::AudioTime::now].
+    ///
+    /// Given this duplicated information, this method is just an internal convenience
+    /// and will remain private for now.
+    pub(crate) fn now(&self) -> InstantSeconds {
         self.now
     }
 
@@ -84,6 +90,11 @@ impl AudioEvents {
             .retain(|event| !event.completely_elapsed(now) || !event.render_progress.complete);
     }
 
+    /// Get the full timeline of events.
+    ///
+    /// These events are used to provide scheduled events directly to
+    /// the audio thread and animate values in the ECS. Events that
+    /// have elapsed are automatically removed in the [`Last`] schedule.
     pub fn timeline(&self) -> &[TimelineEvent] {
         &self.timeline
     }
