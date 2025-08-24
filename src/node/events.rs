@@ -384,7 +384,7 @@ fn time_range(events: &[TimelineParam]) -> core::ops::Range<InstantSeconds> {
 }
 
 impl EventTimeline {
-    /// Construct a new [`TimelineEvent`] from a collection of params.
+    /// Construct a new [`EventTimeline`] from a collection of params.
     fn new(tween: Vec<TimelineParam>) -> Self {
         let render_progress = RenderProgress::new(time_range(&tween));
 
