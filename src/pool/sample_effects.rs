@@ -1,5 +1,6 @@
 //! Types and traits for managing per-sample effects.
 
+use crate::utils::entity_set::{EntitySet, EntitySetIter};
 use bevy_ecs::{
     prelude::*,
     query::{QueryData, QueryFilter, QueryManyUniqueIter, ROQueryItem},
@@ -108,7 +109,7 @@ pub struct EffectOf(pub Entity);
 /// sample's [`SampleEffects`].
 #[derive(Debug, Component)]
 #[relationship_target(relationship = EffectOf, linked_spawn)]
-pub struct SampleEffects(crate::entity_set::EntitySet);
+pub struct SampleEffects(EntitySet);
 
 impl core::ops::Deref for SampleEffects {
     type Target = [Entity];
@@ -120,8 +121,6 @@ impl core::ops::Deref for SampleEffects {
 
 #[doc(hidden)]
 pub use bevy_ecs::spawn::Spawn;
-
-use crate::entity_set::EntitySetIter;
 
 /// Returns a spawnable list of [`SampleEffects`].
 ///

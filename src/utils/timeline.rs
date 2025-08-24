@@ -1,6 +1,6 @@
 //! Audio-rate parameter curves.
 
-use crate::fixed_vec::FixedVec;
+use crate::utils::fixed_vec::FixedVec;
 use bevy_math::{
     Curve,
     curve::{Ease, EaseFunction, EasingCurve},

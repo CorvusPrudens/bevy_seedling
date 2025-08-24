@@ -1,6 +1,6 @@
 //! A simple band-pass filter.
 
-use crate::timeline::Timeline;
+use crate::utils::timeline::Timeline;
 use bevy_ecs::component::Component;
 use firewheel::{
     channel_config::ChannelConfig,

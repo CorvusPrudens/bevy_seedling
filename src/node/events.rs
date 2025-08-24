@@ -220,6 +220,14 @@ pub struct TimelineQueue<'a> {
     pub instant: InstantSeconds,
 }
 
+impl core::fmt::Debug for TimelineQueue<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TimelineQueue")
+            .field("instant", &self.instant)
+            .finish_non_exhaustive()
+    }
+}
+
 impl<'a> TimelineQueue<'a> {
     pub fn new(
         initial_instant: InstantSeconds,
@@ -384,80 +392,6 @@ impl TimelineEvent {
         }
 
         Ok(())
-    }
-}
-
-// impl core::fmt::Debug for TimelineEvent {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         f.debug_struct("TimelineEvent")
-//             .field("tween", &())
-//             .field("render_progress", &self.render_progress)
-//             .field("id", &self.id)
-//             .finish()
-//     }
-// }
-
-struct SingleEvent<T> {
-    before: T,
-    after: T,
-    instant: InstantSeconds,
-}
-
-impl<T> TimelineTween for SingleEvent<T>
-where
-    T: Diff + Send + Sync + 'static,
-{
-    fn render(&self, start: InstantSeconds, end: InstantSeconds, mut queue: TimelineQueue) {
-        if (start..=end).contains(&self.instant) {
-            queue.instant = self.instant;
-            self.after
-                .diff(&self.before, Default::default(), &mut queue);
-        }
-    }
-
-    fn time_range(&self) -> core::ops::Range<InstantSeconds> {
-        self.instant..self.instant
-    }
-}
-
-struct TweenEvent<T> {
-    start: (InstantSeconds, T),
-    end: (InstantSeconds, T),
-    total_events: usize,
-    interpolate: Box<dyn Fn(&T, &T, f32) -> T + Send + Sync>,
-}
-
-impl<T> TimelineTween for TweenEvent<T>
-where
-    T: Diff + Send + Sync + 'static,
-{
-    fn render(&self, start: InstantSeconds, end: InstantSeconds, mut queue: TimelineQueue) {
-        let range = self.start.0.0..self.end.0.0;
-        if range.is_empty() {
-            return;
-        }
-
-        let start = range.start.max(start.0);
-        let end = range.end.min(end.0);
-
-        if range.contains(&start) && end <= range.end && start < end {
-            let duration = range.end - range.start;
-            for i in 1..=self.total_events {
-                let proportion = i as f64 / self.total_events as f64;
-                let instant = self.start.0.0 + proportion * duration;
-                if !(start..=end).contains(&instant) {
-                    continue;
-                }
-
-                queue.instant = InstantSeconds(instant);
-                let new_value = (self.interpolate)(&self.start.1, &self.end.1, proportion as f32);
-                new_value.diff(&self.start.1, PathBuilder::default(), &mut queue);
-            }
-        }
-    }
-
-    fn time_range(&self) -> core::ops::Range<InstantSeconds> {
-        self.start.0..self.end.0
     }
 }
 

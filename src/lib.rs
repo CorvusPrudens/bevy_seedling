@@ -317,7 +317,7 @@
 #![allow(clippy::type_complexity)]
 #![expect(clippy::needless_doctest_main)]
 #![warn(missing_debug_implementations)]
-// #![warn(missing_docs)]
+#![warn(missing_docs)]
 
 // Naming trick to facilitate straightforward internal macro usage.
 extern crate self as bevy_seedling;
@@ -334,20 +334,14 @@ pub use firewheel;
 pub mod configuration;
 pub mod context;
 pub mod edge;
-mod entity_set;
 pub mod error;
-pub mod fixed_vec;
 pub mod node;
 pub mod nodes;
-pub mod perceptual_volume;
 pub mod pool;
 pub mod sample;
 pub mod spatial;
 pub mod time;
-pub mod timeline;
-
-#[cfg(any(feature = "profiling", test))]
-pub mod profiling;
+pub mod utils;
 
 pub mod prelude {
     //! All `bevy_seedlings`'s important types and traits.
@@ -374,7 +368,6 @@ pub mod prelude {
         lpf::{LowPassConfig, LowPassNode},
         send::{SendConfig, SendNode},
     };
-    pub use crate::perceptual_volume::PerceptualVolume;
     pub use crate::pool::{
         DefaultPoolSize, PlaybackCompletionEvent, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
         dynamic::DynamicBus,
@@ -389,6 +382,7 @@ pub mod prelude {
         DefaultSpatialScale, SpatialListener2D, SpatialListener3D, SpatialScale,
     };
     pub use crate::time::{Audio, AudioTime};
+    pub use crate::utils::perceptual_volume::PerceptualVolume;
 
     pub use firewheel::{
         CpalBackend, FirewheelConfig, Volume,
@@ -696,9 +690,9 @@ mod test {
         app.add_plugins((
             MinimalPlugins,
             AssetPlugin::default(),
-            SeedlingPlugin::<crate::profiling::ProfilingBackend> {
+            SeedlingPlugin::<crate::utils::profiling::ProfilingBackend> {
                 graph_config: crate::configuration::GraphConfiguration::Empty,
-                ..SeedlingPlugin::<crate::profiling::ProfilingBackend>::new()
+                ..SeedlingPlugin::<crate::utils::profiling::ProfilingBackend>::new()
             },
             TransformPlugin,
         ))

@@ -5,7 +5,7 @@ use crate::{
     context::{PreStreamRestartEvent, SampleRate, StreamRestartEvent},
     edge::{PendingConnections, PendingEdge},
     error::SeedlingError,
-    node::{AudioState, Baseline, DiffTimestamp, EffectId, FirewheelNode, RegisterNode},
+    node::{AudioState, DiffTimestamp, EffectId, FirewheelNode, RegisterNode},
     pool::label::PoolLabelContainer,
     prelude::{AudioEvents, PoolLabel},
     sample::{OnComplete, PlaybackSettings, QueuedSample, SamplePlayer},
@@ -23,11 +23,8 @@ use bevy_ecs::{
 use core::ops::{Deref, RangeInclusive};
 use firewheel::{
     clock::{DurationSamples, DurationSeconds},
-    diff::Patch,
     nodes::{
-        sampler::{
-            PlaybackState, Playhead, SamplerConfig, SamplerNode, SamplerNodePatch, SamplerState,
-        },
+        sampler::{PlaybackState, Playhead, SamplerConfig, SamplerNode, SamplerState},
         volume::VolumeNode,
     },
 };
@@ -43,18 +40,6 @@ pub(crate) struct SamplePoolPlugin;
 
 impl Plugin for SamplePoolPlugin {
     fn build(&self, app: &mut App) {
-        let world = app.world_mut();
-
-        // world.register_component_hooks::<SamplerNode>().on_insert(
-        //     |mut world: DeferredWorld, context: HookContext| {
-        //         let value = world.get::<SamplerNode>(context.entity).unwrap().clone();
-        //         world
-        //             .commands()
-        //             .entity(context.entity)
-        //             .insert((Baseline(value), EffectId(context.component_id)));
-        //     },
-        // );
-
         app.register_node::<SamplerNode>()
             .register_node_state::<SamplerNode, SamplerState>()
             .add_systems(
