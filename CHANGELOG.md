@@ -1,3 +1,9 @@
+# 0.5.1
+
+## Fixes
+
+- Ensure docs build with all features
+
 # 0.5.0
 
 ## Features
