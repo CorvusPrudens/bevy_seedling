@@ -34,6 +34,26 @@ jobs:
           # Setting LD_LIBRARY_PATH is a workaround for https://github.com/TheBevyFlock/bevy_new_2d/pull/318#issuecomment-2585935350
           LD_LIBRARY_PATH="$(rustc --print target-libdir)" cargo test --locked --workspace --all-features --doc
 
+  no-default-features:
+    name: No default features build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+
+      - name: Populate target directory from cache
+        uses: Leafwing-Studios/cargo-cache@v2
+        with:
+          sweep-cache: true
+
+      - name: Run tests
+        run: |
+          cargo build --locked --workspace --no-default-features
+
   # Run clippy lints.
   clippy:
     name: Clippy and spellcheck

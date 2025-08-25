@@ -20,7 +20,7 @@ manually!
 
 ```toml
 [dependencies]
-bevy_seedling = "0.4"
+bevy_seedling = "0.5"
 bevy = { version = "0.16", default-features = false, features = [
   "animation",
   "bevy_asset",

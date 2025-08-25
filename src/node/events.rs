@@ -4,6 +4,7 @@ use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_math::FloatExt;
 use bevy_time::{Time, TimeSystem};
+use core::sync::atomic::AtomicU64;
 use firewheel::{
     Volume,
     clock::{DurationSeconds, InstantSeconds},
@@ -11,7 +12,6 @@ use firewheel::{
     event::{NodeEventType, ParamData},
     nodes::volume::VolumeNode,
 };
-use portable_atomic::AtomicU64;
 
 use crate::{error::SeedlingError, time::Audio};
 

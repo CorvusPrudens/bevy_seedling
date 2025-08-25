@@ -1,3 +1,9 @@
+# 0.5.2
+
+## Fixes
+
+- Remove use of `portable_atomic` without required feature
+
 # 0.5.1
 
 ## Fixes

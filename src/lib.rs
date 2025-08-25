@@ -19,7 +19,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_seedling = "0.4"
+//! bevy_seedling = "0.5"
 //! bevy = { version = "0.16", default-features = false, features = [
 //!   "animation",
 //!   "bevy_asset",
@@ -341,7 +341,7 @@ use bevy_app::prelude::*;
 use bevy_asset::prelude::AssetApp;
 use bevy_ecs::prelude::*;
 use context::AudioStreamConfig;
-use firewheel::{CpalBackend, backend::AudioBackend, dsp::pan_law::PanLaw};
+use firewheel::{CpalBackend, backend::AudioBackend};
 
 // We re-export Firewheel here for convenience.
 pub use firewheel;
@@ -658,7 +658,7 @@ where
             .register_type::<LimiterConfig>()
             .register_type::<FreeverbNode>()
             .register_type::<Volume>()
-            .register_type::<PanLaw>()
+            .register_type::<firewheel::dsp::pan_law::PanLaw>()
             .register_type::<MainBus>()
             .register_type::<PoolSize>()
             .register_type::<DefaultPoolSize>()
