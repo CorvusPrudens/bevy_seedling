@@ -34,7 +34,7 @@ fn main() {
         .run();
 }
 
-// A Firehwel node typically contains your audio
+// A Firewheel node typically contains your audio
 // processor's parameters. Firewheel's `Diff` and
 // `Patch` traits allows this struct to send
 // realtime-safe messages from the ECS to the
