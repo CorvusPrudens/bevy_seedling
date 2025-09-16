@@ -734,7 +734,7 @@ mod random {
 
     impl Plugin for RandomPlugin {
         fn build(&self, app: &mut App) {
-            app.insert_resource(PitchRngSource::new(SmallRng::from_entropy()))
+            app.insert_resource(PitchRngSource::new(SmallRng::from_os_rng()))
                 .add_systems(Last, RandomPitch::apply.before(SeedlingSystems::Acquire));
         }
     }
@@ -747,7 +747,7 @@ mod random {
 
     impl<T: rand::Rng> PitchRng for RandRng<T> {
         fn gen_pitch(&mut self, range: std::ops::Range<f64>) -> f64 {
-            self.0.gen_range(range)
+            self.0.random_range(range)
         }
     }
 
