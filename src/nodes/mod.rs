@@ -5,6 +5,7 @@ use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 
 pub mod bpf;
+pub mod feedback;
 pub mod freeverb;
 pub mod itd;
 pub mod limiter;
