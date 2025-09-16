@@ -819,7 +819,7 @@ impl PoolCommands for Commands<'_, '_> {
 mod test {
     use super::*;
     use crate::{
-        prelude::LowPassNode,
+        prelude::*,
         sample_effects,
         test::{prepare_app, run},
     };
@@ -985,5 +985,40 @@ mod test {
 
         assert_eq!(archetype.components().len(), 1);
         assert!(entity.contains::<EmptyComponent>());
+    }
+
+    #[test]
+    fn test_remove_stolen_players() {
+        let mut app = prepare_app(|mut commands: Commands, server: Res<AssetServer>| {
+            commands.spawn((SamplerPool(TestPool), PoolSize(4..=4)));
+            commands
+                .spawn((VolumeNode::default(), MainBus))
+                .connect(crate::edge::AudioGraphOutput);
+
+            for _ in 0..8 {
+                commands.spawn((TestPool, SamplePlayer::new(server.load("caw.ogg"))));
+            }
+        });
+
+        // wait for at least one to load
+        loop {
+            let world = app.world_mut();
+            let mut q = world.query_filtered::<Entity, With<Sampler>>();
+            if q.iter(world).len() != 0 {
+                break;
+            }
+            app.update();
+        }
+
+        // allow them to jostle
+        for _ in 0..2 {
+            app.update();
+        }
+
+        // then verify there are only four players once the
+        // first four have been stolen from
+        let world = app.world_mut();
+        let mut q = world.query_filtered::<Entity, With<SamplePlayer>>();
+        assert_eq!(q.iter(world).len(), 4);
     }
 }

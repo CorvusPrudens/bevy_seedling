@@ -628,9 +628,7 @@ impl PlaybackSettings {
     /// }
     /// ```
     pub fn play(&mut self) {
-        *self.playback = PlaybackState::Play {
-            playhead: Some(Playhead::Seconds(0.0)),
-        };
+        *self.playback = PlaybackState::Play { playhead: None };
     }
 
     /// Pause playback.
