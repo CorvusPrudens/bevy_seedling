@@ -146,18 +146,13 @@ impl AudioNodeProcessor for ItdProcessor {
             let direction = direction.normalize_or_zero();
 
             if direction.length_squared() == 0.0 {
-                self.left.read_head = 0.0;
-                self.right.read_head = 0.0;
+                self.left.set_read_head(0.0);
+                self.right.set_read_head(0.0);
                 continue;
             }
 
-            let left_delay =
-                Vec3::X.dot(direction).max(0.0) * self.left.len().saturating_sub(1) as f32;
-            let right_delay =
-                Vec3::NEG_X.dot(direction).max(0.0) * self.right.len().saturating_sub(1) as f32;
-
-            self.left.read_head = left_delay;
-            self.right.read_head = right_delay;
+            self.left.set_read_head(Vec3::X.dot(direction));
+            self.right.set_read_head(Vec3::NEG_X.dot(direction));
         }
 
         if proc_info.in_silence_mask.all_channels_silent(2) {

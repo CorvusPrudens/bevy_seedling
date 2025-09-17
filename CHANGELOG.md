@@ -1,3 +1,12 @@
+# 0.5.3
+
+## Fixes
+
+- `PlaybackSettings::play` no longer restarts from the beginning
+- Fixed missing `EffectId` for simple nodes
+- Fixed dangling sample players when their sampler is stolen
+- Improved robustness of delay line indexing
+
 # 0.5.2
 
 ## Fixes

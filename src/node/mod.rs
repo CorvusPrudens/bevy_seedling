@@ -512,6 +512,7 @@ impl RegisterNode for App {
         let mut nodes = world.get_resource_or_init::<RegisteredNodes>();
 
         if nodes.insert::<T>() {
+            world.add_observer(observe_simple_node_insertion::<T>);
             world.register_required_components::<T, T::Configuration>();
         } else {
             #[cfg(debug_assertions)]
@@ -606,6 +607,20 @@ fn observe_node_insertion<T: Component + Clone>(
             Baseline(value),
             AudioEvents::new(&time),
         ));
+
+    Ok(())
+}
+
+fn observe_simple_node_insertion<T: Component>(
+    trigger: Trigger<OnInsert, T>,
+    components: &Components,
+    mut commands: Commands,
+) -> Result {
+    commands.entity(trigger.target()).insert(EffectId(
+        components
+            .component_id::<T>()
+            .expect("`ComponentId` must be available"),
+    ));
 
     Ok(())
 }
