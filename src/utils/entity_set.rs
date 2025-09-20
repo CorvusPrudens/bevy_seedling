@@ -9,6 +9,7 @@ use bevy_ecs::{
 ///
 /// This type guarantees that all elements are unique.
 #[derive(Debug)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct EntitySet(Vec<Entity>);
 
 impl EntitySet {

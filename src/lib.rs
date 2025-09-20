@@ -366,6 +366,9 @@ use firewheel::{CpalBackend, backend::AudioBackend};
 // We re-export Firewheel here for convenience.
 pub use firewheel;
 
+#[cfg(feature = "reflect")]
+use crate::utils::entity_set::EntitySet;
+
 pub mod configuration;
 pub mod context;
 pub mod edge;
@@ -653,7 +656,10 @@ where
         app.register_type::<RandomPitch>();
 
         #[cfg(feature = "reflect")]
-        app.register_type::<FirewheelNode>()
+        app.register_type::<EntitySet>()
+            .register_type::<EffectOf>()
+            .register_type::<SampleEffects>()
+            .register_type::<FirewheelNode>()
             .register_type::<SamplePlayer>()
             .register_type::<SamplePriority>()
             .register_type::<PlaybackSettings>()
