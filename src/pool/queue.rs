@@ -316,7 +316,7 @@ pub(super) fn assign_work(
 
                 commands
                     .entity(sample_entity)
-                    .remove::<QueuedSample>()
+                    .remove::<(QueuedSample, super::Sampler)>()
                     .add_one_related::<SamplerOf>(sampler_entity);
             }
 
@@ -483,14 +483,16 @@ pub(super) fn assign_work(
                 }
             }
 
+            if let Some(assignment) = current_assignment {
+                // if the `Sampler` relationship is already present on either side,
+                // this will necessarily remove it
+                commands.entity(assignment).trigger(PlaybackCompletionEvent);
+            }
+
             commands
                 .entity(sample_entity)
                 .remove::<QueuedSample>()
                 .add_one_related::<SamplerOf>(sampler_entity);
-
-            if let Some(assignment) = current_assignment {
-                commands.entity(assignment).trigger(PlaybackCompletionEvent);
-            }
         }
     }
 
