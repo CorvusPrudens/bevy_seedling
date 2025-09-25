@@ -1,3 +1,9 @@
+# 0.5.4
+
+## Fixes
+
+- Fixed occasional panic with `Sampler` relationship reinsertion
+
 # 0.5.3
 
 ## Fixes
