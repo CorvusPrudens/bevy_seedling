@@ -45,7 +45,12 @@ impl Plugin for SamplePoolPlugin {
             .add_systems(
                 Last,
                 (
-                    (populate_pool, queue::assign_default, queue::grow_pools)
+                    (
+                        queue::assign_default,
+                        dynamic::update_dynamic_pools,
+                        populate_pool,
+                        queue::grow_pools,
+                    )
                         .chain()
                         .before(SeedlingSystems::Acquire),
                     poll_finished

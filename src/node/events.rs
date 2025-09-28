@@ -203,6 +203,11 @@ impl AudioEvents {
         T: Diff + Patch + Send + Sync + Clone + 'static,
         F: Fn(&T, &T, f32) -> T,
     {
+        // A valid tween should never be empty.
+        if total_events == 0 {
+            return;
+        }
+
         let mut events = Vec::new();
         let mut func = |ev, time| match ev {
             NodeEventType::Param { data, path } => {
