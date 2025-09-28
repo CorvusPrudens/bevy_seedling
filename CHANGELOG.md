@@ -3,6 +3,11 @@
 ## Fixes
 
 - Fixed occasional panic with `Sampler` relationship reinsertion
+- Fixed panic when scheduling a fade or other animation with an identical
+  start and end value
+- Correctly place sample players in `DefaultPool` when they have matching effects
+- Remove `Followers` relationship from effects when the outer `Sampler` relationship
+  is replaced
 
 # 0.5.3
 
