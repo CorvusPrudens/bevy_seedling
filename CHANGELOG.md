@@ -8,6 +8,7 @@
 - Correctly place sample players in `DefaultPool` when they have matching effects
 - Remove `Followers` relationship from effects when the outer `Sampler` relationship
   is replaced
+- Fixed underlying delay line OOB panic
 
 # 0.5.3
 
