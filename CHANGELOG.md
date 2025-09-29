@@ -1,3 +1,7 @@
+# 0.5.5
+
+- Updated unstable docsrs flag
+
 # 0.5.4
 
 ## Fixes
