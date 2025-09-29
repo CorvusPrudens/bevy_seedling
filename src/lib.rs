@@ -328,7 +328,7 @@
 //! [`SampleResource`]: firewheel::core::sample_resource::SampleResource
 //! [`AudioSample`]: prelude::AudioSample
 
-#![cfg_attr(docsrs, doc(auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(clippy::type_complexity)]
 #![expect(clippy::needless_doctest_main)]
 #![warn(missing_debug_implementations)]
