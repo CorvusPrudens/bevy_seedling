@@ -10,31 +10,8 @@ const OFFSET_ROOM: f64 = 0.7;
 
 const STEREO_SPREAD: usize = 23;
 
-const COMB_TUNING_L1: usize = 1116;
-const COMB_TUNING_R1: usize = 1116 + STEREO_SPREAD;
-const COMB_TUNING_L2: usize = 1188;
-const COMB_TUNING_R2: usize = 1188 + STEREO_SPREAD;
-const COMB_TUNING_L3: usize = 1277;
-const COMB_TUNING_R3: usize = 1277 + STEREO_SPREAD;
-const COMB_TUNING_L4: usize = 1356;
-const COMB_TUNING_R4: usize = 1356 + STEREO_SPREAD;
-const COMB_TUNING_L5: usize = 1422;
-const COMB_TUNING_R5: usize = 1422 + STEREO_SPREAD;
-const COMB_TUNING_L6: usize = 1491;
-const COMB_TUNING_R6: usize = 1491 + STEREO_SPREAD;
-const COMB_TUNING_L7: usize = 1557;
-const COMB_TUNING_R7: usize = 1557 + STEREO_SPREAD;
-const COMB_TUNING_L8: usize = 1617;
-const COMB_TUNING_R8: usize = 1617 + STEREO_SPREAD;
-
-const ALLPASS_TUNING_L1: usize = 556;
-const ALLPASS_TUNING_R1: usize = 556 + STEREO_SPREAD;
-const ALLPASS_TUNING_L2: usize = 441;
-const ALLPASS_TUNING_R2: usize = 441 + STEREO_SPREAD;
-const ALLPASS_TUNING_L3: usize = 341;
-const ALLPASS_TUNING_R3: usize = 341 + STEREO_SPREAD;
-const ALLPASS_TUNING_L4: usize = 225;
-const ALLPASS_TUNING_R4: usize = 225 + STEREO_SPREAD;
+const COMB_TUNING: [usize; 8] = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617];
+const ALLPASS_TUNING: [usize; 4] = [556, 441, 341, 225];
 
 #[derive(Debug)]
 pub struct Freeverb {
@@ -55,60 +32,23 @@ fn adjust_length(length: usize, sr: usize) -> usize {
 }
 
 impl Freeverb {
-    pub fn new(sr: usize) -> Self {
+    pub fn new(sample_rate: usize) -> Self {
         let mut freeverb = Freeverb {
-            combs: [
+            combs: core::array::from_fn(|i| {
                 (
-                    Comb::new(adjust_length(COMB_TUNING_L1, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R1, sr)),
-                ),
+                    Comb::new(adjust_length(COMB_TUNING[i], sample_rate)),
+                    Comb::new(adjust_length(COMB_TUNING[i] + STEREO_SPREAD, sample_rate)),
+                )
+            }),
+            allpasses: core::array::from_fn(|i| {
                 (
-                    Comb::new(adjust_length(COMB_TUNING_L2, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R2, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L3, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R3, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L4, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R4, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L5, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R5, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L6, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R6, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L7, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R7, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L8, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R8, sr)),
-                ),
-            ],
-            allpasses: [
-                (
-                    AllPass::new(adjust_length(ALLPASS_TUNING_L1, sr)),
-                    AllPass::new(adjust_length(ALLPASS_TUNING_R1, sr)),
-                ),
-                (
-                    AllPass::new(adjust_length(ALLPASS_TUNING_L2, sr)),
-                    AllPass::new(adjust_length(ALLPASS_TUNING_R2, sr)),
-                ),
-                (
-                    AllPass::new(adjust_length(ALLPASS_TUNING_L3, sr)),
-                    AllPass::new(adjust_length(ALLPASS_TUNING_R3, sr)),
-                ),
-                (
-                    AllPass::new(adjust_length(ALLPASS_TUNING_L4, sr)),
-                    AllPass::new(adjust_length(ALLPASS_TUNING_R4, sr)),
-                ),
-            ],
+                    AllPass::new(adjust_length(ALLPASS_TUNING[i], sample_rate)),
+                    AllPass::new(adjust_length(
+                        ALLPASS_TUNING[i] + STEREO_SPREAD,
+                        sample_rate,
+                    )),
+                )
+            }),
             wet_gains: (0.0, 0.0),
             wet: 0.0,
             dry: 0.0,
@@ -151,7 +91,6 @@ impl Freeverb {
 
     pub fn set_dampening(&mut self, value: f64) {
         self.dampening = value * SCALE_DAMPENING;
-        self.update_combs();
     }
 
     pub fn set_wet(&mut self, value: f64) {
@@ -179,10 +118,9 @@ impl Freeverb {
 
     pub fn set_room_size(&mut self, value: f64) {
         self.room_size = value * SCALE_ROOM + OFFSET_ROOM;
-        self.update_combs();
     }
 
-    fn update_combs(&mut self) {
+    pub fn update_combs(&mut self) {
         let (feedback, dampening) = if self.frozen {
             (1.0, 0.0)
         } else {
@@ -197,15 +135,44 @@ impl Freeverb {
             combs.1.set_dampening(dampening);
         }
     }
+
+    pub fn reset(&mut self) {
+        for (l, r) in self.combs.iter_mut() {
+            l.reset();
+            r.reset();
+        }
+
+        for (l, r) in self.allpasses.iter_mut() {
+            l.reset();
+            r.reset();
+        }
+    }
+
+    pub fn resize(&mut self, sample_rate: usize) {
+        for (i, (l, r)) in self.combs.iter_mut().enumerate() {
+            l.resize(adjust_length(COMB_TUNING[i], sample_rate));
+            r.resize(adjust_length(COMB_TUNING[i] + STEREO_SPREAD, sample_rate));
+        }
+
+        for (i, (l, r)) in self.allpasses.iter_mut().enumerate() {
+            l.resize(adjust_length(ALLPASS_TUNING[i], sample_rate));
+            r.resize(adjust_length(
+                ALLPASS_TUNING[i] + STEREO_SPREAD,
+                sample_rate,
+            ));
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::STEREO_SPREAD;
+
     #[test]
     fn ticking_does_something() {
         let mut freeverb = super::Freeverb::new(44100);
         assert_eq!(freeverb.tick((1.0, 1.0)), (0.0, 0.0));
-        for _ in 0..super::COMB_TUNING_R8 * 2 {
+        for _ in 0..(super::COMB_TUNING[7] + STEREO_SPREAD) * 2 {
             freeverb.tick((0.0, 0.0));
         }
         assert_ne!(freeverb.tick((0.0, 0.0)), (0.0, 0.0));

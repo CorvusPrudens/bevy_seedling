@@ -6,10 +6,14 @@ pub struct DelayLine {
 
 impl DelayLine {
     pub fn new(length: usize) -> Self {
-        Self {
-            buffer: vec![0.0; length],
-            index: 0,
+        // No need to carry extra capacity around.
+        let mut buffer = Vec::new();
+        buffer.reserve_exact(length);
+        for _ in 0..length {
+            buffer.push(0.0);
         }
+
+        Self { buffer, index: 0 }
     }
 
     pub fn read(&self) -> f64 {
@@ -24,6 +28,17 @@ impl DelayLine {
         } else {
             self.index += 1;
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.buffer.fill(0.0);
+    }
+
+    pub fn resize(&mut self, size: usize) {
+        // little point in messing around with the exact
+        // capacity here
+        self.buffer.resize(size, 0.0);
+        self.index %= self.buffer.len();
     }
 }
 

@@ -113,9 +113,8 @@ bevy_ecs::define_label!(
 /// ```
 /// # use bevy::prelude::*;
 /// # use bevy_seedling::prelude::*;
-/// fn mute(mut q: Single<&mut VolumeNode, With<MainBus>>) {
-///     let mut params = q.into_inner();
-///     params.volume = Volume::Linear(0.0);
+/// fn mute(mut main_bus: Single<&mut VolumeNode, With<MainBus>>) {
+///     main_bus.volume = Volume::Linear(0.0);
 /// }
 /// ```
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]

@@ -24,6 +24,14 @@ impl AllPass {
 
         output
     }
+
+    pub fn reset(&mut self) {
+        self.delay_line.reset();
+    }
+
+    pub fn resize(&mut self, delay_length: usize) {
+        self.delay_line.resize(delay_length);
+    }
 }
 
 #[cfg(test)]

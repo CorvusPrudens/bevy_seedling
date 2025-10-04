@@ -39,6 +39,15 @@ impl Comb {
 
         output
     }
+
+    pub fn reset(&mut self) {
+        self.filter_state = 0.0;
+        self.delay_line.reset();
+    }
+
+    pub fn resize(&mut self, delay_length: usize) {
+        self.delay_line.resize(delay_length);
+    }
 }
 
 #[cfg(test)]

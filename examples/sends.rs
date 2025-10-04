@@ -24,6 +24,7 @@ fn create_send(server: Res<AssetServer>, mut commands: Commands) {
             room_size: 0.9,
             width: 0.75,
             damping: 0.5,
+            ..Default::default()
         })
         .id();
 

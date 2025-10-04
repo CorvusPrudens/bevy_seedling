@@ -8,7 +8,8 @@ use bevy_ecs::component::Component;
 use firewheel::{
     channel_config::{ChannelConfig, ChannelCount},
     core::node::ProcInfo,
-    diff::{Diff, Patch},
+    diff::{Diff, Notify, Patch},
+    dsp::declick::{DeclickValues, Declicker, FadeType},
     event::ProcEvents,
     node::{
         AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, EmptyConfig,
@@ -27,10 +28,21 @@ mod freeverb;
 pub struct FreeverbNode {
     /// Set the size of the emulated room, expressed from 0 to 1.
     pub room_size: f32,
+
     /// Set the high-frequency damping, expressed from 0 to 1.
     pub damping: f32,
+
     /// Set the L/R blending, expressed from 0 to 1.
     pub width: f32,
+
+    /// Pause the reverb processing.
+    ///
+    /// This prevents a reverb tail from ringing out when you
+    /// want all sound to momentarily pause.
+    pub pause: bool,
+
+    /// Reset the reverb, clearing its internal state.
+    pub reset: Notify<()>,
 }
 
 impl Default for FreeverbNode {
@@ -39,6 +51,8 @@ impl Default for FreeverbNode {
             room_size: 0.5,
             damping: 0.5,
             width: 0.5,
+            pause: false,
+            reset: Notify::new(()),
         }
     }
 }
@@ -64,8 +78,14 @@ impl AudioNode for FreeverbNode {
         self.apply_params(&mut freeverb);
 
         FreeverbProcessor {
-            params: self.clone(),
             freeverb,
+            paused: self.pause,
+            declicker: if self.pause {
+                Declicker::SettledAt0
+            } else {
+                Declicker::SettledAt1
+            },
+            values: DeclickValues::new(cx.stream_info.declick_frames),
         }
     }
 }
@@ -75,12 +95,15 @@ impl FreeverbNode {
         verb.set_dampening(self.damping as f64);
         verb.set_width(self.width as f64);
         verb.set_room_size(self.room_size as f64);
+        verb.update_combs();
     }
 }
 
 struct FreeverbProcessor {
-    params: FreeverbNode,
     freeverb: freeverb::Freeverb,
+    paused: bool,
+    declicker: Declicker,
+    values: DeclickValues,
 }
 
 impl AudioNodeProcessor for FreeverbProcessor {
@@ -91,15 +114,38 @@ impl AudioNodeProcessor for FreeverbProcessor {
         events: &mut ProcEvents,
         _: &mut ProcExtra,
     ) -> ProcessStatus {
-        let mut changed = false;
-
+        let mut update_combs = false;
         for patch in events.drain_patches::<FreeverbNode>() {
-            changed = true;
-            self.params.apply(patch);
+            match patch {
+                FreeverbNodePatch::Damping(value) => {
+                    self.freeverb.set_dampening(value as f64);
+                    update_combs = true;
+                }
+                FreeverbNodePatch::RoomSize(value) => {
+                    self.freeverb.set_room_size(value as f64);
+                    update_combs = true;
+                }
+                FreeverbNodePatch::Width(value) => {
+                    self.freeverb.set_width(value as f64);
+                }
+                FreeverbNodePatch::Reset(_) => {
+                    self.freeverb.reset();
+                }
+                FreeverbNodePatch::Pause(value) => {
+                    // TODO: perform declicking
+                    self.paused = value;
+
+                    if value {
+                        self.declicker.fade_to_0(&self.values);
+                    } else {
+                        self.declicker.fade_to_1(&self.values);
+                    }
+                }
+            }
         }
 
-        if changed {
-            self.params.apply_params(&mut self.freeverb);
+        if update_combs {
+            self.freeverb.update_combs();
         }
 
         // I don't really want to figure out if the reverb is silent
@@ -107,6 +153,10 @@ impl AudioNodeProcessor for FreeverbProcessor {
         //     // All inputs are silent.
         //     return ProcessStatus::ClearAllOutputs;
         // }
+
+        if self.paused && self.declicker.is_settled() {
+            return ProcessStatus::ClearAllOutputs;
+        }
 
         for frame in 0..proc_info.frames {
             let (left, right) = self
@@ -117,13 +167,21 @@ impl AudioNodeProcessor for FreeverbProcessor {
             outputs[1][frame] = right as f32;
         }
 
+        if !self.declicker.is_settled() {
+            self.declicker.process(
+                &mut outputs[..2],
+                0..proc_info.frames,
+                &self.values,
+                1.0,
+                FadeType::EqualPower3dB,
+            );
+        }
+
         ProcessStatus::outputs_not_silent()
     }
 
     fn new_stream(&mut self, stream_info: &firewheel::StreamInfo) {
-        // Note: for a proper implementation, we should change the sample rate in-place
-        // rather than creating entirely new buffers.
-        self.freeverb = freeverb::Freeverb::new(stream_info.sample_rate.get() as usize);
-        self.params.apply_params(&mut self.freeverb);
+        // TODO: we could probably attempt to smooth the transition here
+        self.freeverb.resize(stream_info.sample_rate.get() as usize);
     }
 }
