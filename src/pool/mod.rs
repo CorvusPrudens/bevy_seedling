@@ -42,7 +42,12 @@ impl Plugin for SamplePoolPlugin {
             .add_systems(
                 Last,
                 (
-                    (populate_pool, queue::assign_default, queue::grow_pools)
+                    (
+                        queue::assign_default,
+                        dynamic::update_dynamic_pools,
+                        populate_pool,
+                        queue::grow_pools,
+                    )
                         .chain()
                         .before(SeedlingSystems::Acquire),
                     poll_finished
@@ -62,6 +67,7 @@ impl Plugin for SamplePoolPlugin {
             .add_observer(remove_finished)
             .add_observer(generate_snapshots)
             .add_observer(apply_snapshots)
+            .add_observer(Sampler::observe_replace)
             .add_plugins(dynamic::DynamicPlugin);
     }
 }
@@ -397,6 +403,23 @@ impl Sampler {
             let mut sampler = world.get_mut::<Sampler>(context.entity).unwrap();
             sampler.state = Some(state);
             sampler.sample_rate = Some(sample_rate);
+        }
+    }
+
+    // Whenever this link is broken, all the effects should also remove their control.
+    fn observe_replace(
+        trigger: Trigger<OnReplace, Self>,
+        target: Query<&SampleEffects>,
+        mut commands: Commands,
+    ) {
+        let Ok(effects) = target.get(trigger.target()) else {
+            return;
+        };
+
+        for effect in effects.iter() {
+            if let Ok(mut entity) = commands.get_entity(effect) {
+                entity.try_remove::<crate::node::follower::Followers>();
+            }
         }
     }
 }

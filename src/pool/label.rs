@@ -26,8 +26,9 @@ bevy_ecs::define_label!(
 /// The default sample pool.
 ///
 /// If no pool is specified when spawning a
-/// [`SamplePlayer`] and no effects are applied,
-/// this label will be inserted automatically.
+/// [`SamplePlayer`] and any effects match those
+/// on the default pool, this label will be inserted
+/// automatically.
 ///
 /// [`SamplePlayer`]: crate::sample::SamplePlayer
 ///

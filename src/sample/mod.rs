@@ -277,6 +277,8 @@ pub(super) fn observe_player_insert(
 ) {
     commands
         .entity(player.event_target())
+        // When re-inserting, the current playback if any should be stopped.
+        .remove::<crate::pool::Sampler>()
         .insert(DiffTimestamp::new(&time))
         .insert_if_new(AudioEvents::new(&time));
 }
@@ -814,5 +816,55 @@ mod random {
                 commands.entity(entity).remove::<Self>();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::pool::Sampler;
+    use crate::prelude::*;
+    use crate::test::{prepare_app, run};
+    use bevy::prelude::*;
+
+    #[test]
+    fn test_reinsertion() {
+        let mut app = prepare_app(|mut commands: Commands| {
+            commands.spawn((SamplerPool(DefaultPool), PoolSize(1..=1)));
+
+            commands
+                .spawn((VolumeNode::default(), MainBus))
+                .connect(AudioGraphOutput);
+        });
+
+        run(
+            &mut app,
+            |mut commands: Commands, server: Res<AssetServer>| {
+                commands.spawn(SamplePlayer::new(server.load("caw.ogg")));
+            },
+        );
+
+        // wait for the sample to load
+        loop {
+            let world = app.world_mut();
+            let mut q = world.query_filtered::<Entity, With<Sampler>>();
+            if q.iter(world).len() != 0 {
+                break;
+            }
+            app.update();
+        }
+
+        // then, reinsert
+        run(
+            &mut app,
+            |target: Single<Entity, With<Sampler>>,
+             mut commands: Commands,
+             server: Res<AssetServer>| {
+                commands
+                    .entity(*target)
+                    .insert(SamplePlayer::new(server.load("caw.ogg")));
+            },
+        );
+
+        app.update();
     }
 }

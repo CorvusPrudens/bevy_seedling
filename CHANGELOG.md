@@ -1,4 +1,24 @@
-# 0.6.0-rc.1
+# 0.6.0
+
+- Upgraded to Bevy 0.17
+
+# 0.5.5
+
+- Updated unstable docsrs flag
+
+# 0.5.4
+
+## Fixes
+
+- Fixed occasional panic with `Sampler` relationship reinsertion
+- Fixed panic when scheduling a fade or other animation with an identical
+  start and end value
+- Correctly place sample players in `DefaultPool` when they have matching effects
+- Remove `Followers` relationship from effects when the outer `Sampler` relationship
+  is replaced
+- Fixed underlying delay line OOB panic
+
+# 0.5.3
 
 ## Fixes
 
@@ -69,7 +89,7 @@ by default.
 - `LimiterNode`, a dynamic limiter, which eliminates jarring distortion
   when things get too loud. This is automatically applied to the output
   of the new default graph configuration.
-- `LufsNode`, a LUFS analyzer, which helps sound designers monitor the
+- `LoudnessNode`, a LUFS analyzer, which helps sound designers monitor the
   overall loudness and consistency of a Bevy app's sound.
 
 ### Configurable initial graph

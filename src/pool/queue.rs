@@ -316,7 +316,7 @@ pub(super) fn assign_work(
 
                 commands
                     .entity(sample_entity)
-                    .remove::<QueuedSample>()
+                    .remove::<(QueuedSample, super::Sampler)>()
                     .add_one_related::<SamplerOf>(sampler_entity);
             }
 
@@ -483,14 +483,16 @@ pub(super) fn assign_work(
                 }
             }
 
+            if let Some(assignment) = current_assignment {
+                // if the `Sampler` relationship is already present on either side,
+                // this will necessarily remove it
+                commands.entity(assignment).trigger(PlaybackCompletionEvent);
+            }
+
             commands
                 .entity(sample_entity)
                 .remove::<QueuedSample>()
                 .add_one_related::<SamplerOf>(sampler_entity);
-
-            if let Some(assignment) = current_assignment {
-                commands.trigger(PlaybackCompletionEvent(assignment));
-            }
         }
     }
 
@@ -550,23 +552,64 @@ pub(super) fn tick_skipped(
 /// Assign the default pool label to a sample player that has no label.
 pub(super) fn assign_default(
     samples: Query<
-        Entity,
-        (
-            With<SamplePlayer>,
-            Without<PoolLabelContainer>,
-            Without<SampleEffects>,
-        ),
+        (Entity, Option<&SampleEffects>),
+        (With<SamplePlayer>, Without<PoolLabelContainer>),
     >,
+    effects: Query<&EffectId>,
+    // if there's no default pool, this probably shouldn't run
+    default_pool: Single<Option<&SampleEffects>, With<super::SamplerPool<DefaultPool>>>,
     mut commands: Commands,
 ) {
-    for sample in samples.iter() {
-        commands.entity(sample).insert(DefaultPool);
+    for (sample, sample_effects) in samples.iter() {
+        match sample_effects {
+            None => {
+                // clear default candidate
+                commands.entity(sample).insert(DefaultPool);
+            }
+            Some(sample_effects) => {
+                if let Some(default_effects) = default_pool.as_ref() {
+                    let default_effects: Vec<_> = default_effects
+                        .iter()
+                        .filter_map(|entity| effects.get(entity).map(|id| id.0).ok())
+                        .collect();
+                    let sample_effects: Vec<_> = sample_effects
+                        .iter()
+                        .filter_map(|entity| effects.get(entity).map(|id| id.0).ok())
+                        .collect();
+
+                    if sample_effects.is_empty() {
+                        // in this degenerate scenarios, where the sample effects are malformed,
+                        // we'll consider this not default
+                        continue;
+                    }
+
+                    // If the sample describes effects that fit a correctly-ordered subset of the
+                    // default pool's effects, we'll consider it acceptable.
+                    let mut is_eq = false;
+                    for window in default_effects.windows(sample_effects.len()) {
+                        if window == sample_effects.as_slice() {
+                            is_eq = true;
+                            break;
+                        }
+                    }
+
+                    if is_eq {
+                        commands.entity(sample).insert(DefaultPool);
+                    }
+                }
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::{
+        prelude::*,
+        sample_effects,
+        test::{prepare_app, run},
+    };
 
     #[test]
     fn test_sorting() {
@@ -612,5 +655,89 @@ mod test {
         ];
 
         test_order(candidates, &[1, 0]);
+    }
+
+    #[test]
+    fn test_default_pool_without_effects() {
+        #[derive(Component)]
+        struct Effects;
+
+        #[derive(Component)]
+        struct Empty;
+
+        let mut app = prepare_app(|mut commands: Commands, server: Res<AssetServer>| {
+            commands.spawn((SamplerPool(DefaultPool),));
+
+            commands.spawn((
+                Effects,
+                SamplePlayer::new(server.load("caw.ogg")),
+                sample_effects![LowPassNode::default()],
+            ));
+
+            commands.spawn((Empty, SamplePlayer::new(server.load("caw.ogg"))));
+        });
+
+        run(
+            &mut app,
+            |effects: Single<Has<DefaultPool>, With<Effects>>,
+             empty: Single<Has<DefaultPool>, With<Empty>>| {
+                assert!(!*effects);
+                assert!(*empty);
+            },
+        );
+    }
+    #[test]
+    fn test_default_pool_with_effects() {
+        #[derive(Component)]
+        struct Subset;
+
+        #[derive(Component)]
+        struct Full;
+
+        #[derive(Component)]
+        struct Unordered;
+
+        #[derive(Component)]
+        struct Empty;
+
+        let mut app = prepare_app(|mut commands: Commands, server: Res<AssetServer>| {
+            commands.spawn((
+                SamplerPool(DefaultPool),
+                sample_effects![SpatialBasicNode::default(), LowPassNode::default()],
+            ));
+
+            commands.spawn((
+                Subset,
+                SamplePlayer::new(server.load("caw.ogg")),
+                sample_effects![LowPassNode::default()],
+            ));
+
+            commands.spawn((
+                Full,
+                SamplePlayer::new(server.load("caw.ogg")),
+                sample_effects![SpatialBasicNode::default(), LowPassNode::default()],
+            ));
+
+            commands.spawn((
+                Unordered,
+                SamplePlayer::new(server.load("caw.ogg")),
+                sample_effects![LowPassNode::default(), SpatialBasicNode::default(),],
+            ));
+
+            commands.spawn((Empty, SamplePlayer::new(server.load("caw.ogg"))));
+        });
+
+        run(
+            &mut app,
+            |subset: Single<Has<DefaultPool>, With<Subset>>,
+             full: Single<Has<DefaultPool>, With<Full>>,
+             unordered: Single<Has<DefaultPool>, With<Unordered>>,
+             empty: Single<Has<DefaultPool>, With<Empty>>| {
+                assert!(*subset);
+                assert!(*full);
+                assert!(!*unordered);
+                assert!(*empty);
+            },
+        );
     }
 }

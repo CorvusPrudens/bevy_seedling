@@ -1,6 +1,6 @@
 [package]
 name = "bevy_seedling"
-version = "0.6.0-rc.1"
+version = "0.6.0"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
@@ -40,17 +40,17 @@ adpcm = ["symphonium/adpcm"]
 profiling = []
 
 [dependencies]
-bevy_ecs = "0.17.0-rc.1"
-bevy_app = "0.17.0-rc.1"
-bevy_math = { version = "0.17.0-rc.1", default-features = false, features = [
+bevy_ecs = "0.17.2"
+bevy_app = "0.17.2"
+bevy_math = { version = "0.17.2", default-features = false, features = [
   "curve",
 ] }
-bevy_asset = "0.17.0-rc.1"
-bevy_transform = "0.17.0-rc.1"
-bevy_log = "0.17.0-rc.1"
-bevy_platform = "0.17.0-rc.1"
-bevy_time = "0.17.0-rc.1"
-bevy_reflect = { version = "0.17.0-rc.1", default-features = false, features = [
+bevy_asset = "0.17.2"
+bevy_transform = "0.17.2"
+bevy_log = "0.17.2"
+bevy_platform = "0.17.2"
+bevy_time = "0.17.2"
+bevy_reflect = { version = "0.17.2", default-features = false, features = [
   "glam",
 ] }
 
@@ -84,7 +84,7 @@ firewheel = { version = "0.8.0-rc.1", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
 bevy_seedling = { path = ".", features = ["hrtf"] }
-bevy = { version = "0.17.0-rc.1", default-features = false, features = [
+bevy = { version = "0.17.2", default-features = false, features = [
   "bevy_debug_stepping",
   "bevy_asset",
   "bevy_state",

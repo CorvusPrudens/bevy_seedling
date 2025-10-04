@@ -12,7 +12,7 @@ pub struct DelayLine {
 impl DelayLine {
     pub fn new(size: usize) -> Self {
         Self {
-            buffer: vec![0.0; size],
+            buffer: vec![0.0; size.max(1)],
             write_head: 0,
             read_head: 0.0,
         }
@@ -23,7 +23,9 @@ impl DelayLine {
     }
 
     pub fn resize(&mut self, new_size: usize) {
-        self.buffer.resize(new_size, 0.0);
+        self.buffer.resize(new_size.max(1), 0.0);
+        self.write_head %= self.buffer.len();
+        self.read_head %= self.buffer.len() as f32;
     }
 
     pub fn write(&mut self, sample: f32) {
@@ -42,14 +44,13 @@ impl DelayLine {
 
     /// Read from the buffer, performing linear interpolation.
     pub fn read(&self) -> f32 {
-        let read_position = self.write_head as f32 - 1.0 - self.read_head;
+        let float_len = self.buffer.len() as f32;
+        let read_position = float_len + self.write_head as f32 - 1.0 - self.read_head;
 
-        let wrapped_position = read_position.rem_euclid(self.buffer.len() as f32);
-
-        let index_a = wrapped_position.floor() as usize;
+        let index_a = read_position as usize % self.buffer.len();
         let index_b = (index_a + 1) % self.buffer.len();
 
-        let fract = wrapped_position.fract();
+        let fract = read_position.fract();
 
         let a = self.buffer[index_a];
         let b = self.buffer[index_b];
@@ -65,11 +66,9 @@ mod test {
     #[test]
     fn test_oob() {
         let mut delay = DelayLine::new(31);
-        delay.set_read_head(1.0);
+        delay.set_read_head(1.2271447e-13);
 
-        for _ in 0..64 {
-            delay.write(0.5);
-            delay.read();
-        }
+        delay.write(0.5);
+        delay.read();
     }
 }
