@@ -408,11 +408,11 @@ impl Sampler {
 
     // Whenever this link is broken, all the effects should also remove their control.
     fn observe_replace(
-        trigger: Trigger<OnReplace, Self>,
+        trigger: On<Replace, Self>,
         target: Query<&SampleEffects>,
         mut commands: Commands,
     ) {
-        let Ok(effects) = target.get(trigger.target()) else {
+        let Ok(effects) = target.get(trigger.entity) else {
             return;
         };
 
