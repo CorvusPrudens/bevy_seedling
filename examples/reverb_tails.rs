@@ -1,11 +1,18 @@
 //! This example demonstrates how to correctly pause reverbs.
 
 use bevy::prelude::*;
+use bevy_log::{Level, LogPlugin};
 use bevy_seedling::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
+        .add_plugins((
+            DefaultPlugins.set(LogPlugin {
+                level: Level::DEBUG,
+                ..Default::default()
+            }),
+            SeedlingPlugin::default(),
+        ))
         .add_systems(Startup, (set_up_ui, startup).chain())
         .add_systems(
             Update,
