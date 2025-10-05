@@ -24,16 +24,25 @@ mod delay_line;
 mod freeverb;
 
 /// A simple, relatively cheap stereo reverb.
+///
+/// Freeverb tends to have a somewhat metallic sound, but
+/// its minimal computational cost makes it highly versatile.
 #[derive(Diff, Patch, Clone, Debug, Component)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct FreeverbNode {
     /// Set the size of the emulated room, expressed from 0 to 1.
+    ///
+    /// Values near zero will sound like a small room, while values
+    /// near one will reverberate almost continuously.
     pub room_size: f32,
 
     /// Set the high-frequency damping, expressed from 0 to 1.
+    ///
+    /// Values near zero will produce a dark or muffled sound,
+    /// while values near one will sound bright or metallic.
     pub damping: f32,
 
-    /// Set the L/R blending, expressed from 0 to 1.
+    /// Set the left/right blending, expressed from 0 to 1.
     pub width: f32,
 
     /// Pause the reverb processing.
@@ -89,10 +98,18 @@ impl AudioNode for FreeverbNode {
 
         let mut processor = FreeverbProcessor {
             freeverb,
-            damping: SmoothedParam::new(self.damping, smoother_config, cx.stream_info.sample_rate),
-            width: SmoothedParam::new(self.width, smoother_config, cx.stream_info.sample_rate),
+            damping: SmoothedParam::new(
+                self.damping.clamp(0.0, 1.0),
+                smoother_config,
+                cx.stream_info.sample_rate,
+            ),
+            width: SmoothedParam::new(
+                self.width.clamp(0.0, 1.0),
+                smoother_config,
+                cx.stream_info.sample_rate,
+            ),
             room_size: SmoothedParam::new(
-                self.room_size,
+                self.room_size.clamp(0.0, 1.0),
                 smoother_config,
                 cx.stream_info.sample_rate,
             ),
@@ -134,13 +151,13 @@ impl AudioNodeProcessor for FreeverbProcessor {
         for patch in events.drain_patches::<FreeverbNode>() {
             match patch {
                 FreeverbNodePatch::Damping(value) => {
-                    self.damping.set_value(value);
+                    self.damping.set_value(value.clamp(0.0, 1.0));
                 }
                 FreeverbNodePatch::RoomSize(value) => {
-                    self.room_size.set_value(value);
+                    self.room_size.set_value(value.clamp(0.0, 1.0));
                 }
                 FreeverbNodePatch::Width(value) => {
-                    self.width.set_value(value);
+                    self.width.set_value(value.clamp(0.0, 1.0));
                 }
                 FreeverbNodePatch::Reset(_) => {
                     self.freeverb.reset();
