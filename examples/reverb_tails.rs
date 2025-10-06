@@ -1,18 +1,11 @@
 //! This example demonstrates how to correctly pause reverbs.
 
 use bevy::prelude::*;
-use bevy_log::{Level, LogPlugin};
 use bevy_seedling::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins((
-            DefaultPlugins.set(LogPlugin {
-                level: Level::DEBUG,
-                ..Default::default()
-            }),
-            SeedlingPlugin::default(),
-        ))
+        .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
         .add_systems(Startup, (set_up_ui, startup).chain())
         .add_systems(
             Update,
@@ -64,13 +57,13 @@ fn toggle_playback(
 ) {
     if keys.just_pressed(KeyCode::Space) {
         if *player.play {
-            player.play();
-            reverb.pause = false;
-        } else {
             player.pause();
             // This is the key -- when you pause sample playback, make sure
             // you also pause any active reverbs!
             reverb.pause = true;
+        } else {
+            player.play();
+            reverb.pause = false;
         }
     }
 }
@@ -146,13 +139,16 @@ fn set_up_ui(mut commands: Commands) {
 }
 
 fn set_playback(
-    player: Single<&PlaybackSettings>,
+    player: Single<&PlaybackSettings, Changed<PlaybackSettings>>,
     mut item: Single<&mut Text, With<PlaybackItem>>,
 ) {
     let state = if *player.play { "Playing" } else { "Paused" };
     item.0 = format!("Playback: {state}");
 }
 
-fn set_room_size(reverb: Single<&FreeverbNode>, mut item: Single<&mut Text, With<RoomSizeItem>>) {
+fn set_room_size(
+    reverb: Single<&FreeverbNode, Changed<FreeverbNode>>,
+    mut item: Single<&mut Text, With<RoomSizeItem>>,
+) {
     item.0 = format!("Room Size: {:.2}", reverb.room_size);
 }

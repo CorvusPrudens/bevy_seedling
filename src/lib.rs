@@ -589,6 +589,7 @@ where
             .register_node::<VolumeNode>()
             .register_node::<VolumePanNode>()
             .register_node::<SpatialBasicNode>()
+            .register_node::<FreeverbNode>()
             .register_simple_node::<StereoToMonoNode>();
 
         app.configure_sets(

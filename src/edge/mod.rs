@@ -292,7 +292,12 @@ fn lookup_node<'a>(
                 );
             }
             #[cfg(not(debug_assertions))]
-            error_once!("failed to connect to entity `{target_entity:?}`: no Firewheel node found");
+            {
+                let _ = connection;
+                error_once!(
+                    "failed to connect to entity `{target_entity:?}`: no Firewheel node found"
+                );
+            }
 
             None
         }
