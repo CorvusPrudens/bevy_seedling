@@ -152,9 +152,8 @@ pub use assets::{AudioSample, SampleLoader, SampleLoaderError};
 ///         volume: Volume::UNITY_GAIN,
 ///     },
 ///     PlaybackSettings {
-///         playback: Notify::new(PlaybackState::Play {
-///             playhead: Some(Playhead::Seconds(0.0)),
-///         }),
+///         play: Notify::new(true),
+///         play_from: PlayFrom::BEGINNING,
 ///         speed: 1.0,
 ///         on_complete: OnComplete::Despawn,
 ///     },
@@ -355,15 +354,13 @@ pub enum OnComplete {
 ///     commands.spawn((
 ///         SamplePlayer::new(server.load("my_sample.wav")),
 ///         // You can start one second in
-///         PlaybackSettings::default().with_playback(PlaybackState::Play {
-///             playhead: Some(Playhead::Seconds(1.0)),
-///         }),
+///         PlaybackSettings::default().with_play_from(PlayFrom::Seconds(1.0)),
 ///     ));
 ///
 ///     commands.spawn((
 ///         SamplePlayer::new(server.load("my_sample.wav")),
 ///         // Or even spawn with paused playback
-///         PlaybackSettings::default().with_playback(PlaybackState::Pause),
+///         PlaybackSettings::default().with_playback(false),
 ///     ));
 /// }
 /// ```
@@ -463,7 +460,7 @@ impl PlaybackSettings {
     /// # use bevy_seedling::prelude::*;
     /// fn play_at(time: Res<Time<Audio>>, server: Res<AssetServer>, mut commands: Commands) {
     ///     let mut events = AudioEvents::new(&time);
-    ///     let settings = PlaybackSettings::default().with_playback(PlaybackState::Pause);
+    ///     let settings = PlaybackSettings::default().with_playback(false);
     ///
     ///     // Start playing exactly one second from now.
     ///     settings.play_at(None, time.delay(DurationSeconds(1.0)), &mut events);
@@ -612,7 +609,7 @@ impl PlaybackSettings {
     /// # use bevy::prelude::*;
     /// fn resume_paused_samples(mut samples: Query<&mut PlaybackSettings>) {
     ///     for mut params in samples.iter_mut() {
-    ///         if matches!(*params.playback, PlaybackState::Pause) {
+    ///         if !*params.play {
     ///             params.play();
     ///         }
     ///     }

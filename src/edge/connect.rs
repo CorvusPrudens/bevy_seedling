@@ -140,6 +140,46 @@ impl PendingConnections {
 ///
 /// [`EntityCommands`]: bevy_ecs::prelude::EntityCommands
 /// [`NodeLabel`]: crate::prelude::NodeLabel
+///
+/// ## Specifying ports
+///
+/// When connecting, chaining, or disconnecting nodes, you can
+/// specify exactly which outputs should be connected to which inputs.
+/// For example, if you connect a stereo node to a mono node, you
+/// can downmix the stereo signal:
+///
+/// ```
+/// # use bevy::prelude::*;
+/// # use bevy_seedling::prelude::*;
+/// # fn system(mut commands: Commands) {
+/// commands.spawn(VolumeNode::default()).chain_node_with(
+///     (
+///         LowPassNode::default(),
+///         LowPassConfig {
+///             channels: NonZeroChannelCount::new(1).unwrap(),
+///             ..Default::default()
+///         },
+///     ),
+///     &[(0, 0), (1, 0)],
+/// );
+/// # }
+/// ```
+///
+/// The tuples represent individual edges in the audio graph. The
+/// first element is the output of the source, and the second is
+/// the input of the destination. So, in the example above, the
+/// left and right channels of [`VolumeNode`] are both connected
+/// to the single input of [`LowPassNode`].
+///
+/// [`VolumeNode`]: crate::prelude::VolumeNode
+/// [`LowPassNode`]: crate::prelude::LowPassNode
+///
+/// The above example is also unnecessary in most circumstances.
+/// The [`ChannelMapping`] component, a required component on all
+/// nodes, defaults to [`ChannelMapping::Speakers`]. This will automatically
+/// upmix or downmix the connections according to common speaker configurations,
+/// such as stereo-to-mono, when no explicit mapping is provided. In practice,
+/// you'll rarely need to provide these explicit mappings.
 pub trait Connect<'a>: Sized {
     /// Queue a connection from this entity to the target.
     ///
