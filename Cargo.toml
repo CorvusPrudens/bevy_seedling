@@ -60,6 +60,7 @@ firewheel = { version = "0.8.0-rc.1", features = [
   "scheduled_events",
   "musical_transport",
   "glam-30",
+  "freeverb_node",
 ] }
 symphonium = { version = "0.6", default-features = false, features = [
   "opt-simd",
