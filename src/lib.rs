@@ -386,7 +386,9 @@ pub mod prelude {
         SfxBus, SpatialPool,
     };
     pub use crate::context::AudioContext;
-    pub use crate::edge::{AudioGraphInput, AudioGraphOutput, Connect, Disconnect, EdgeTarget};
+    pub use crate::edge::{
+        AudioGraphInput, AudioGraphOutput, ChannelMapping, Connect, Disconnect, EdgeTarget,
+    };
     pub use crate::node::{
         FirewheelNode, RegisterNode,
         events::{AudioEvents, VolumeFade},
@@ -396,7 +398,6 @@ pub mod prelude {
     pub use crate::nodes::loudness::{LoudnessConfig, LoudnessNode, LoudnessState};
     pub use crate::nodes::{
         bpf::{BandPassConfig, BandPassNode},
-        freeverb::FreeverbNode,
         itd::{ItdConfig, ItdNode},
         limiter::{LimiterConfig, LimiterNode},
         lpf::{LowPassConfig, LowPassNode},
@@ -429,10 +430,8 @@ pub mod prelude {
         diff::{Memo, Notify},
         nodes::{
             StereoToMonoNode,
-            sampler::{
-                PlaybackSpeedQuality, PlaybackState, Playhead, RepeatMode, SamplerConfig,
-                SamplerNode,
-            },
+            freeverb::FreeverbNode,
+            sampler::{PlayFrom, PlaybackSpeedQuality, RepeatMode, SamplerConfig, SamplerNode},
             spatial_basic::SpatialBasicNode,
             volume::{VolumeNode, VolumeNodeConfig},
             volume_pan::VolumePanNode,
@@ -676,9 +675,8 @@ where
             .register_type::<ItdNode>()
             .register_type::<ItdConfig>()
             .register_type::<LimiterConfig>()
-            .register_type::<FreeverbNode>()
             .register_type::<Volume>()
-            .register_type::<firewheel::dsp::pan_law::PanLaw>()
+            .register_type::<firewheel::dsp::fade::FadeCurve>()
             .register_type::<MainBus>()
             .register_type::<PoolSize>()
             .register_type::<DefaultPoolSize>()
@@ -696,14 +694,14 @@ where
             .register_type::<SamplerPool<configuration::SpatialPool>>()
             .register_type::<node::ScheduleDiffing>()
             .register_type::<node::AudioScheduleLookahead>()
+            .register_type::<FreeverbNode>()
             .register_type::<NonZeroChannelCount>()
             .register_type::<SamplerConfig>()
-            .register_type::<PlaybackState>()
             .register_type::<RepeatMode>()
-            .register_type::<Playhead>()
+            // .register_type::<Playhead>()
             .register_type::<Notify<f32>>()
             .register_type::<Notify<bool>>()
-            .register_type::<Notify<PlaybackState>>()
+            // .register_type::<Notify<PlaybackState>>()
             .register_type::<InstantMusical>()
             .register_type::<InstantSeconds>()
             .register_type::<InstantSamples>()

@@ -133,7 +133,7 @@ impl AudioNodeProcessor for VolumeProcessor {
             }
         }
 
-        ProcessStatus::outputs_not_silent()
+        ProcessStatus::OutputsModified
     }
 }
 

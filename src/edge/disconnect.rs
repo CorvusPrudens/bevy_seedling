@@ -1,7 +1,10 @@
-use super::{DEFAULT_CONNECTION, EdgeTarget, NodeMap, PendingEdge};
-use crate::{context::AudioContext, node::FirewheelNode};
+use super::{EdgeTarget, NodeMap, PendingEdge};
+use crate::{
+    context::AudioContext,
+    node::{FirewheelNode, FirewheelNodeInfo},
+};
 use bevy_ecs::prelude::*;
-use bevy_log::prelude::*;
+use core::ops::Deref;
 
 #[cfg(debug_assertions)]
 use core::panic::Location;
@@ -85,9 +88,7 @@ pub trait Disconnect: Sized {
     /// The disconnection is deferred, finalizing in the
     /// [`SeedlingSystems::Connect`][crate::SeedlingSystems::Connect] set.
     #[cfg_attr(debug_assertions, track_caller)]
-    fn disconnect(self, target: impl Into<EdgeTarget>) -> Self {
-        self.disconnect_with(target, DEFAULT_CONNECTION)
-    }
+    fn disconnect(self, target: impl Into<EdgeTarget>) -> Self;
 
     /// Queue a disconnection from this entity to the target with the provided port mappings.
     ///
@@ -97,24 +98,42 @@ pub trait Disconnect: Sized {
     fn disconnect_with(self, target: impl Into<EdgeTarget>, ports: &[(u32, u32)]) -> Self;
 }
 
+#[cfg_attr(debug_assertions, track_caller)]
+fn disconnect_with_commands(
+    target: EdgeTarget,
+    ports: Option<Vec<(u32, u32)>>,
+    commands: &mut EntityCommands,
+) {
+    #[cfg(debug_assertions)]
+    let location = Location::caller();
+
+    commands
+        .entry::<PendingDisconnections>()
+        .or_default()
+        .and_modify(|mut pending| {
+            pending.push(PendingEdge::new_with_location(
+                target,
+                ports,
+                #[cfg(debug_assertions)]
+                location,
+            ));
+        });
+}
+
 impl Disconnect for EntityCommands<'_> {
+    fn disconnect(mut self, target: impl Into<EdgeTarget>) -> Self {
+        let target = target.into();
+
+        disconnect_with_commands(target, None, &mut self);
+
+        self
+    }
+
     fn disconnect_with(mut self, target: impl Into<EdgeTarget>, ports: &[(u32, u32)]) -> Self {
         let target = target.into();
         let ports = ports.to_vec();
 
-        #[cfg(debug_assertions)]
-        let location = Location::caller();
-
-        self.entry::<PendingDisconnections>()
-            .or_default()
-            .and_modify(|mut pending| {
-                pending.push(PendingEdge::new_with_location(
-                    target,
-                    Some(ports),
-                    #[cfg(debug_assertions)]
-                    location,
-                ));
-            });
+        disconnect_with_commands(target, Some(ports), &mut self);
 
         self
     }
@@ -122,7 +141,7 @@ impl Disconnect for EntityCommands<'_> {
 
 pub(crate) fn process_disconnections(
     mut disconnections: Query<(&mut PendingDisconnections, &FirewheelNode)>,
-    targets: Query<&FirewheelNode>,
+    targets: Query<(&FirewheelNode, &FirewheelNodeInfo)>,
     node_map: Res<NodeMap>,
     mut context: ResMut<AudioContext>,
 ) {
@@ -138,51 +157,28 @@ pub(crate) fn process_disconnections(
     context.with(|context| {
         for (mut pending, source_node) in disconnections.into_iter() {
             pending.0.retain(|disconnections| {
-                let ports = disconnections.ports.as_deref().unwrap_or(DEFAULT_CONNECTION);
+                let Some((target_node, _target_info)) =
+                    super::fetch_target(disconnections, &node_map, &targets, (*context).deref())
+                else {
+                    return false;
+                };
 
-                let target_entity = match disconnections.target {
-                    EdgeTarget::Entity(entity) => entity,
-                    EdgeTarget::Label(label) => {
-                        let Some(entity) = node_map.get(&label) else {
-                            #[cfg(debug_assertions)]
-                            {
-                                let location = disconnections.origin;
-                                error_once!("failed to disconnect from node label `{label:?}` at {location}: no associated Firewheel node found");
-                            }
-                            #[cfg(not(debug_assertions))]
-                            error_once!("failed to disconnect from node label `{label:?}`: no associated Firewheel node found");
+                let existing_connections;
+                let ports = match disconnections.ports.as_deref() {
+                    Some(ports) => ports,
+                    None => {
+                        existing_connections = context
+                            .edges()
+                            .into_iter()
+                            .filter(|e| e.src_node == source_node.0 && e.dst_node == target_node)
+                            .map(|e| (e.src_port, e.dst_port))
+                            .collect::<Vec<_>>();
 
-                            // We may need to wait for the intended label to be spawned.
-                            return true;
-                        };
-
-                        *entity
-                    }
-                    EdgeTarget::Node(dest_node) => {
-                        // no questions asked, simply disconnect
-                        context.disconnect(source_node.0, dest_node, ports);
-
-                        // if this fails, the target node must have been removed from the graph
-                        return false;
+                        existing_connections.as_slice()
                     }
                 };
 
-                let target = match targets.get(target_entity) {
-                    Ok(t) => t,
-                    Err(_) => {
-                        #[cfg(debug_assertions)]
-                        {
-                            let location = disconnections.origin;
-                            error_once!("failed to disconnect from entity `{target_entity:?}` at {location}: no Firewheel node found");
-                        }
-                        #[cfg(not(debug_assertions))]
-                        error_once!("failed to disconnect from entity `{target_entity:?}`: no Firewheel node found");
-
-                        return false;
-                    }
-                };
-
-                context.disconnect(source_node.0, target.0, ports);
+                context.disconnect(source_node.0, target_node, ports);
 
                 false
             });

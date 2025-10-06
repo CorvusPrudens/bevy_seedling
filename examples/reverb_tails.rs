@@ -63,7 +63,7 @@ fn toggle_playback(
     mut reverb: Single<&mut FreeverbNode>,
 ) {
     if keys.just_pressed(KeyCode::Space) {
-        if *player.playback == PlaybackState::Pause {
+        if *player.play {
             player.play();
             reverb.pause = false;
         } else {
@@ -149,11 +149,7 @@ fn set_playback(
     player: Single<&PlaybackSettings>,
     mut item: Single<&mut Text, With<PlaybackItem>>,
 ) {
-    let state = if player.playback.is_playing() {
-        "Playing"
-    } else {
-        "Paused"
-    };
+    let state = if *player.play { "Playing" } else { "Paused" };
     item.0 = format!("Playback: {state}");
 }
 

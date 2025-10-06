@@ -35,7 +35,7 @@ fn toggle_playback(
     // The pause and play methods queue up audio events that
     // are sent at the end of the frame.
     for mut settings in settings.iter_mut() {
-        if matches!(*settings.playback, PlaybackState::Play { .. }) {
+        if *settings.play {
             settings.pause();
         } else {
             settings.play();

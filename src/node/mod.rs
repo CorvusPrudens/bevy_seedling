@@ -1,10 +1,13 @@
 //! Audio node registration and management.
 
-use crate::edge::NodeMap;
 use crate::error::SeedlingError;
 use crate::pool::sample_effects::EffectOf;
 use crate::time::{Audio, AudioTime};
-use crate::{SeedlingSystems, prelude::AudioContext};
+use crate::{
+    SeedlingSystems,
+    edge::{ChannelMapping, NodeMap},
+    prelude::AudioContext,
+};
 use bevy_app::prelude::*;
 use bevy_ecs::component::Components;
 use bevy_ecs::lifecycle::HookContext;
@@ -16,8 +19,10 @@ use bevy_ecs::{
 use bevy_log::prelude::*;
 use bevy_platform::collections::HashSet;
 use bevy_time::Time;
+use firewheel::channel_config::ChannelConfig;
 use firewheel::clock::{DurationSeconds, EventInstant, InstantSeconds};
 use firewheel::error::UpdateError;
+use firewheel::graph::NodeEntry;
 use firewheel::{
     diff::{Diff, Patch},
     event::{NodeEvent, NodeEventType},
@@ -69,6 +74,29 @@ pub struct ScheduleDiffing(pub bool);
 impl Default for ScheduleDiffing {
     fn default() -> Self {
         Self(true)
+    }
+}
+
+/// Provides information about a node's audio processor.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+#[component(immutable)]
+pub struct FirewheelNodeInfo {
+    /// The I/O count of this processor.
+    pub channel_config: ChannelConfig,
+
+    /// The number of audio frames of latency.
+    ///
+    /// This can be used to calculate latency compensation
+    /// for the graph.
+    pub latency_frames: u32,
+}
+
+impl FirewheelNodeInfo {
+    pub(crate) fn new(entry: &NodeEntry) -> Self {
+        Self {
+            channel_config: entry.info.channel_config,
+            latency_frames: entry.info.latency_frames,
+        }
     }
 }
 
@@ -191,9 +219,19 @@ fn handle_configuration_changes<
                 .collect::<Vec<_>>();
 
             let new_node = context.add_node(node.clone(), Some(config.clone()));
-            commands.entity(entity).insert(FirewheelNode(new_node));
+            let info = FirewheelNodeInfo::new(context.node_info(new_node).unwrap());
 
-            for edge in existing_inputs {
+            commands
+                .entity(entity)
+                .insert((FirewheelNode(new_node), info));
+
+            // TODO: consider handling channel mappings here
+            for edge in existing_inputs
+                .into_iter()
+                // This ensures a channel-modifying reinsertion won't produce
+                // an error.
+                .take(info.channel_config.num_inputs.get() as usize)
+            {
                 context.connect(
                     edge.src_node,
                     new_node,
@@ -202,7 +240,10 @@ fn handle_configuration_changes<
                 )?;
             }
 
-            for edge in existing_outputs {
+            for edge in existing_outputs
+                .into_iter()
+                .take(info.channel_config.num_outputs.get() as usize)
+            {
                 context.connect(
                     new_node,
                     edge.dst_node,
@@ -236,12 +277,13 @@ fn acquire_id<T>(
     context.with(|context| {
         for (entity, container, config, labels) in q.iter() {
             let node = context.add_node(container.clone(), config.cloned());
+            let info = FirewheelNodeInfo::new(context.node_info(node).unwrap());
 
             for label in labels.iter().flat_map(|l| l.iter()) {
                 node_map.insert(*label, entity);
             }
 
-            commands.entity(entity).insert(FirewheelNode(node));
+            commands.entity(entity).insert((FirewheelNode(node), info));
         }
     });
 }
@@ -636,6 +678,7 @@ fn observe_simple_node_insertion<T: Component>(
 /// audio node is removed from the graph.
 #[derive(Debug, Clone, Copy, Component)]
 #[component(on_replace = Self::on_replace_hook, immutable)]
+#[require(ChannelMapping)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct FirewheelNode(pub NodeID);
 

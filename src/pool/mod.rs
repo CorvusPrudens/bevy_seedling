@@ -21,7 +21,7 @@ use core::ops::{Deref, RangeInclusive};
 use firewheel::{
     clock::{DurationSamples, DurationSeconds},
     nodes::{
-        sampler::{PlaybackState, Playhead, SamplerConfig, SamplerNode, SamplerState},
+        sampler::{PlayFrom, SamplerConfig, SamplerNode, SamplerState},
         volume::VolumeNode,
     },
 };
@@ -478,9 +478,8 @@ fn apply_snapshots(
                 server.reload(sample);
             }
 
-            *settings.playback = PlaybackState::Play {
-                playhead: Some(Playhead::Seconds(snapshot.playhead)),
-            };
+            settings.play();
+            settings.play_from = PlayFrom::Seconds(snapshot.playhead);
 
             commands.insert(new_player).remove::<Sampler>();
         }
@@ -539,7 +538,8 @@ fn watch_sample_players(
         // If we applied the scheduled events before this, the
         // sampler itself would call `value_at` afterwards, meaning we'd
         // produce incorrectly duplicated, potentially unscheduled events.
-        sampler_node.playback = settings.playback;
+        sampler_node.play = settings.play;
+        sampler_node.play_from = settings.play_from;
         sampler_node.speed = settings.speed;
 
         // TODO: consider collecting these errors
@@ -563,11 +563,6 @@ fn spawn_chain(
     effects: &[Entity],
     commands: &mut Commands,
 ) -> Entity {
-    let connections = config.as_ref().map(|c| {
-        let channels = c.channels.get().get();
-        (0..channels).map(|i| (i, i)).collect()
-    });
-
     let sampler = commands
         .spawn((
             SamplerNode::default(),
@@ -598,7 +593,7 @@ fn spawn_chain(
             .entry::<PendingConnections>()
             .or_default()
             .into_mut()
-            .push(PendingEdge::new(chain[0], connections.clone()));
+            .push(PendingEdge::new(chain[0], None));
 
         for pair in chain.windows(2) {
             world
@@ -606,7 +601,7 @@ fn spawn_chain(
                 .entry::<PendingConnections>()
                 .or_default()
                 .into_mut()
-                .push(PendingEdge::new(pair[1], connections.clone()));
+                .push(PendingEdge::new(pair[1], None));
         }
 
         Ok(())
@@ -760,7 +755,7 @@ fn poll_finished(
     mut commands: Commands,
 ) {
     for (node, active, state) in nodes.iter() {
-        let finished = state.0.finished() == node.playback.id();
+        let finished = state.0.finished() == node.play.id();
 
         if finished {
             commands.trigger(PlaybackCompletionEvent(active.0));

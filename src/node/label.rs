@@ -125,7 +125,7 @@ pub struct MainBus;
 pub type InternedNodeLabel = Interned<dyn NodeLabel>;
 
 /// A collection of all node labels applied to an entity.
-///<
+///
 /// To associate a label with an audio node,
 /// the node entity should be spawned with the label.
 /// ```

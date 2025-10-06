@@ -195,7 +195,7 @@ impl AudioNodeProcessor for ItdProcessor {
             }
         }
 
-        ProcessStatus::outputs_not_silent()
+        ProcessStatus::OutputsModified
     }
 
     fn new_stream(&mut self, stream_info: &firewheel::StreamInfo) {

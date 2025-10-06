@@ -1,9 +1,11 @@
 //! Node connection and disconnection utilities.
 
-use crate::context::AudioContext;
+use crate::context::{AudioContext, SeedlingContextWrapper};
+use crate::node::FirewheelNodeInfo;
 use crate::node::label::InternedNodeLabel;
 use crate::prelude::{FirewheelNode, MainBus, NodeLabel};
 use bevy_ecs::prelude::*;
+use bevy_log::error_once;
 use bevy_platform::collections::HashMap;
 use firewheel::node::NodeID;
 
@@ -54,6 +56,88 @@ pub struct AudioGraphInput;
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct AudioGraphOutput;
+
+/// Describes how a node's outputs are mapped to the inputs
+/// of its connections.
+///
+/// Defaults to [`ChannelMapping::Speakers`].
+///
+/// This is applied when no explicit channel mapping is provided.
+/// When the output and input channel count between two nodes
+/// matches, all inputs and outputs will be connected in order
+/// regardless of this setting.
+#[derive(Component, Default, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub enum ChannelMapping {
+    /// Uses a set of standard mappings for combinations of common speaker
+    /// I/O setups (mono, stereo, quad, and 5.1). For example, when connecting
+    /// a mono output to a stereo input, each stereo input will receive a connection.
+    ///
+    /// Non-standard configurations will fall back to [`ChannelMapping::Discrete`].
+    #[default]
+    Speakers,
+
+    /// Outputs are mapped to inputs in-order up to the maximum number of inputs
+    /// or outputs. Any additional channels are dropped.
+    Discrete,
+}
+
+impl ChannelMapping {
+    /// Maps the input channels to the output channels according
+    /// to the variant.
+    pub fn map_channels(&self, outputs: u32, inputs: u32) -> Vec<(u32, u32)> {
+        let map_min = || (0..outputs.min(inputs)).map(|i| (i, i)).collect();
+
+        match self {
+            ChannelMapping::Discrete => map_min(),
+            ChannelMapping::Speakers => {
+                match (outputs, inputs) {
+                    // Mono -> Stereo / Mono -> Quad
+                    (1, 2) | (1, 4) => {
+                        vec![(0, 0), (0, 1)]
+                    }
+                    // Mono -> 5.1
+                    (1, 6) => {
+                        vec![(0, 2)]
+                    }
+                    // Stereo -> Mono
+                    (2, 1) => {
+                        vec![(0, 0), (1, 0)]
+                    }
+                    // Stereo -> Quad / Stereo -> 5.1
+                    (2, 4) | (2, 6) => {
+                        vec![(0, 0), (1, 1)]
+                    }
+                    // Quad -> Mono
+                    (4, 1) => {
+                        vec![(0, 0), (1, 0), (2, 0), (3, 0)]
+                    }
+                    // Quad -> Stereo
+                    (4, 2) => {
+                        vec![(0, 0), (1, 1), (2, 0), (3, 1)]
+                    }
+                    // Quad -> 5.1
+                    (4, 6) => {
+                        vec![(0, 0), (1, 1), (2, 4), (3, 5)]
+                    }
+                    // 5.1 -> Mono
+                    (6, 1) => {
+                        vec![(0, 0), (1, 0), (2, 0), (4, 0), (5, 0)]
+                    }
+                    // 5.1 -> Stereo
+                    (6, 2) => {
+                        vec![(0, 0), (2, 0), (4, 0), (1, 1), (2, 1), (5, 1)]
+                    }
+                    // 5.1 -> Quad
+                    (6, 4) => {
+                        vec![(0, 0), (2, 0), (1, 1), (2, 1), (4, 2), (5, 3)]
+                    }
+                    _ => map_min(),
+                }
+            }
+        }
+    }
+}
 
 /// A target for node connections.
 ///
@@ -140,8 +224,6 @@ impl From<Entity> for EdgeTarget {
     }
 }
 
-const DEFAULT_CONNECTION: &[(u32, u32)] = &[(0, 0), (1, 1)];
-
 /// A map that associates [`NodeLabel`]s with audio
 /// graph nodes.
 ///
@@ -192,4 +274,78 @@ pub(crate) fn auto_connect(
             commands.entity(entity).connect(MainBus);
         }
     });
+}
+
+fn lookup_node<'a>(
+    target_entity: Entity,
+    connection: &PendingEdge,
+    targets: &'a Query<(&FirewheelNode, &FirewheelNodeInfo)>,
+) -> Option<(&'a FirewheelNode, &'a FirewheelNodeInfo)> {
+    match targets.get(target_entity) {
+        Ok(t) => Some(t),
+        Err(_) => {
+            #[cfg(debug_assertions)]
+            {
+                let location = connection.origin;
+                error_once!(
+                    "failed to connect to entity `{target_entity:?}` at {location}: no Firewheel node found"
+                );
+            }
+            #[cfg(not(debug_assertions))]
+            error_once!("failed to connect to entity `{target_entity:?}`: no Firewheel node found");
+
+            None
+        }
+    }
+}
+
+fn fetch_target(
+    connection: &PendingEdge,
+    node_map: &NodeMap,
+    targets: &Query<(&FirewheelNode, &FirewheelNodeInfo)>,
+    context: &dyn SeedlingContextWrapper,
+) -> Option<(NodeID, FirewheelNodeInfo)> {
+    match connection.target {
+        EdgeTarget::Entity(entity) => {
+            let Some((node, info)) = lookup_node(entity, connection, targets) else {
+                return None;
+            };
+
+            Some((node.0, *info))
+        }
+        EdgeTarget::Label(label) => {
+            let Some(entity) = node_map.get(&label) else {
+                #[cfg(debug_assertions)]
+                {
+                    let location = connection.origin;
+                    error_once!(
+                        "failed to connect to node label `{label:?}` at {location}: no associated Firewheel node found"
+                    );
+                }
+                #[cfg(not(debug_assertions))]
+                error_once!(
+                    "failed to connect to node label `{label:?}`: no associated Firewheel node found"
+                );
+
+                return None;
+            };
+
+            let Some((node, info)) = lookup_node(*entity, connection, &targets) else {
+                return None;
+            };
+
+            Some((node.0, *info))
+        }
+        EdgeTarget::Node(dest_node) => {
+            let Some(info) = context.node_info(dest_node) else {
+                error_once!(
+                    "failed to connect audio node to target: the target `NodeID` doesn't exist"
+                );
+                return None;
+            };
+            let info = FirewheelNodeInfo::new(info);
+
+            Some((dest_node, info))
+        }
+    }
 }

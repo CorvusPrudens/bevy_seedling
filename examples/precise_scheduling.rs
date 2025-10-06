@@ -47,7 +47,7 @@ fn startup(server: Res<AssetServer>, time: Res<Time<Audio>>, mut commands: Comma
     // With precise scheduling, we can make it loop seamlessly while
     // skipping the intro.
     settings.play_at(
-        Some(Playhead::Seconds(time.delay(DurationSeconds(11.443)).0)),
+        Some(PlayFrom::Seconds(time.delay(DurationSeconds(11.443)).0)),
         time.delay(DurationSeconds(70.125)),
         &mut events,
     );
@@ -89,7 +89,7 @@ fn fade_out(
     let fade_duration = DurationSeconds(5.0);
     volume.fade_to(Volume::SILENT, fade_duration, &mut volume_events);
     settings.speed_to(0.95, fade_duration, &mut settings_events);
-    settings.stop_at(time.delay(fade_duration), &mut settings_events);
+    settings.pause_at(time.delay(fade_duration), &mut settings_events);
 
     Ok(())
 }

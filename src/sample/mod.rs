@@ -11,7 +11,7 @@ use bevy_math::FloatExt;
 use firewheel::{
     clock::{DurationSeconds, InstantSeconds},
     diff::Notify,
-    nodes::sampler::{PlaybackState, Playhead, RepeatMode},
+    nodes::sampler::{PlayFrom, RepeatMode},
 };
 use std::time::Duration;
 
@@ -370,12 +370,16 @@ pub enum OnComplete {
 #[derive(Component, Debug, Clone)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct PlaybackSettings {
-    /// Sets the playback state, allowing you to play, pause or stop samples.
+    /// Triggers the beginning or end of playback.
     ///
     /// This field provides only one-way communication with the
     /// audio processor. To get whether the sample is playing,
     /// see [`Sampler::is_playing`][crate::pool::Sampler::is_playing].
-    pub playback: Notify<PlaybackState>,
+    pub play: Notify<bool>,
+
+    /// Determines where the sample plays from when [`PlaybackSettings::play`]
+    /// is set to `true`.
+    pub play_from: PlayFrom,
 
     /// Sets the playback speed.
     ///
@@ -394,10 +398,18 @@ pub struct PlaybackSettings {
 }
 
 impl PlaybackSettings {
-    /// Set the [`PlaybackState`].
-    pub fn with_playback(self, playback: PlaybackState) -> Self {
+    /// Set the playback.
+    pub fn with_playback(self, play: bool) -> Self {
         Self {
-            playback: Notify::new(playback),
+            play: Notify::new(play),
+            ..self
+        }
+    }
+
+    /// Set the [`PlayFrom`] state.
+    pub fn with_play_from(self, play_from: PlayFrom) -> Self {
+        Self {
+            play_from: play_from,
             ..self
         }
     }
@@ -465,12 +477,15 @@ impl PlaybackSettings {
     /// ```
     pub fn play_at(
         &self,
-        playhead: Option<Playhead>,
+        play_from: Option<PlayFrom>,
         time: InstantSeconds,
         events: &mut AudioEvents,
     ) {
         events.schedule(time, self, |settings| {
-            *settings.playback = PlaybackState::Play { playhead };
+            *settings.play = true;
+            if let Some(play_from) = play_from {
+                settings.play_from = play_from;
+            }
         });
     }
 
@@ -496,33 +511,7 @@ impl PlaybackSettings {
     /// ```
     pub fn pause_at(&self, time: InstantSeconds, events: &mut AudioEvents) {
         events.schedule(time, self, |settings| {
-            *settings.playback = PlaybackState::Pause;
-        });
-    }
-
-    /// Stop a sample at `time`.
-    ///
-    /// ```
-    /// # use bevy::prelude::*;
-    /// # use bevy_seedling::prelude::*;
-    /// fn stop_at(time: Res<Time<Audio>>, server: Res<AssetServer>, mut commands: Commands) {
-    ///     let mut events = AudioEvents::new(&time);
-    ///     let settings = PlaybackSettings::default();
-    ///
-    ///     // Allow the sample to start playing, but stop at exactly
-    ///     // one second from now.
-    ///     settings.stop_at(time.delay(DurationSeconds(1.0)), &mut events);
-    ///
-    ///     commands.spawn((
-    ///         events,
-    ///         settings,
-    ///         SamplePlayer::new(server.load("my_sample.wav")),
-    ///     ));
-    /// }
-    /// ```
-    pub fn stop_at(&self, time: InstantSeconds, events: &mut AudioEvents) {
-        events.schedule(time, self, |settings| {
-            *settings.playback = PlaybackState::Stop;
+            *settings.play = false;
         });
     }
 
@@ -630,7 +619,7 @@ impl PlaybackSettings {
     /// }
     /// ```
     pub fn play(&mut self) {
-        *self.playback = PlaybackState::Play { playhead: None };
+        *self.play = true;
     }
 
     /// Pause playback.
@@ -645,31 +634,15 @@ impl PlaybackSettings {
     /// }
     /// ```
     pub fn pause(&mut self) {
-        *self.playback = PlaybackState::Pause;
-    }
-
-    /// Stop playback, resetting the playhead to the start.
-    ///
-    /// ```
-    /// # use bevy_seedling::prelude::*;
-    /// # use bevy::prelude::*;
-    /// fn stop_all_samples(mut samples: Query<&mut PlaybackSettings>) {
-    ///     for mut params in samples.iter_mut() {
-    ///         params.stop();
-    ///     }
-    /// }
-    /// ```
-    pub fn stop(&mut self) {
-        *self.playback = PlaybackState::Stop;
+        *self.play = false;
     }
 }
 
 impl Default for PlaybackSettings {
     fn default() -> Self {
         Self {
-            playback: Notify::new(PlaybackState::Play {
-                playhead: Some(Playhead::Seconds(0.0)),
-            }),
+            play: Notify::new(true),
+            play_from: PlayFrom::Resume,
             speed: 1.0,
             on_complete: OnComplete::Despawn,
         }
@@ -686,9 +659,10 @@ impl firewheel::diff::Diff for PlaybackSettings {
         path: firewheel::diff::PathBuilder,
         event_queue: &mut E,
     ) {
-        self.playback
-            .diff(&baseline.playback, path.with(2), event_queue);
-        self.speed.diff(&baseline.speed, path.with(4), event_queue);
+        self.play.diff(&baseline.play, path.with(2), event_queue);
+        self.play_from
+            .diff(&baseline.play_from, path.with(3), event_queue);
+        self.speed.diff(&baseline.speed, path.with(5), event_queue);
     }
 }
 
@@ -704,7 +678,8 @@ impl firewheel::diff::Patch for PlaybackSettings {
 
     fn apply(&mut self, patch: Self::Patch) {
         match patch {
-            firewheel::nodes::sampler::SamplerNodePatch::Playback(p) => self.playback = p,
+            firewheel::nodes::sampler::SamplerNodePatch::Play(p) => self.play = p,
+            firewheel::nodes::sampler::SamplerNodePatch::PlayFrom(p) => self.play_from = p,
             firewheel::nodes::sampler::SamplerNodePatch::Speed(s) => self.speed = s,
             _ => {}
         }

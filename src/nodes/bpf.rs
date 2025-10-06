@@ -194,6 +194,6 @@ impl AudioNodeProcessor for BandPassProcessor {
             }
         }
 
-        ProcessStatus::outputs_not_silent()
+        ProcessStatus::OutputsModified
     }
 }

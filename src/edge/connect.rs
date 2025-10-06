@@ -1,7 +1,12 @@
-use super::{DEFAULT_CONNECTION, EdgeTarget, NodeMap, PendingEdge};
-use crate::{context::AudioContext, node::FirewheelNode};
+use super::{EdgeTarget, NodeMap, PendingEdge};
+use crate::{
+    context::AudioContext,
+    edge::ChannelMapping,
+    node::{FirewheelNode, FirewheelNodeInfo},
+};
 use bevy_ecs::prelude::*;
 use bevy_log::prelude::*;
+use core::ops::Deref;
 
 #[cfg(debug_assertions)]
 use core::panic::Location;
@@ -160,10 +165,7 @@ pub trait Connect<'a>: Sized {
     /// The connection is deferred, finalizing in the
     /// [`SeedlingSystems::Connect`][crate::SeedlingSystems::Connect] set.
     #[cfg_attr(debug_assertions, track_caller)]
-    #[inline]
-    fn connect(self, target: impl Into<EdgeTarget>) -> ConnectCommands<'a> {
-        self.connect_with(target, DEFAULT_CONNECTION)
-    }
+    fn connect(self, target: impl Into<EdgeTarget>) -> ConnectCommands<'a>;
 
     /// Queue a connection from this entity to the target with the provided port mappings.
     ///
@@ -191,10 +193,7 @@ pub trait Connect<'a>: Sized {
     /// # }
     /// ```
     #[cfg_attr(debug_assertions, track_caller)]
-    #[inline]
-    fn chain_node<B: Bundle>(self, node: B) -> ConnectCommands<'a> {
-        self.chain_node_with(node, DEFAULT_CONNECTION)
-    }
+    fn chain_node<B: Bundle>(self, node: B) -> ConnectCommands<'a>;
 
     /// Chain a node with a manually-specified connection.
     ///
@@ -235,7 +234,36 @@ pub trait Connect<'a>: Sized {
     fn tail(&self) -> Entity;
 }
 
+#[cfg_attr(debug_assertions, track_caller)]
+fn connect_with_commands(
+    target: EdgeTarget,
+    connections: Option<Vec<(u32, u32)>>,
+    commands: &mut EntityCommands,
+) {
+    #[cfg(debug_assertions)]
+    let location = Location::caller();
+
+    commands
+        .entry::<PendingConnections>()
+        .or_default()
+        .and_modify(|mut pending| {
+            pending.push(PendingEdge::new_with_location(
+                target,
+                connections,
+                #[cfg(debug_assertions)]
+                location,
+            ));
+        });
+}
+
 impl<'a> Connect<'a> for EntityCommands<'a> {
+    fn connect(mut self, target: impl Into<EdgeTarget>) -> ConnectCommands<'a> {
+        let target = target.into();
+        connect_with_commands(target, None, &mut self);
+
+        ConnectCommands::new(self)
+    }
+
     fn connect_with(
         mut self,
         target: impl Into<EdgeTarget>,
@@ -243,22 +271,18 @@ impl<'a> Connect<'a> for EntityCommands<'a> {
     ) -> ConnectCommands<'a> {
         let target = target.into();
         let ports = ports.to_vec();
-
-        #[cfg(debug_assertions)]
-        let location = Location::caller();
-
-        self.entry::<PendingConnections>()
-            .or_default()
-            .and_modify(|mut pending| {
-                pending.push(PendingEdge::new_with_location(
-                    target,
-                    Some(ports),
-                    #[cfg(debug_assertions)]
-                    location,
-                ));
-            });
+        connect_with_commands(target, Some(ports), &mut self);
 
         ConnectCommands::new(self)
+    }
+
+    fn chain_node<B: Bundle>(mut self, node: B) -> ConnectCommands<'a> {
+        let new_id = self.commands().spawn(node).id();
+
+        let mut new_connection = self.connect(new_id);
+        new_connection.tail = Some(new_id);
+
+        new_connection
     }
 
     fn chain_node_with<B: Bundle>(mut self, node: B, ports: &[(u32, u32)]) -> ConnectCommands<'a> {
@@ -283,6 +307,20 @@ impl<'a> Connect<'a> for EntityCommands<'a> {
 
 impl<'a> Connect<'a> for ConnectCommands<'a> {
     #[cfg_attr(debug_assertions, track_caller)]
+    fn connect(mut self, target: impl Into<EdgeTarget>) -> ConnectCommands<'a> {
+        let tail = self.tail();
+
+        let mut commands = self.commands.commands();
+        let mut commands = commands.entity(tail);
+
+        let target = target.into();
+
+        connect_with_commands(target, None, &mut commands);
+
+        self
+    }
+
+    #[cfg_attr(debug_assertions, track_caller)]
     fn connect_with(
         mut self,
         target: impl Into<EdgeTarget>,
@@ -296,22 +334,18 @@ impl<'a> Connect<'a> for ConnectCommands<'a> {
         let target = target.into();
         let ports = ports.to_vec();
 
-        #[cfg(debug_assertions)]
-        let location = Location::caller();
-
-        commands
-            .entry::<PendingConnections>()
-            .or_default()
-            .and_modify(|mut pending| {
-                pending.push(PendingEdge::new_with_location(
-                    target,
-                    Some(ports),
-                    #[cfg(debug_assertions)]
-                    location,
-                ));
-            });
+        connect_with_commands(target, Some(ports), &mut commands);
 
         self
+    }
+
+    fn chain_node<B: Bundle>(mut self, node: B) -> ConnectCommands<'a> {
+        let new_id = self.commands.commands().spawn(node).id();
+
+        let mut new_connection = self.connect(new_id);
+        new_connection.tail = Some(new_id);
+
+        new_connection
     }
 
     fn chain_node_with<B: Bundle>(mut self, node: B, ports: &[(u32, u32)]) -> ConnectCommands<'a> {
@@ -374,14 +408,19 @@ impl core::fmt::Debug for ConnectCommands<'_> {
 }
 
 pub(crate) fn process_connections(
-    mut connections: Query<(&mut PendingConnections, &FirewheelNode)>,
-    targets: Query<&FirewheelNode>,
+    mut connections: Query<(
+        &mut PendingConnections,
+        &FirewheelNode,
+        &FirewheelNodeInfo,
+        &ChannelMapping,
+    )>,
+    targets: Query<(&FirewheelNode, &FirewheelNodeInfo)>,
     node_map: Res<NodeMap>,
     mut context: ResMut<AudioContext>,
 ) {
     let connections = connections
         .iter_mut()
-        .filter(|(pending, _)| !pending.0.is_empty())
+        .filter(|(pending, ..)| !pending.0.is_empty())
         .collect::<Vec<_>>();
 
     if connections.is_empty() {
@@ -389,55 +428,28 @@ pub(crate) fn process_connections(
     }
 
     context.with(|context| {
-        for (mut pending, source_node) in connections.into_iter() {
+        for (mut pending, source_node, source_info, source_mapping) in connections.into_iter() {
             pending.0.retain(|connection| {
-                let ports = connection.ports.as_deref().unwrap_or(DEFAULT_CONNECTION);
+                let Some((target_node, target_info)) =
+                    super::fetch_target(connection, &node_map, &targets, (*context).deref())
+                else {
+                    return false;
+                };
 
-                let target_entity = match connection.target {
-                    EdgeTarget::Entity(entity) => entity,
-                    EdgeTarget::Label(label) => {
-                        let Some(entity) = node_map.get(&label) else {
-                            #[cfg(debug_assertions)]
-                            {
-                                let location = connection.origin;
-                                error_once!("failed to connect to node label `{label:?}` at {location}: no associated Firewheel node found");
-                            }
-                            #[cfg(not(debug_assertions))]
-                            error_once!("failed to connect to node label `{label:?}`: no associated Firewheel node found");
+                let inferred_ports;
+                let ports = match connection.ports.as_deref() {
+                    Some(ports) => ports,
+                    None => {
+                        let outputs = source_info.channel_config.num_outputs.get();
+                        let inputs = target_info.channel_config.num_inputs.get();
 
-                            // We may need to wait for the intended label to be spawned.
-                            return true;
-                        };
+                        inferred_ports = source_mapping.map_channels(outputs, inputs);
 
-                        *entity
-                    }
-                    EdgeTarget::Node(dest_node) => {
-                        // no questions asked, simply connect
-                        if let Err(e) = context.connect(source_node.0, dest_node, ports, false) {
-                            error_once!("failed to connect audio node to target: {e}");
-                        }
-
-                        // if this fails, the target node must have been removed from the graph
-                        return false;
+                        inferred_ports.as_slice()
                     }
                 };
 
-                let target = match targets.get(target_entity) {
-                    Ok(t) => t,
-                    Err(_) => {
-                        #[cfg(debug_assertions)]
-                        {
-                            let location = connection.origin;
-                            error_once!("failed to connect to entity `{target_entity:?}` at {location}: no Firewheel node found");
-                        }
-                        #[cfg(not(debug_assertions))]
-                        error_once!("failed to connect to entity `{target_entity:?}`: no Firewheel node found");
-
-                        return false;
-                    }
-                };
-
-                if let Err(e) = context.connect(source_node.0, target.0, ports, false) {
+                if let Err(e) = context.connect(source_node.0, target_node, ports, false) {
                     error_once!("failed to connect audio node to target: {e}");
                 }
 
@@ -450,12 +462,18 @@ pub(crate) fn process_connections(
 #[cfg(test)]
 mod test {
     use crate::{
-        context::AudioContext, edge::AudioGraphOutput, prelude::MainBus, test::prepare_app,
+        context::AudioContext,
+        edge::AudioGraphOutput,
+        prelude::MainBus,
+        test::{prepare_app, run},
     };
 
     use super::*;
     use bevy::ecs::system::RunSystemOnce;
-    use firewheel::nodes::volume::VolumeNode;
+    use firewheel::{
+        channel_config::NonZeroChannelCount,
+        nodes::volume::{VolumeNode, VolumeNodeConfig},
+    };
 
     #[derive(Component)]
     struct One;
@@ -566,5 +584,105 @@ mod test {
                 },
             )
             .unwrap();
+    }
+
+    #[test]
+    fn test_simple_auto_connect() {
+        let mut app = prepare_app(|mut commands: Commands| {
+            commands
+                .spawn((
+                    VolumeNode::default(),
+                    VolumeNodeConfig {
+                        channels: NonZeroChannelCount::new(1).unwrap(),
+                    },
+                    One,
+                ))
+                .chain_node((
+                    VolumeNode::default(),
+                    VolumeNodeConfig {
+                        channels: NonZeroChannelCount::new(1).unwrap(),
+                    },
+                    Two,
+                ))
+                .connect(AudioGraphOutput);
+        });
+
+        let connected = run(
+            &mut app,
+            |one: Single<&FirewheelNode, With<One>>,
+             two: Single<&FirewheelNode, With<Two>>,
+             mut context: ResMut<AudioContext>| {
+                context.with(|context| {
+                    let edges = context.edges();
+
+                    for edge in edges {
+                        if edge.src_node == one.0 && edge.dst_node == two.0 {
+                            return true;
+                        }
+                    }
+
+                    false
+                })
+            },
+        );
+
+        assert!(connected);
+    }
+
+    #[test]
+    fn test_downmix() {
+        let mut app = prepare_app(|mut commands: Commands| {
+            commands
+                .spawn((
+                    VolumeNode::default(),
+                    VolumeNodeConfig {
+                        channels: NonZeroChannelCount::new(2).unwrap(),
+                    },
+                    One,
+                ))
+                .chain_node((
+                    VolumeNode::default(),
+                    VolumeNodeConfig {
+                        channels: NonZeroChannelCount::new(1).unwrap(),
+                    },
+                    Two,
+                ))
+                .connect(AudioGraphOutput);
+        });
+
+        let connected = run(
+            &mut app,
+            |one: Single<&FirewheelNode, With<One>>,
+             two: Single<&FirewheelNode, With<Two>>,
+             mut context: ResMut<AudioContext>| {
+                context.with(|context| {
+                    let edges = context.edges();
+
+                    let mut left = false;
+                    let mut right = false;
+                    for edge in edges {
+                        if edge.src_node == one.0
+                            && edge.dst_node == two.0
+                            && edge.src_port == 0
+                            && edge.dst_port == 0
+                        {
+                            left = true;
+                        }
+
+                        if edge.src_node == one.0
+                            && edge.dst_node == two.0
+                            && edge.src_port == 1
+                            && edge.dst_port == 0
+                        {
+                            right = true;
+                        }
+                    }
+
+                    left && right
+                })
+            },
+        );
+
+        assert!(connected);
     }
 }

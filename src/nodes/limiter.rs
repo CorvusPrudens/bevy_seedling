@@ -374,7 +374,7 @@ impl AudioNodeProcessor for Limiter {
             self.advance();
         }
 
-        ProcessStatus::outputs_not_silent()
+        ProcessStatus::OutputsModified
     }
 
     fn new_stream(&mut self, stream_info: &firewheel::StreamInfo) {

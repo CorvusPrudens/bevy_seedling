@@ -1,17 +1,18 @@
 //! A convenient node for routing to sends.
 
 use crate::{
-    edge::{Disconnect, EdgeTarget, PendingConnections, PendingEdge},
+    edge::{ChannelMapping, Disconnect, EdgeTarget, PendingConnections, PendingEdge},
     node::follower::FollowerOf,
     prelude::MainBus,
 };
 use bevy_ecs::prelude::*;
 use firewheel::{
-    SilenceMask, Volume,
+    Volume,
     channel_config::{ChannelConfig, ChannelCount, NonZeroChannelCount},
     diff::{Diff, Patch},
     dsp::volume::DEFAULT_AMP_EPSILON,
     event::ProcEvents,
+    mask::{MaskType, SilenceMask},
     node::{
         AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
         ProcExtra, ProcInfo, ProcessStatus,
@@ -44,6 +45,7 @@ use firewheel::{
 /// The signal simply passing through [`SendNode`] is untouched, while the
 /// send output has [`SendNode::send_volume`] applied.
 #[derive(Diff, Patch, Debug, Clone, Component)]
+#[require(ChannelMapping::Discrete)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 #[cfg_attr(feature = "reflect", reflect(from_reflect = false))]
 pub struct SendNode {
@@ -233,9 +235,9 @@ impl AudioNodeProcessor for SendProcessor {
                 }
             }
 
-            ProcessStatus::OutputsModified {
-                out_silence_mask: SilenceMask(self.silence_mask),
-            }
+            ProcessStatus::OutputsModifiedWithMask(MaskType::Silence(SilenceMask(
+                self.silence_mask,
+            )))
         } else {
             let gain_buffer = self.gain.get_buffer(proc_info.frames).0;
             for frame in 0..proc_info.frames {
@@ -245,7 +247,7 @@ impl AudioNodeProcessor for SendProcessor {
                 }
             }
 
-            ProcessStatus::outputs_not_silent()
+            ProcessStatus::OutputsModified
         }
     }
 }

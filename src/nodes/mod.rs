@@ -5,7 +5,6 @@ use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 
 pub mod bpf;
-pub mod freeverb;
 pub mod itd;
 pub mod limiter;
 pub mod lpf;
@@ -22,7 +21,6 @@ impl Plugin for SeedlingNodesPlugin {
         app.register_node::<bpf::BandPassNode>()
             .register_node::<lpf::LowPassNode>()
             .register_node::<send::SendNode>()
-            .register_node::<freeverb::FreeverbNode>()
             .register_node::<limiter::LimiterNode>()
             .register_node::<itd::ItdNode>()
             .add_systems(
