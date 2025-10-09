@@ -12,7 +12,7 @@ use firewheel::{
     event::ProcEvents,
     node::{
         AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcExtra, ProcInfo, ProcessStatus,
+        ProcExtra, ProcInfo, ProcStreamCtx, ProcessStatus,
     },
 };
 
@@ -377,7 +377,7 @@ impl AudioNodeProcessor for Limiter {
         ProcessStatus::OutputsModified
     }
 
-    fn new_stream(&mut self, stream_info: &firewheel::StreamInfo) {
+    fn new_stream(&mut self, stream_info: &firewheel::StreamInfo, _: &mut ProcStreamCtx) {
         self.index = 0;
         self.sample_rate = stream_info.sample_rate;
         self.max_buffer_length = stream_info.max_block_frames;

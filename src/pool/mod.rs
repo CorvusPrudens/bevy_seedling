@@ -178,7 +178,7 @@ impl Plugin for SamplePoolPlugin {
 /// ));
 ///
 /// // Once spawned, this entity will receive a
-/// // `SamplerEffects` pointing to a `SpatialBasicNode`
+/// // `SampleEffects` pointing to a `SpatialBasicNode`
 /// commands.spawn((SpatialPool, SamplePlayer::new(server.load("my_sample.wav"))));
 /// # }
 /// ```
@@ -233,7 +233,10 @@ impl Plugin for SamplePoolPlugin {
 /// # fn spatial_pool(mut commands: Commands) {
 /// # #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
 /// # struct SpatialPool;
-/// commands.spawn((SpatialPool, sample_effects![SpatialBasicNode::default()]));
+/// commands.spawn((
+///     SamplerPool(SpatialPool),
+///     sample_effects![SpatialBasicNode::default()],
+/// ));
 /// # }
 /// ```
 ///

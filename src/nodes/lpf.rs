@@ -7,7 +7,7 @@ use firewheel::{
     event::ProcEvents,
     node::{
         AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcExtra, ProcInfo, ProcessStatus,
+        ProcExtra, ProcInfo, ProcStreamCtx, ProcessStatus,
     },
     param::smoother::{SmoothedParam, SmootherConfig},
 };
@@ -179,7 +179,7 @@ impl AudioNodeProcessor for LowPassProcessor {
         ProcessStatus::OutputsModified
     }
 
-    fn new_stream(&mut self, stream_info: &firewheel::StreamInfo) {
+    fn new_stream(&mut self, stream_info: &firewheel::StreamInfo, _: &mut ProcStreamCtx) {
         self.frequency.update_sample_rate(stream_info.sample_rate);
     }
 }

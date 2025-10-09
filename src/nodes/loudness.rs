@@ -8,7 +8,7 @@ use firewheel::{
     collector::ArcGc,
     diff::{Diff, Notify, Patch},
     event::ProcEvents,
-    node::{AudioNode, AudioNodeProcessor, ProcBuffers, ProcExtra, ProcInfo},
+    node::{AudioNode, AudioNodeProcessor, ProcBuffers, ProcExtra, ProcInfo, ProcStreamCtx},
 };
 use portable_atomic::AtomicF64;
 
@@ -244,7 +244,7 @@ impl AudioNodeProcessor for LoudnessProcessor {
         firewheel::node::ProcessStatus::Bypass
     }
 
-    fn new_stream(&mut self, stream_info: &firewheel::StreamInfo) {
+    fn new_stream(&mut self, stream_info: &firewheel::StreamInfo, _: &mut ProcStreamCtx) {
         if stream_info.sample_rate != stream_info.prev_sample_rate {
             // unfortunately, we have to re-construct here
             self.analyzer =

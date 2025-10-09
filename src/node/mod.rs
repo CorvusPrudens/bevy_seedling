@@ -413,7 +413,7 @@ impl RegisteredState {
 /// ## Synchronizing ECS and audio types
 ///
 /// For nodes with parameters, you'll probably want to implement Firewheel's [`Diff`]
-/// and [`Patch`] traits. These are `bevy_seedling`'s primary mechanism for Synchronizing
+/// and [`Patch`] traits. These are `bevy_seedling`'s primary mechanism for synchronizing
 /// data.
 ///
 /// ```
@@ -657,13 +657,17 @@ fn observe_node_insertion<T: Component + Clone>(
 fn observe_simple_node_insertion<T: Component>(
     trigger: On<Insert, T>,
     components: &Components,
+    time: Res<Time<Audio>>,
     mut commands: Commands,
 ) -> Result {
-    commands.entity(trigger.event_target()).insert(EffectId(
-        components
-            .component_id::<T>()
-            .expect("`ComponentId` must be available"),
-    ));
+    commands
+        .entity(trigger.event_target())
+        .insert(EffectId(
+            components
+                .component_id::<T>()
+                .expect("`ComponentId` must be available"),
+        ))
+        .insert_if_new(AudioEvents::new(&time));
 
     Ok(())
 }
