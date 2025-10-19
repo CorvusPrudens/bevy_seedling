@@ -758,7 +758,7 @@ fn poll_finished(
     mut commands: Commands,
 ) {
     for (node, active, state) in nodes.iter() {
-        let finished = state.0.finished() == node.play.id();
+        let finished = *node.play && state.0.finished() == node.play.id();
 
         if finished {
             commands.trigger(PlaybackCompletionEvent(active.0));
