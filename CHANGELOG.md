@@ -1,5 +1,12 @@
 # 0.6.0
 
+# Features
+
+- Added `ChannelMapping` component, simplifying the process
+  of connecting nodes with different arities
+
+## Changes
+
 - Upgraded to Bevy 0.17 and Firewheel 0.9
 - Aligned sample playhead management with new Firewheel API
 
