@@ -17,6 +17,9 @@
 //! meaning you'll need to specify quite a few features
 //! manually!
 //!
+//! <details>
+//! <summary>Example `Cargo.toml`</summary>
+//!
 //! ```toml
 //! [dependencies]
 //! bevy_seedling = "0.6.0-rc.1"
@@ -73,6 +76,8 @@
 //!   "zstd_rust",
 //! ] }
 //! ```
+//!
+//! </details>
 //!
 //! Then, you'll need to add the [`SeedlingPlugin`] to your app.
 //!

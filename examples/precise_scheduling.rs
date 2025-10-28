@@ -11,9 +11,6 @@ use std::time::Duration;
 fn main() {
     App::new()
         .add_plugins((
-            // Without a window, the event loop tends to run quite fast.
-            // We'll slow it down so we don't drop any audio events.
-            // MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_millis(16))),
             MinimalPlugins,
             LogPlugin::default(),
             AssetPlugin::default(),
