@@ -106,7 +106,7 @@ pub(super) fn grow_pools(
             for _ in samplers.len()..new_size {
                 super::spawn_chain(
                     pool_entity,
-                    Some(pool_config.clone()),
+                    Some(*pool_config),
                     pool_effects.map(|e| e.deref()).unwrap_or(&[]),
                     &mut commands,
                 );
