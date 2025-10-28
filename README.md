@@ -18,42 +18,67 @@ Note that you'll need to disable Bevy's `bevy_audio` feature,
 meaning you'll need to specify quite a few features
 manually!
 
+<details>
+<summary>Example `Cargo.toml`</summary>
+
 ```toml
 [dependencies]
-bevy_seedling = "0.5"
-bevy = { version = "0.16", default-features = false, features = [
+bevy_seedling = "0.6.0"
+bevy = { version = "0.17.2", default-features = false, features = [
+  "std",
+  "async_executor",
+  "android-game-activity",
+  "android_shared_stdcxx",
   "animation",
   "bevy_asset",
   "bevy_color",
   "bevy_core_pipeline",
+  "bevy_post_process",
+  "bevy_anti_alias",
   "bevy_gilrs",
   "bevy_gizmos",
   "bevy_gltf",
+  "bevy_input_focus",
+  "bevy_log",
   "bevy_mesh_picking_backend",
   "bevy_pbr",
   "bevy_picking",
   "bevy_render",
   "bevy_scene",
+  "bevy_image",
+  "bevy_mesh",
+  "bevy_camera",
+  "bevy_light",
+  "bevy_shader",
   "bevy_sprite",
   "bevy_sprite_picking_backend",
+  "bevy_sprite_render",
   "bevy_state",
   "bevy_text",
   "bevy_ui",
   "bevy_ui_picking_backend",
+  "bevy_ui_render",
   "bevy_window",
   "bevy_winit",
   "custom_cursor",
   "default_font",
   "hdr",
+  "ktx2",
   "multi_threaded",
   "png",
+  "reflect_auto_register",
   "smaa_luts",
   "sysinfo_plugin",
   "tonemapping_luts",
   "webgl2",
   "x11",
+  "wayland",
+  "debug",
+  "zstd_rust",
 ] }
 ```
+
+</details>
 
 Then, you'll need to add the `SeedlingPlugin` to your app.
 
@@ -110,6 +135,7 @@ should help you get up to speed on common usage patterns.
 
 | `bevy` | `bevy_seedling` |
 | ------ | --------------- |
+| 0.17   | 0.6             |
 | 0.16   | 0.4, 0.5        |
 | 0.15   | 0.3             |
 

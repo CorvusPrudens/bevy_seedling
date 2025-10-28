@@ -15,9 +15,9 @@
 //! stop and restart with the new configuration.
 
 use crate::{
-    context::AudioStreamConfig,
+    context::{AudioStreamConfig, StreamRestartEvent, StreamStartEvent},
     edge::{AudioGraphInput, AudioGraphOutput, PendingConnections},
-    node::FirewheelNode,
+    node::{FirewheelNode, FirewheelNodeInfo},
 };
 use bevy_app::prelude::*;
 use bevy_asset::prelude::*;
@@ -75,15 +75,15 @@ where
         )
         .add_systems(
             PostStartup,
-            (initialize_stream, connect_io)
-                .chain()
-                .in_set(SeedlingStartupSystems::StreamInitialization),
+            initialize_stream.in_set(SeedlingStartupSystems::StreamInitialization),
         )
         .add_systems(
             Last,
             add_default_transforms.before(crate::SeedlingSystems::Acquire),
         )
         .add_observer(fetch_io::<B>)
+        .add_observer(connect_io::<StreamStartEvent>)
+        .add_observer(connect_io::<StreamRestartEvent>)
         .add_observer(restart_audio);
     }
 }
@@ -464,22 +464,27 @@ fn insert_io(mut commands: Commands) {
     commands.trigger(FetchAudioIoEvent);
 }
 
-fn connect_io(
+fn connect_io<E: Event>(
+    _: On<E>,
     input: Query<Entity, With<AudioGraphInput>>,
     output: Query<Entity, With<AudioGraphOutput>>,
     mut commands: Commands,
     mut context: ResMut<crate::prelude::AudioContext>,
 ) -> Result {
     context.with(|ctx| {
-        commands.entity(input.single()?).insert((
-            FirewheelNode(ctx.graph_in_node_id()),
-            Name::new("Audio Input Node"),
-        ));
+        let node_id = ctx.graph_in_node_id();
+        let info = FirewheelNodeInfo::new(ctx.node_info(node_id).unwrap());
+        commands
+            .entity(input.single()?)
+            .insert((info, Name::new("Audio Input Node")))
+            .insert_if_new(FirewheelNode(node_id));
 
-        commands.entity(output.single()?).insert((
-            FirewheelNode(ctx.graph_out_node_id()),
-            Name::new("Audio Output Node"),
-        ));
+        let node_id = ctx.graph_out_node_id();
+        let info = FirewheelNodeInfo::new(ctx.node_info(node_id).unwrap());
+        commands
+            .entity(output.single()?)
+            .insert((info, Name::new("Audio Output Node")))
+            .insert_if_new(FirewheelNode(node_id));
 
         Ok(())
     })

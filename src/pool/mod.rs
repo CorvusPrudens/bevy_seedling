@@ -21,7 +21,7 @@ use core::ops::{Deref, RangeInclusive};
 use firewheel::{
     clock::{DurationSamples, DurationSeconds},
     nodes::{
-        sampler::{PlaybackState, Playhead, SamplerConfig, SamplerNode, SamplerState},
+        sampler::{PlayFrom, SamplerConfig, SamplerNode, SamplerState},
         volume::VolumeNode,
     },
 };
@@ -42,7 +42,12 @@ impl Plugin for SamplePoolPlugin {
             .add_systems(
                 Last,
                 (
-                    (populate_pool, queue::assign_default, queue::grow_pools)
+                    (
+                        queue::assign_default,
+                        dynamic::update_dynamic_pools,
+                        populate_pool,
+                        queue::grow_pools,
+                    )
                         .chain()
                         .before(SeedlingSystems::Acquire),
                     poll_finished
@@ -62,6 +67,7 @@ impl Plugin for SamplePoolPlugin {
             .add_observer(remove_finished)
             .add_observer(generate_snapshots)
             .add_observer(apply_snapshots)
+            .add_observer(Sampler::observe_replace)
             .add_plugins(dynamic::DynamicPlugin);
     }
 }
@@ -172,7 +178,7 @@ impl Plugin for SamplePoolPlugin {
 /// ));
 ///
 /// // Once spawned, this entity will receive a
-/// // `SamplerEffects` pointing to a `SpatialBasicNode`
+/// // `SampleEffects` pointing to a `SpatialBasicNode`
 /// commands.spawn((SpatialPool, SamplePlayer::new(server.load("my_sample.wav"))));
 /// # }
 /// ```
@@ -227,7 +233,10 @@ impl Plugin for SamplePoolPlugin {
 /// # fn spatial_pool(mut commands: Commands) {
 /// # #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
 /// # struct SpatialPool;
-/// commands.spawn((SpatialPool, sample_effects![SpatialBasicNode::default()]));
+/// commands.spawn((
+///     SamplerPool(SpatialPool),
+///     sample_effects![SpatialBasicNode::default()],
+/// ));
 /// # }
 /// ```
 ///
@@ -399,6 +408,23 @@ impl Sampler {
             sampler.sample_rate = Some(sample_rate);
         }
     }
+
+    // Whenever this link is broken, all the effects should also remove their control.
+    fn observe_replace(
+        trigger: On<Replace, Self>,
+        target: Query<&SampleEffects>,
+        mut commands: Commands,
+    ) {
+        let Ok(effects) = target.get(trigger.entity) else {
+            return;
+        };
+
+        for effect in effects.iter() {
+            if let Ok(mut entity) = commands.get_entity(effect) {
+                entity.try_remove::<crate::node::follower::Followers>();
+            }
+        }
+    }
 }
 
 /// A snapshot of a sampler's state.
@@ -455,9 +481,8 @@ fn apply_snapshots(
                 server.reload(sample);
             }
 
-            *settings.playback = PlaybackState::Play {
-                playhead: Some(Playhead::Seconds(snapshot.playhead)),
-            };
+            settings.play();
+            settings.play_from = PlayFrom::Seconds(snapshot.playhead);
 
             commands.insert(new_player).remove::<Sampler>();
         }
@@ -516,7 +541,8 @@ fn watch_sample_players(
         // If we applied the scheduled events before this, the
         // sampler itself would call `value_at` afterwards, meaning we'd
         // produce incorrectly duplicated, potentially unscheduled events.
-        sampler_node.playback = settings.playback;
+        sampler_node.play = settings.play;
+        sampler_node.play_from = settings.play_from;
         sampler_node.speed = settings.speed;
 
         // TODO: consider collecting these errors
@@ -540,11 +566,6 @@ fn spawn_chain(
     effects: &[Entity],
     commands: &mut Commands,
 ) -> Entity {
-    let connections = config.as_ref().map(|c| {
-        let channels = c.channels.get().get();
-        (0..channels).map(|i| (i, i)).collect()
-    });
-
     let sampler = commands
         .spawn((
             SamplerNode::default(),
@@ -575,7 +596,7 @@ fn spawn_chain(
             .entry::<PendingConnections>()
             .or_default()
             .into_mut()
-            .push(PendingEdge::new(chain[0], connections.clone()));
+            .push(PendingEdge::new(chain[0], None));
 
         for pair in chain.windows(2) {
             world
@@ -583,7 +604,7 @@ fn spawn_chain(
                 .entry::<PendingConnections>()
                 .or_default()
                 .into_mut()
-                .push(PendingEdge::new(pair[1], connections.clone()));
+                .push(PendingEdge::new(pair[1], None));
         }
 
         Ok(())
@@ -668,11 +689,10 @@ fn populate_pool(
             .insert((PoolShape(component_ids), PoolSize(size.clone())));
 
         let size = (*size.start()).max(1);
-        let config = config.clone();
         for _ in 0..size {
             spawn_chain(
                 pool,
-                Some(config.clone()),
+                Some(*config),
                 pool_effects.map(|e| e.deref()).unwrap_or(&[]),
                 &mut commands,
             );
@@ -686,9 +706,9 @@ fn populate_pool(
 /// their playback completes.
 ///
 /// Note that this may be triggered even when the sample isn't
-/// played, including when its playback is set to
-/// [`PlaybackState::Stop`][crate::prelude::PlaybackState] or
-/// when it can't find space in a sampler pool.
+/// played, such as when it can't find space in a sampler pool
+/// within its [`SampleQueueLifetime`][crate::sample::SampleQueueLifetime]
+/// component.
 #[derive(Debug, EntityEvent)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct PlaybackCompletionEvent(pub Entity);
@@ -737,7 +757,7 @@ fn poll_finished(
     mut commands: Commands,
 ) {
     for (node, active, state) in nodes.iter() {
-        let finished = state.0.finished() == node.playback.id();
+        let finished = *node.play && state.0.finished() == node.play.id();
 
         if finished {
             commands.trigger(PlaybackCompletionEvent(active.0));

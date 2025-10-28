@@ -17,10 +17,13 @@
 //! meaning you'll need to specify quite a few features
 //! manually!
 //!
+//! <details>
+//! <summary>Example `Cargo.toml`</summary>
+//!
 //! ```toml
 //! [dependencies]
-//! bevy_seedling = "0.6.0-rc.1"
-//! bevy = { version = "0.17.0-rc.1", default-features = false, features = [
+//! bevy_seedling = "0.6.0"
+//! bevy = { version = "0.17.2", default-features = false, features = [
 //!   "std",
 //!   "async_executor",
 //!   "android-game-activity",
@@ -73,6 +76,8 @@
 //!   "zstd_rust",
 //! ] }
 //! ```
+//!
+//! </details>
 //!
 //! Then, you'll need to add the [`SeedlingPlugin`] to your app.
 //!
@@ -348,7 +353,7 @@
 //! [`SampleResource`]: firewheel::core::sample_resource::SampleResource
 //! [`AudioSample`]: prelude::AudioSample
 
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(clippy::type_complexity)]
 #![expect(clippy::needless_doctest_main)]
 #![warn(missing_debug_implementations)]
@@ -386,7 +391,9 @@ pub mod prelude {
         SfxBus, SpatialPool,
     };
     pub use crate::context::AudioContext;
-    pub use crate::edge::{AudioGraphInput, AudioGraphOutput, Connect, Disconnect, EdgeTarget};
+    pub use crate::edge::{
+        AudioGraphInput, AudioGraphOutput, ChannelMapping, Connect, Disconnect, EdgeTarget,
+    };
     pub use crate::node::{
         FirewheelNode, RegisterNode,
         events::{AudioEvents, VolumeFade},
@@ -396,7 +403,6 @@ pub mod prelude {
     pub use crate::nodes::loudness::{LoudnessConfig, LoudnessNode, LoudnessState};
     pub use crate::nodes::{
         bpf::{BandPassConfig, BandPassNode},
-        freeverb::FreeverbNode,
         itd::{ItdConfig, ItdNode},
         limiter::{LimiterConfig, LimiterNode},
         lpf::{LowPassConfig, LowPassNode},
@@ -429,10 +435,8 @@ pub mod prelude {
         diff::{Memo, Notify},
         nodes::{
             StereoToMonoNode,
-            sampler::{
-                PlaybackSpeedQuality, PlaybackState, Playhead, RepeatMode, SamplerConfig,
-                SamplerNode,
-            },
+            freeverb::FreeverbNode,
+            sampler::{PlayFrom, PlaybackSpeedQuality, RepeatMode, SamplerConfig, SamplerNode},
             spatial_basic::SpatialBasicNode,
             volume::{VolumeNode, VolumeNodeConfig},
             volume_pan::VolumePanNode,
@@ -590,6 +594,7 @@ where
             .register_node::<VolumeNode>()
             .register_node::<VolumePanNode>()
             .register_node::<SpatialBasicNode>()
+            .register_node::<FreeverbNode>()
             .register_simple_node::<StereoToMonoNode>();
 
         app.configure_sets(
@@ -638,81 +643,13 @@ where
         app.register_simple_node::<StreamReaderNode>()
             .register_simple_node::<StreamWriterNode>();
 
-        #[cfg(all(feature = "reflect", feature = "stream"))]
-        app.register_type::<StreamReaderNode>()
-            .register_type::<StreamWriterNode>();
-
         #[cfg(feature = "hrtf")]
         app.register_node::<HrtfNode>();
 
-        #[cfg(all(feature = "reflect", feature = "hrtf"))]
-        app.register_type::<HrtfNode>()
-            .register_type::<HrtfConfig>();
-
-        #[cfg(all(feature = "reflect", feature = "rand"))]
-        app.register_type::<RandomPitch>();
-
         #[cfg(feature = "reflect")]
-        app.register_type::<FirewheelNode>()
-            .register_type::<SamplePlayer>()
-            .register_type::<SamplePriority>()
-            .register_type::<PlaybackSettings>()
-            .register_type::<sample::SampleQueueLifetime>()
-            .register_type::<OnComplete>()
-            .register_type::<SpatialScale>()
-            .register_type::<DefaultSpatialScale>()
-            .register_type::<SpatialListener2D>()
-            .register_type::<SpatialListener3D>()
-            .register_type::<InputDeviceInfo>()
-            .register_type::<OutputDeviceInfo>()
-            .register_type::<firewheel::node::NodeID>()
-            .register_type::<node::follower::FollowerOf>()
-            .register_type::<SendNode>()
-            .register_type::<LowPassNode>()
-            .register_type::<LowPassConfig>()
-            .register_type::<BandPassConfig>()
-            .register_type::<LimiterNode>()
-            .register_type::<LimiterConfig>()
-            .register_type::<ItdNode>()
-            .register_type::<ItdConfig>()
-            .register_type::<LimiterConfig>()
-            .register_type::<FreeverbNode>()
-            .register_type::<Volume>()
-            .register_type::<firewheel::dsp::pan_law::PanLaw>()
-            .register_type::<MainBus>()
-            .register_type::<PoolSize>()
-            .register_type::<DefaultPoolSize>()
-            .register_type::<PlaybackCompletionEvent>()
-            .register_type::<DefaultPool>()
+        app.register_type::<SamplerPool<MusicPool>>()
             .register_type::<SamplerPool<DefaultPool>>()
-            .register_type::<DynamicBus>()
-            .register_type::<configuration::FetchAudioIoEvent>()
-            .register_type::<configuration::RestartAudioEvent>()
-            .register_type::<configuration::SfxBus>()
-            .register_type::<configuration::GraphConfiguration>()
-            .register_type::<configuration::MusicPool>()
-            .register_type::<SamplerPool<configuration::MusicPool>>()
-            .register_type::<configuration::SpatialPool>()
-            .register_type::<SamplerPool<configuration::SpatialPool>>()
-            .register_type::<node::ScheduleDiffing>()
-            .register_type::<node::AudioScheduleLookahead>()
-            .register_type::<NonZeroChannelCount>()
-            .register_type::<SamplerConfig>()
-            .register_type::<PlaybackState>()
-            .register_type::<RepeatMode>()
-            .register_type::<Playhead>()
-            .register_type::<Notify<f32>>()
-            .register_type::<Notify<bool>>()
-            .register_type::<Notify<PlaybackState>>()
-            .register_type::<InstantMusical>()
-            .register_type::<InstantSeconds>()
-            .register_type::<InstantSamples>()
-            .register_type::<DurationMusical>()
-            .register_type::<DurationSeconds>()
-            .register_type::<DurationSamples>()
-            .register_type::<VolumeNode>()
-            .register_type::<VolumeNodeConfig>()
-            .register_type::<VolumePanNode>();
+            .register_type::<SamplerPool<SpatialPool>>();
     }
 }
 

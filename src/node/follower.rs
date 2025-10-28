@@ -1,7 +1,8 @@
 //! Types that allow one set of params to track another.
 
 use bevy_ecs::{component::Mutable, prelude::*};
-use firewheel::diff::{Diff, Patch, PathBuilder};
+use firewheel::diff::{Diff, EventQueue, Patch, PathBuilder};
+use firewheel::event::NodeEventType;
 use smallvec::SmallVec;
 
 use crate::time::{Audio, AudioTime};
@@ -80,6 +81,13 @@ pub(crate) fn param_follower<T: Diff + Patch + Component<Mutability = Mutable> +
         }
         events.merge_timelines_and_clear(&mut source_events, time.now());
 
+        // similarly, non-clone events should be forwarded directly
+        for event in source_events.queue.drain(..) {
+            if !matches!(event, NodeEventType::Param { .. }) {
+                events.push(event);
+            }
+        }
+
         // TODO: this will remove the timestamp too eagerly if there
         // are multiple followers.
         if let Some(timestamp) = timestamp {
@@ -90,7 +98,15 @@ pub(crate) fn param_follower<T: Diff + Patch + Component<Mutability = Mutable> +
         }
 
         for event in event_queue.drain(..) {
-            super::apply_patch(params.as_mut(), &event)?;
+            match event {
+                e @ NodeEventType::Param { .. } => {
+                    super::apply_patch(params.as_mut(), &e)?;
+                }
+                // non-param events should be forwarded
+                other => {
+                    events.push(other);
+                }
+            }
         }
     }
 

@@ -1,6 +1,6 @@
 [package]
 name = "bevy_seedling"
-version = "0.6.0-rc.1"
+version = "0.6.0"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
@@ -40,51 +40,53 @@ adpcm = ["symphonium/adpcm"]
 profiling = []
 
 [dependencies]
-bevy_ecs = "0.17.0-rc.1"
-bevy_app = "0.17.0-rc.1"
-bevy_math = { version = "0.17.0-rc.1", default-features = false, features = [
+bevy_ecs = { version = "0.17.2", default-features = false }
+bevy_app = { version = "0.17.2", default-features = false }
+bevy_math = { version = "0.17.2", default-features = false, features = [
   "curve",
+  "std",
 ] }
-bevy_asset = "0.17.0-rc.1"
-bevy_transform = "0.17.0-rc.1"
-bevy_log = "0.17.0-rc.1"
-bevy_platform = "0.17.0-rc.1"
-bevy_time = "0.17.0-rc.1"
-bevy_reflect = { version = "0.17.0-rc.1", default-features = false, features = [
+bevy_asset = { version = "0.17.2", default-features = false }
+bevy_transform = { version = "0.17.2", default-features = false, features = ["bevy-support"] }
+bevy_log = { version = "0.17.2", default-features = false }
+bevy_platform = { version = "0.17.2", default-features = false, features = ["alloc"] }
+bevy_time = { version = "0.17.2", default-features = false }
+bevy_reflect = { version = "0.17.2", default-features = false, features = [
   "glam",
 ] }
 
-firewheel = { version = "0.8.0-rc.1", features = [
+firewheel = { version = "0.9.0", features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
   "musical_transport",
   "glam-30",
+  "freeverb_node",
 ] }
 symphonium = { version = "0.6", default-features = false, features = [
   "opt-simd",
   "fft-resampler",
 ] }
-symphonia = "0.5"
-smallvec = "1.13"
-bevy_seedling_macros = { path = "./seedling_macros", version = "0.6.0-rc.1" }
+symphonia = { version = "0.5", default-features = false }
+smallvec = { version = "1.13", default-features = false }
+bevy_seedling_macros = { path = "./seedling_macros", version = "0.6.0" }
 rand = { version = "0.9", default-features = false, features = [
   "small_rng",
   "os_rng",
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-firewheel-ircam-hrtf = { version = "0.2.0-rc.1", optional = true, features = [
+firewheel-ircam-hrtf = { version = "0.2.0", optional = true, features = [
   "bevy",
 ] }
-firewheel-web-audio = { version = "0.3.0-rc.1", optional = true }
+firewheel-web-audio = { version = "0.3.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { version = "0.8.0-rc.1", features = ["wasm-bindgen"] }
+firewheel = { version = "0.9.0", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
 bevy_seedling = { path = ".", features = ["hrtf"] }
-bevy = { version = "0.17.0-rc.1", default-features = false, features = [
+bevy = { version = "0.17.2", default-features = false, features = [
   "bevy_debug_stepping",
   "bevy_asset",
   "bevy_state",

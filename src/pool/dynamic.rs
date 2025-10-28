@@ -65,8 +65,7 @@ pub(super) struct DynamicPlugin;
 
 impl Plugin for DynamicPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Registries>()
-            .add_systems(PostUpdate, update_dynamic_pools);
+        app.init_resource::<Registries>();
     }
 }
 
@@ -84,9 +83,9 @@ struct RegistryEntry {
 }
 
 #[derive(Resource, Default)]
-struct Registries(HashMap<Vec<ComponentId>, RegistryEntry>);
+pub(super) struct Registries(HashMap<Vec<ComponentId>, RegistryEntry>);
 
-fn update_dynamic_pools(
+pub(super) fn update_dynamic_pools(
     queued_samples: Query<
         (Entity, &SampleEffects),
         (

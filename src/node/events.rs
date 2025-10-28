@@ -41,7 +41,7 @@ impl Plugin for EventsPlugin {
 /// # use bevy_seedling::prelude::*;
 /// fn scheduling(time: Res<Time<Audio>>, server: Res<AssetServer>, mut commands: Commands) {
 ///     let mut events = AudioEvents::new(&time);
-///     let settings = PlaybackSettings::default().with_playback(PlaybackState::Pause);
+///     let settings = PlaybackSettings::default().with_playback(false);
 ///
 ///     // Start playing exactly one second from now.
 ///     settings.play_at(None, time.delay(DurationSeconds(1.0)), &mut events);
@@ -203,6 +203,11 @@ impl AudioEvents {
         T: Diff + Patch + Send + Sync + Clone + 'static,
         F: Fn(&T, &T, f32) -> T,
     {
+        // A valid tween should never be empty.
+        if total_events == 0 {
+            return;
+        }
+
         let mut events = Vec::new();
         let mut func = |ev, time| match ev {
             NodeEventType::Param { data, path } => {

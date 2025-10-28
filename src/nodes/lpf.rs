@@ -7,7 +7,7 @@ use firewheel::{
     event::ProcEvents,
     node::{
         AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcExtra, ProcInfo, ProcessStatus,
+        ProcExtra, ProcInfo, ProcStreamCtx, ProcessStatus,
     },
     param::smoother::{SmoothedParam, SmootherConfig},
 };
@@ -143,7 +143,7 @@ impl AudioNodeProcessor for LowPassProcessor {
         //
         // Allowing a bit of settling time would resolve this.
         if proc_info.in_silence_mask.all_channels_silent(inputs.len()) {
-            self.frequency.reset();
+            self.frequency.reset_to_target();
 
             // All inputs are silent.
             return ProcessStatus::ClearAllOutputs;
@@ -176,10 +176,10 @@ impl AudioNodeProcessor for LowPassProcessor {
             }
         }
 
-        ProcessStatus::outputs_not_silent()
+        ProcessStatus::OutputsModified
     }
 
-    fn new_stream(&mut self, stream_info: &firewheel::StreamInfo) {
+    fn new_stream(&mut self, stream_info: &firewheel::StreamInfo, _: &mut ProcStreamCtx) {
         self.frequency.update_sample_rate(stream_info.sample_rate);
     }
 }
