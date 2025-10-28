@@ -405,10 +405,7 @@ impl PlaybackSettings {
 
     /// Set the [`PlayFrom`] state.
     pub fn with_play_from(self, play_from: PlayFrom) -> Self {
-        Self {
-            play_from: play_from,
-            ..self
-        }
+        Self { play_from, ..self }
     }
 
     /// Set the sample speed.
@@ -453,7 +450,7 @@ impl PlaybackSettings {
     /// Begin playing a sample at `time`.
     ///
     /// This can also be used to seek within a playing
-    /// sample by providing a [`Playhead`].
+    /// sample by providing [`PlayFrom::Seconds`] or [`PlayFrom::Frames`].
     ///
     /// ```
     /// # use bevy::prelude::*;

@@ -689,11 +689,10 @@ fn populate_pool(
             .insert((PoolShape(component_ids), PoolSize(size.clone())));
 
         let size = (*size.start()).max(1);
-        let config = config.clone();
         for _ in 0..size {
             spawn_chain(
                 pool,
-                Some(config.clone()),
+                Some(*config),
                 pool_effects.map(|e| e.deref()).unwrap_or(&[]),
                 &mut commands,
             );
@@ -707,9 +706,9 @@ fn populate_pool(
 /// their playback completes.
 ///
 /// Note that this may be triggered even when the sample isn't
-/// played, including when its playback is set to
-/// [`PlaybackState::Stop`][crate::prelude::PlaybackState] or
-/// when it can't find space in a sampler pool.
+/// played, such as when it can't find space in a sampler pool
+/// within its [`SampleQueueLifetime`][crate::sample::SampleQueueLifetime]
+/// component.
 #[derive(Debug, EntityEvent)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct PlaybackCompletionEvent(pub Entity);

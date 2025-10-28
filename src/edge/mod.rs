@@ -312,11 +312,7 @@ fn fetch_target(
 ) -> Option<(NodeID, FirewheelNodeInfo)> {
     match connection.target {
         EdgeTarget::Entity(entity) => {
-            let Some((node, info)) = lookup_node(entity, connection, targets) else {
-                return None;
-            };
-
-            Some((node.0, *info))
+            lookup_node(entity, connection, targets).map(|(node, info)| (node.0, *info))
         }
         EdgeTarget::Label(label) => {
             let Some(entity) = node_map.get(&label) else {
@@ -335,11 +331,7 @@ fn fetch_target(
                 return None;
             };
 
-            let Some((node, info)) = lookup_node(*entity, connection, &targets) else {
-                return None;
-            };
-
-            Some((node.0, *info))
+            lookup_node(*entity, connection, targets).map(|(node, info)| (node.0, *info))
         }
         EdgeTarget::Node(dest_node) => {
             let Some(info) = context.node_info(dest_node) else {
