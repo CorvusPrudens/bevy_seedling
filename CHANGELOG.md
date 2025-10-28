@@ -1,6 +1,7 @@
 # 0.6.0
 
-- Upgraded to Bevy 0.17
+- Upgraded to Bevy 0.17 and Firewheel 0.9
+- Aligned sample playhead management with new Firewheel API
 
 # 0.5.5
 

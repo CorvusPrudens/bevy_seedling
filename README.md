@@ -23,8 +23,8 @@ manually!
 
 ```toml
 [dependencies]
-bevy_seedling = "0.6.0-rc.1"
-bevy = { version = "0.17.0-rc.1", default-features = false, features = [
+bevy_seedling = "0.6.0"
+bevy = { version = "0.17.2", default-features = false, features = [
   "std",
   "async_executor",
   "android-game-activity",
