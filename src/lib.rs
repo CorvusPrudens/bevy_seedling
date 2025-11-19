@@ -22,7 +22,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_seedling = "0.6.0"
+//! bevy_seedling = "0.6.1"
 //! bevy = { version = "0.17.2", default-features = false, features = [
 //!   "std",
 //!   "async_executor",

@@ -1,3 +1,9 @@
+# 0.6.1
+
+## Fixes
+
+- Fixed panics resulting from empty animation timelines
+
 # 0.6.0
 
 # Features
