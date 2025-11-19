@@ -187,6 +187,11 @@ impl AudioEvents {
         let mut queue = TimelineQueue::new(time, &mut func);
         new_value.diff(&initial_value, Default::default(), &mut queue);
 
+        // A valid tween should never be empty.
+        if events.is_empty() {
+            return;
+        }
+
         self.timeline.push(EventTimeline::new(events));
     }
 
@@ -203,11 +208,6 @@ impl AudioEvents {
         T: Diff + Patch + Send + Sync + Clone + 'static,
         F: Fn(&T, &T, f32) -> T,
     {
-        // A valid tween should never be empty.
-        if total_events == 0 {
-            return;
-        }
-
         let mut events = Vec::new();
         let mut func = |ev, time| match ev {
             NodeEventType::Param { data, path } => {
@@ -227,6 +227,11 @@ impl AudioEvents {
             queue.instant = InstantSeconds(instant);
             let new_value = (interpolate)(&start_value, &end_value, proportion as f32);
             new_value.diff(&start_value, PathBuilder::default(), &mut queue);
+        }
+
+        // A valid tween should never be empty.
+        if events.is_empty() {
+            return;
         }
 
         self.timeline.push(EventTimeline::new(events));
@@ -391,6 +396,8 @@ fn time_range(events: &[TimelineParam]) -> core::ops::Range<InstantSeconds> {
 impl EventTimeline {
     /// Construct a new [`EventTimeline`] from a collection of params.
     fn new(tween: Vec<TimelineParam>) -> Self {
+        assert!(!tween.is_empty(), "an event timeline should never be empty");
+
         let render_progress = RenderProgress::new(time_range(&tween));
 
         EventTimeline {

@@ -40,7 +40,7 @@ fn startup(server: Res<AssetServer>, mut commands: Commands) {
     commands.spawn((
         MusicPool,
         MusicB,
-        SamplePlayer::new(server.load("midir-chip.ogg")),
+        SamplePlayer::new(server.load("midir-chip.ogg")).with_volume(Volume::Decibels(-6.0)),
         // Each sampler in the music pool has a volume node.
         // We'll initialize this one to zero.
         sample_effects![VolumeNode {
