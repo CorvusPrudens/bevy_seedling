@@ -12,7 +12,6 @@ use firewheel::{
     event::{NodeEventType, ParamData},
     nodes::volume::VolumeNode,
 };
-use rand::seq::IndexedRandom;
 
 use crate::{error::SeedlingError, time::Audio};
 
