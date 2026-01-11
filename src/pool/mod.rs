@@ -711,11 +711,35 @@ fn populate_pool(
 /// component.
 #[derive(Debug, EntityEvent)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-pub struct PlaybackCompletionEvent(pub Entity);
+pub struct PlaybackCompletion {
+    /// The [`SamplePlayer`] entity.
+    pub entity: Entity,
+    /// The reason for completion.
+    pub reason: CompletionReason,
+}
+
+/// Provides the condition that triggered completion.
+#[derive(Debug)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub enum CompletionReason {
+    /// The sample fully completed its playback.
+    PlaybackComplete,
+    /// The playback of a sample was interrupted before completion.
+    ///
+    /// This can happen when a sample with a higher priority is queued
+    /// in a full sampler pool.
+    PlaybackInterrupted,
+    /// The sample was not able to acquire a sampler before
+    /// its [`SampleQueueLifetime`][crate::sample::SampleQueueLifetime] elapsed.
+    ///
+    /// This means the sample never actually played before this
+    /// event triggered.
+    QueueLifetimeElapsed,
+}
 
 /// Clean up sample resources according to their playback settings.
 fn remove_finished(
-    trigger: On<PlaybackCompletionEvent>,
+    trigger: On<PlaybackCompletion>,
     samples: Query<(&PlaybackSettings, &PoolLabelContainer)>,
     mut commands: Commands,
 ) -> Result {
@@ -760,7 +784,10 @@ fn poll_finished(
         let finished = *node.play && state.0.finished() == node.play.id();
 
         if finished {
-            commands.trigger(PlaybackCompletionEvent(active.0));
+            commands.trigger(PlaybackCompletion {
+                entity: active.0,
+                reason: CompletionReason::PlaybackComplete,
+            });
         }
     }
 }

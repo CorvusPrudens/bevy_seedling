@@ -1,5 +1,5 @@
 use super::{
-    PlaybackCompletionEvent, PoolSamplerOf, PoolSamplers, PoolShape, PoolSize, SamplerOf,
+    PlaybackCompletion, PoolSamplerOf, PoolSamplers, PoolShape, PoolSize, SamplerOf,
     sample_effects::{EffectOf, SampleEffects},
 };
 use crate::{
@@ -486,7 +486,10 @@ pub(super) fn assign_work(
             if let Some(assignment) = current_assignment {
                 // if the `Sampler` relationship is already present on either side,
                 // this will necessarily remove it
-                commands.entity(assignment).trigger(PlaybackCompletionEvent);
+                commands.trigger(PlaybackCompletion {
+                    entity: assignment,
+                    reason: super::CompletionReason::PlaybackInterrupted,
+                });
             }
 
             commands
@@ -544,7 +547,10 @@ pub(super) fn tick_skipped(
         if timer.0.tick(delta).elapsed() >= lifetime.0 {
             debug!("skipping sample {:?} after {:?}", sample_entity, lifetime.0,);
 
-            commands.trigger(PlaybackCompletionEvent(sample_entity));
+            commands.trigger(PlaybackCompletion {
+                entity: sample_entity,
+                reason: crate::pool::CompletionReason::QueueLifetimeElapsed,
+            });
         }
     }
 }

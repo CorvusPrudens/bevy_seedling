@@ -4,6 +4,16 @@
 
 - Fixed effect leak from `OnComplete::Remove`
 
+## Features
+
+- Added `CompletionReason` to `PlaybackCompletion` event
+
+## Changes
+
+- Renamed `PlaybackCompletionEvent` to `PlaybackCompletion`
+- Switched to `recursive_spawn` for `sample_effects`, permitting an
+  arbitrary number of effects to be spawned at once
+
 # 0.6.1
 
 ## Fixes

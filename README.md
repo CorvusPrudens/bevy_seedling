@@ -23,8 +23,8 @@ manually!
 
 ```toml
 [dependencies]
-bevy_seedling = "0.6.1"
-bevy = { version = "0.17.2", default-features = false, features = [
+bevy_seedling = "0.7.0"
+bevy = { version = "0.18.0", default-features = false, features = [
   "std",
   "async_executor",
   "android-game-activity",
@@ -135,6 +135,7 @@ should help you get up to speed on common usage patterns.
 
 | `bevy` | `bevy_seedling` |
 | ------ | --------------- |
+| 0.18   | 0.7             |
 | 0.17   | 0.6             |
 | 0.16   | 0.4, 0.5        |
 | 0.15   | 0.3             |
