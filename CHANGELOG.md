@@ -1,3 +1,15 @@
+# 0.7.0
+
+## Features
+
+- Added `CompletionReason` to `PlaybackCompletion` event
+
+## Changes
+
+- Renamed `PlaybackCompletionEvent` to `PlaybackCompletion`
+- Switched to `recursive_spawn` for `sample_effects`, permitting an
+  arbitrary number of effects to be spawned at once
+
 # 0.6.1
 
 ## Fixes

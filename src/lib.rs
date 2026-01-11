@@ -22,8 +22,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_seedling = "0.6.1"
-//! bevy = { version = "0.17.2", default-features = false, features = [
+//! bevy_seedling = "0.7.0"
+//! bevy = { version = "0.18.0", default-features = false, features = [
 //!   "std",
 //!   "async_executor",
 //!   "android-game-activity",
@@ -409,7 +409,7 @@ pub mod prelude {
         send::{SendConfig, SendNode},
     };
     pub use crate::pool::{
-        DefaultPoolSize, PlaybackCompletionEvent, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
+        DefaultPoolSize, PlaybackCompletion, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
         dynamic::DynamicBus,
         label::{DefaultPool, PoolLabel},
         sample_effects::{EffectOf, EffectsQuery, SampleEffects},
