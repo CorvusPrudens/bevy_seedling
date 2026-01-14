@@ -119,3 +119,10 @@ required-features = ["profiling"]
 
 [package.metadata.docs.rs]
 all-features = true
+
+[profile.release]
+# Optimize with size in mind (also try "z", sometimes it is better).
+#
+# Slightly slows compile times, great improvements to file size and runtime
+# performance.
+opt-level = "s"
