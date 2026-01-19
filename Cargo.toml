@@ -1,6 +1,6 @@
 [package]
 name = "bevy_seedling"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
@@ -40,22 +40,22 @@ adpcm = ["symphonium/adpcm"]
 profiling = []
 
 [dependencies]
-bevy_ecs = { version = "0.18.0-rc.2", default-features = false }
-bevy_app = { version = "0.18.0-rc.2", default-features = false }
-bevy_math = { version = "0.18.0-rc.2", default-features = false, features = [
+bevy_ecs = { version = "0.17.3", default-features = false }
+bevy_app = { version = "0.17.3", default-features = false }
+bevy_math = { version = "0.17.3", default-features = false, features = [
   "curve",
   "std",
 ] }
-bevy_asset = { version = "0.18.0-rc.2", default-features = false }
-bevy_transform = { version = "0.18.0-rc.2", default-features = false, features = ["bevy-support"] }
-bevy_log = { version = "0.18.0-rc.2", default-features = false }
-bevy_platform = { version = "0.18.0-rc.2", default-features = false, features = ["alloc"] }
-bevy_time = { version = "0.18.0-rc.2", default-features = false }
-bevy_reflect = { version = "0.18.0-rc.2", default-features = false, features = [
+bevy_asset = { version = "0.17.3", default-features = false }
+bevy_transform = { version = "0.17.3", default-features = false, features = ["bevy-support"] }
+bevy_log = { version = "0.17.3", default-features = false }
+bevy_platform = { version = "0.17.3", default-features = false, features = ["alloc"] }
+bevy_time = { version = "0.17.3", default-features = false }
+bevy_reflect = { version = "0.17.3", default-features = false, features = [
   "glam",
 ] }
 
-firewheel = { path = "../firewheel", features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "1cf3a7c", features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
@@ -76,22 +76,36 @@ rand = { version = "0.9", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-firewheel-ircam-hrtf = { version = "0.2.0", optional = true, features = [
+firewheel-ircam-hrtf = { path = "../firewheel-ircam-hrtf", version = "0.3.0", optional = true, features = [
   "bevy",
 ] }
 firewheel-web-audio = { version = "0.3.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { path = "../firewheel", features = ["wasm-bindgen"] }
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "1cf3a7c", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
 bevy_seedling = { path = ".", features = ["hrtf"] }
-bevy = { version = "0.18.0-rc.2", default-features = false, features = [
-  "2d_bevy_render",
-  "default_app",
-  "default_platform",
-  "picking",
-  "ui",
+bevy = { version = "0.17.3", default-features = false, features = [
+  "bevy_debug_stepping",
+  "bevy_asset",
+  "bevy_state",
+  "multi_threaded",
+  "sysinfo_plugin",
+  "std",
+  "bevy_log",
+  "bevy_core_pipeline",
+  # for examples with ui
+  "bevy_text",
+  "default_font",
+  "bevy_ui",
+  "bevy_ui_render",
+  "bevy_picking",
+  "bevy_ui_picking_backend",
+  "bevy_window",
+  "bevy_render",
+  "wayland",
+  "x11",
 ] }
 criterion = { version = "0.5", default-features = false, features = [
   "plotters",

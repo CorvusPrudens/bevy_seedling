@@ -38,20 +38,31 @@ impl core::fmt::Display for ProfilingError {
 impl std::error::Error for ProfilingError {}
 
 impl AudioBackend for ProfilingBackend {
+    type AudioAPI = ();
+    type DeviceID = String;
+    type ExtraInputDeviceInfo = ();
+    type ExtraOutputDeviceInfo = ();
     type Config = ();
     type Instant = std::time::Instant;
 
     type StartStreamError = ProfilingError;
     type StreamError = ProfilingError;
 
-    fn available_input_devices() -> Vec<DeviceInfo> {
+    fn available_input_devices(_api: Option<Self::AudioAPI>) -> Vec<DeviceInfo<Self::DeviceID>> {
         vec![]
     }
 
-    fn available_output_devices() -> Vec<DeviceInfo> {
+    fn extra_input_device_info(
+        _device_id: &Self::DeviceID,
+        _api: Option<Self::AudioAPI>,
+    ) -> Option<Self::ExtraInputDeviceInfo> {
+        None
+    }
+
+    fn available_output_devices(_api: Option<Self::AudioAPI>) -> Vec<DeviceInfo<Self::DeviceID>> {
         vec![DeviceInfo {
-            name: "default output".into(),
-            num_channels: 2,
+            id: "default output".into(),
+            name: None,
             is_default: true,
         }]
     }
@@ -124,8 +135,8 @@ impl AudioBackend for ProfilingBackend {
                 num_stream_in_channels: 0,
                 num_stream_out_channels: 2,
                 declick_frames: NonZeroU32::new(16).unwrap(),
-                input_device_name: None,
-                output_device_name: Some("default output".into()),
+                input_device_id: None,
+                output_device_id: "default output".into(),
                 input_to_output_latency_seconds: 0.0,
             },
         ))

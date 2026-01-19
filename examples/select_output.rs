@@ -22,7 +22,7 @@ fn main() {
 
 fn startup(outputs: Query<(Entity, &OutputDeviceInfo)>, mut commands: Commands) {
     for (entity, device) in &outputs {
-        info!("device: {}, default: {}", device.name, device.is_default);
+        info!("device: {:?}, default: {}", device.name, device.is_default);
 
         if device.is_default {
             commands.entity(entity).insert(SelectedOutput);
@@ -80,12 +80,18 @@ fn observe_selection(
 ) -> Result {
     let output = outputs.get(trigger.event_target())?;
 
-    stream.0.output.device_name = Some(output.name.clone());
+    stream.0.output.device_id = Some(output.id.clone());
 
     let new_string = if output.is_default {
-        format!("{} (default)", output.name)
+        format!(
+            "{} (default)",
+            output.name.as_deref().unwrap_or("Unknown Device")
+        )
     } else {
-        output.name.clone()
+        output
+            .name
+            .clone()
+            .unwrap_or_else(|| "Unknown Device".into())
     };
     text.single_mut()?.0 = new_string;
 

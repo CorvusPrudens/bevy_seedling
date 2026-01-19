@@ -2,7 +2,7 @@ use core::any::Any;
 use core::error::Error;
 use firewheel::{
     FirewheelCtx, StreamInfo,
-    backend::{AudioBackend, DeviceInfo},
+    backend::AudioBackend,
     channel_config::ChannelConfig,
     clock::{AudioClock, TransportState},
     error::{AddEdgeError, RemoveNodeError, UpdateError},
@@ -86,12 +86,6 @@ impl SeedlingContext {
 /// This allows applications to treat all backend identically
 /// after construction.
 pub trait SeedlingContextWrapper: core::any::Any {
-    /// Get a list of the available audio input devices.
-    fn available_input_devices(&self) -> Vec<DeviceInfo>;
-
-    /// Get a list of the available audio output devices.
-    fn available_output_devices(&self) -> Vec<DeviceInfo>;
-
     /// Information about the running audio stream.
     ///
     /// Returns `None` if no audio stream is currently running.
@@ -281,14 +275,6 @@ where
     B: AudioBackend + core::any::Any,
     B::StreamError: core::error::Error + Send + Sync + 'static,
 {
-    fn available_input_devices(&self) -> Vec<DeviceInfo> {
-        <FirewheelCtx<B>>::available_input_devices(self)
-    }
-
-    fn available_output_devices(&self) -> Vec<DeviceInfo> {
-        <FirewheelCtx<B>>::available_output_devices(self)
-    }
-
     fn stream_info(&self) -> Option<&StreamInfo> {
         <FirewheelCtx<B>>::stream_info(self)
     }

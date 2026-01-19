@@ -579,6 +579,7 @@ where
     B: 'static,
     B::Config: Clone + Send + Sync + 'static,
     B::StreamError: Send + Sync + 'static,
+    B::DeviceID: core::fmt::Debug + Clone + PartialEq + Send + Sync + 'static,
 {
     fn build(&self, app: &mut App) {
         use prelude::*;
