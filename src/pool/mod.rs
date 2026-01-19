@@ -732,8 +732,8 @@ fn remove_finished(
             commands
                 .entity(sample_entity)
                 .remove_by_id(container.label_id)
+                .despawn_related::<SampleEffects>()
                 .remove_with_requires::<(
-                    SampleEffects,
                     SamplePlayer,
                     PoolLabelContainer,
                     Sampler,
@@ -1005,6 +1005,12 @@ mod test {
 
         assert_eq!(archetype.components().len(), 1);
         assert!(entity.contains::<EmptyComponent>());
+
+        // We'll also verify that effects are not leaked
+        let total_lpfs = run(&mut app, |fx: Query<&LowPassNode>| fx.iter().len());
+        // 4 is the minimum that should exist in the pool, and the last one
+        // comes from the `SampleEffects` template
+        assert_eq!(total_lpfs, 5);
     }
 
     #[test]

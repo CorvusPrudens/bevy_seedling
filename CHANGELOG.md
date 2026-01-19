@@ -1,3 +1,9 @@
+# 0.7.0
+
+## Fixes
+
+- Fixed effect leak from `OnComplete::Remove`
+
 # 0.6.1
 
 ## Fixes
