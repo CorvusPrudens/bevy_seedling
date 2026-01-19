@@ -3,7 +3,6 @@
 use firewheel::{
     StreamInfo,
     backend::{AudioBackend, DeviceInfo},
-    clock::DurationSeconds,
     node::StreamStatus,
     processor::FirewheelProcessor,
 };
@@ -74,8 +73,6 @@ impl AudioBackend for ProfilingBackend {
         std::thread::spawn(move || {
             let mut processor = None;
 
-            let mut seconds = DurationSeconds(0.0);
-
             let block_duration = BLOCK_SIZE as f64 / sample_rate.get() as f64;
             let input = [0f32; BLOCK_SIZE * CHANNELS];
             let mut output = [0f32; BLOCK_SIZE * CHANNELS];
@@ -103,17 +100,9 @@ impl AudioBackend for ProfilingBackend {
                                 input_stream_status: StreamStatus::empty(),
                                 output_stream_status: StreamStatus::empty(),
                                 dropped_frames: 0,
-                            }, // CHANNELS,
-                               // CHANNELS,
-                               // BLOCK_SIZE,
-                               // now,
-                               // start - now,
-                               // StreamStatus::empty(),
-                               // StreamStatus::empty(),
-                               // 0,
+                            },
                         );
                         std::thread::sleep(std::time::Duration::from_secs_f64(block_duration));
-                        seconds.0 += block_duration;
 
                         match receiver.try_recv() {
                             Ok(new_processor) => *processor = new_processor,
