@@ -11,6 +11,7 @@ use bevy_ecs::{
 /// This targets the [`SampleEffects`] component.
 #[derive(Debug, Component)]
 #[relationship(relationship_target = SampleEffects)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct EffectOf(pub Entity);
 
 /// A serial chain of effects applied on a per-sampler basis.
@@ -109,6 +110,7 @@ pub struct EffectOf(pub Entity);
 /// sample's [`SampleEffects`].
 #[derive(Debug, Component)]
 #[relationship_target(relationship = EffectOf, linked_spawn)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SampleEffects(EntitySet);
 
 impl core::ops::Deref for SampleEffects {

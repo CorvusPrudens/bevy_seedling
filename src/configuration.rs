@@ -88,7 +88,7 @@ where
 /// System sets for audio initialization.
 #[derive(Debug, SystemSet, PartialEq, Eq, Hash, Clone)]
 pub enum SeedlingStartupSystems {
-    /// I/O devices are fetched and the graph configuration is initialized.
+    /// The graph configuration is initialized.
     ///
     /// This is run in the [`PreStartup`] schedule.
     GraphSetup,
@@ -258,7 +258,7 @@ fn restart_audio(
 /// Information about an audio input device.
 #[derive(Component, Debug, PartialEq, Clone)]
 #[component(immutable)]
-// #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct InputDeviceInfo {
     /// The device's backend-specific identifier.
     pub id: String,
@@ -271,7 +271,7 @@ pub struct InputDeviceInfo {
 /// Information about an audio input device.
 #[derive(Component, Debug, PartialEq, Clone)]
 #[component(immutable)]
-// #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct OutputDeviceInfo {
     /// The device's backend-specific identifier.
     pub id: String,

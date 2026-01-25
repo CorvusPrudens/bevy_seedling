@@ -86,7 +86,7 @@ impl AudioContext {
     /// # use bevy::prelude::*;
     /// # use bevy_seedling::prelude::*;
     /// fn system(mut context: ResMut<AudioContext>) {
-    ///     let input_devices = context.with(|context| context.available_input_devices());
+    ///     let input_devices = context.with(|context| context.input_devices_simple());
     /// }
     /// ```
     pub fn with<F, O>(&mut self, f: F) -> O
@@ -108,6 +108,7 @@ impl AudioContext {
 /// crate::configuration::SeedlingStartupSystems::StreamInitialization
 /// [`PostStartup`]: bevy_app::prelude::PostStartup
 #[derive(Resource, Debug, Clone)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SampleRate(sync::Arc<sync::atomic::AtomicU32>);
 
 impl SampleRate {

@@ -299,6 +299,7 @@ struct PoolSamplers(Vec<Entity>);
 #[derive(Debug, Component)]
 #[relationship(relationship_target = Sampler)]
 #[component(on_remove = Self::on_remove_hook)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SamplerOf(pub Entity);
 
 impl SamplerOf {
@@ -321,10 +322,13 @@ impl SamplerOf {
 #[derive(Component)]
 #[relationship_target(relationship = SamplerOf)]
 #[component(on_insert = Self::on_insert_hook)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature = "reflect", reflect(from_reflect = false))]
 pub struct Sampler {
     #[relationship]
     sampler: Entity,
     sample_rate: Option<SampleRate>,
+    #[cfg_attr(feature = "reflect", reflect(ignore))]
     state: Option<SamplerState>,
 }
 

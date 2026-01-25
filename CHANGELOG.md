@@ -3,6 +3,7 @@
 ## Features
 
 - Added `CompletionReason` to `PlaybackCompletion` event
+- Added `Reflect` implementations for all public relationships
 
 ## Changes
 
