@@ -4,6 +4,7 @@
 
 - Added `CompletionReason` to `PlaybackCompletion` event
 - Added `Reflect` implementations for all public relationships
+- Insert `Name` components on audio nodes with `debug` feature
 
 ## Changes
 

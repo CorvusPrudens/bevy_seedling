@@ -14,12 +14,13 @@ categories = ["game-development", "multimedia::audio"]
 exclude = ["/assets"]
 
 [features]
-default = ["stream", "wav", "ogg", "rand", "loudness", "reflect"]
+default = ["stream", "wav", "ogg", "rand", "loudness", "reflect", "debug"]
 stream = ["firewheel/stream_nodes"]
 rand = ["dep:rand"]
 loudness = ["dep:ebur128", "dep:portable-atomic"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
 web_audio = ["dep:firewheel-web-audio"]
+debug = ["bevy_ecs/debug"]
 
 hrtf = ["dep:firewheel-ircam-hrtf"]
 # embed all HRTF subjects
@@ -47,9 +48,13 @@ bevy_math = { version = "0.18.0", default-features = false, features = [
   "std",
 ] }
 bevy_asset = { version = "0.18.0", default-features = false }
-bevy_transform = { version = "0.18.0", default-features = false, features = ["bevy-support"] }
+bevy_transform = { version = "0.18.0", default-features = false, features = [
+  "bevy-support",
+] }
 bevy_log = { version = "0.18.0", default-features = false }
-bevy_platform = { version = "0.18.0", default-features = false, features = ["alloc"] }
+bevy_platform = { version = "0.18.0", default-features = false, features = [
+  "alloc",
+] }
 bevy_time = { version = "0.18.0", default-features = false }
 bevy_reflect = { version = "0.18.0", default-features = false, features = [
   "glam",
@@ -82,7 +87,9 @@ firewheel-ircam-hrtf = { path = "../firewheel-ircam-hrtf", version = "0.4.0", op
 firewheel-web-audio = { path = "../firewheel-web-audio", version = "0.4.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/taboky-dev/Firewheel", rev = "b3d70f9", features = ["wasm-bindgen"] }
+firewheel = { git = "https://github.com/taboky-dev/Firewheel", rev = "b3d70f9", features = [
+  "wasm-bindgen",
+] }
 
 [dev-dependencies]
 bevy_seedling = { path = ".", features = ["hrtf"] }

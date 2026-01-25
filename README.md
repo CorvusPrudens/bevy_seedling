@@ -118,6 +118,7 @@ should help you get up to speed on common usage patterns.
 | Flag            | Description                                | Default |
 | --------------- | ------------------------------------------ | ------- |
 | `reflect`       | Enable `bevy_reflect` derive macros.       | Yes     |
+| `debug`         | Label audio nodes with `Name`.             | Yes     |
 | `rand`          | Enable the `RandomPitch` component.        | Yes     |
 | `wav`           | Enable WAV format and PCM encoding.        | Yes     |
 | `ogg`           | Enable Ogg format and Vorbis encoding.     | Yes     |

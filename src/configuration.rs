@@ -516,7 +516,11 @@ fn set_up_graph(mut commands: Commands, config: Res<ConfigResource>) {
                 .chain_node(LimiterNode::new(0.003, 0.15))
                 .connect(AudioGraphOutput);
 
-            commands.spawn((SoundEffectsBus, VolumeNode::default(), Name::new("SFX Bus")));
+            commands.spawn((
+                SoundEffectsBus,
+                VolumeNode::default(),
+                Name::new("Sound Effects Bus"),
+            ));
 
             commands
                 .spawn((
@@ -552,14 +556,19 @@ fn set_up_graph(mut commands: Commands, config: Res<ConfigResource>) {
         GraphConfiguration::Minimal => {
             // Buses
             commands
-                .spawn((MainBus, VolumeNode::default()))
+                .spawn((MainBus, VolumeNode::default(), Name::new("Main Bus")))
                 .connect(AudioGraphOutput);
 
-            commands.spawn((crate::pool::dynamic::DynamicBus, VolumeNode::default()));
+            commands.spawn((
+                crate::pool::dynamic::DynamicBus,
+                VolumeNode::default(),
+                Name::new("Dynamic Bus"),
+            ));
 
             // Pools
             commands.spawn((
                 SamplerPool(DefaultPool),
+                Name::new("Default Sampler Pool"),
                 sample_effects![VolumeNode::default()],
             ));
         }
