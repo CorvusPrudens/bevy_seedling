@@ -1,9 +1,5 @@
 # 0.7.0
 
-## Fixes
-
-- Fixed effect leak from `OnComplete::Remove`
-
 ## Features
 
 - Added `CompletionReason` to `PlaybackCompletion` event
@@ -15,6 +11,11 @@
 - Switched to `recursive_spawn` for `sample_effects`, permitting an
   arbitrary number of effects to be spawned at once
 - Updated Firewheel backend management
+
+## Fixes
+
+- Fixed effect leak from `OnComplete::Remove`
+- Improved correctness of pool label component removal
 
 ### Migration guide
 

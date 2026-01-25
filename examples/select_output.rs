@@ -139,10 +139,10 @@ fn set_up_ui(mut commands: Commands) {
             margin: UiRect::AUTO,
             padding: UiRect::axes(Val::Px(50.0), Val::Px(50.0)),
             border: UiRect::axes(Val::Px(2.0), Val::Px(2.0)),
+            border_radius: BorderRadius::all(Val::Px(25.0)),
             ..default()
         },
         BorderColor::all(Color::srgb(0.9, 0.9, 0.9)),
-        BorderRadius::all(Val::Px(25.0)),
         children![
             (
                 Text::new("Device Selection"),

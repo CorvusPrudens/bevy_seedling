@@ -58,10 +58,10 @@ fn setup(mut master: Single<&mut VolumeNode, With<MainBus>>, mut commands: Comma
             margin: UiRect::AUTO,
             padding: UiRect::axes(Val::Px(50.0), Val::Px(50.0)),
             border: UiRect::axes(Val::Px(2.0), Val::Px(2.0)),
+            border_radius: BorderRadius::all(Val::Px(25.0)),
             ..default()
         },
         BorderColor::all(Color::srgb(0.9, 0.9, 0.9)),
-        BorderRadius::all(Val::Px(25.0)),
         children![
             text((
                 Text::new("Sound Settings"),
@@ -293,10 +293,10 @@ pub fn text(text: impl Bundle) -> impl Bundle {
             padding: UiRect::axes(Val::Px(10.0), Val::Px(10.0)),
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
+            border_radius: BorderRadius::all(Val::Percent(10.0)),
             ..Default::default()
         },
         BackgroundColor(Color::srgb(0.9, 0.9, 0.9)),
-        BorderRadius::all(Val::Percent(10.0)),
         children![(text, TextColor(Color::srgb(0.1, 0.1, 0.1)))],
     )
 }

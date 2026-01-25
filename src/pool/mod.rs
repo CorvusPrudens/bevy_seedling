@@ -740,11 +740,11 @@ pub enum CompletionReason {
 /// Clean up sample resources according to their playback settings.
 fn remove_finished(
     trigger: On<PlaybackCompletion>,
-    samples: Query<(&PlaybackSettings, &PoolLabelContainer)>,
+    samples: Query<&PlaybackSettings>,
     mut commands: Commands,
 ) -> Result {
     let sample_entity = trigger.event_target();
-    let (settings, container) = samples.get(sample_entity)?;
+    let settings = samples.get(sample_entity)?;
 
     match settings.on_complete {
         OnComplete::Preserve => {
@@ -755,7 +755,6 @@ fn remove_finished(
         OnComplete::Remove => {
             commands
                 .entity(sample_entity)
-                .remove_by_id(container.label_id)
                 .despawn_related::<SampleEffects>()
                 .remove_with_requires::<(
                     SamplePlayer,

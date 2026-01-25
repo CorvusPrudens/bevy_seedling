@@ -69,7 +69,7 @@ symphonium = { version = "0.6", default-features = false, features = [
 ] }
 symphonia = { version = "0.5", default-features = false }
 smallvec = { version = "1.13", default-features = false }
-bevy_seedling_macros = { path = "./seedling_macros", version = "0.6.0" }
+bevy_seedling_macros = { path = "./seedling_macros", version = "0.7.0" }
 rand = { version = "0.9", default-features = false, features = [
   "small_rng",
   "os_rng",
@@ -89,9 +89,15 @@ bevy_seedling = { path = ".", features = ["hrtf"] }
 bevy = { version = "0.18.0", default-features = false, features = [
   "2d_bevy_render",
   "default_app",
-  "default_platform",
   "picking",
-  "ui",
+  "ui_bevy_render",
+  "bevy_winit",
+  "default_font",
+  "std",
+  "sysinfo_plugin",
+  "wayland",
+  "webgl2",
+  "x11",
 ] }
 criterion = { version = "0.5", default-features = false, features = [
   "plotters",
