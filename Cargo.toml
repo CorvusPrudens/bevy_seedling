@@ -14,13 +14,13 @@ categories = ["game-development", "multimedia::audio"]
 exclude = ["/assets"]
 
 [features]
-default = ["stream", "wav", "ogg", "rand", "loudness", "reflect", "debug"]
+default = ["wav", "ogg", "rand", "reflect"]
 stream = ["firewheel/stream_nodes"]
 rand = ["dep:rand"]
 loudness = ["dep:ebur128", "dep:portable-atomic"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
 web_audio = ["dep:firewheel-web-audio"]
-debug = ["bevy_ecs/debug"]
+dev = ["bevy_ecs/debug"]
 
 hrtf = ["dep:firewheel-ircam-hrtf"]
 # embed all HRTF subjects

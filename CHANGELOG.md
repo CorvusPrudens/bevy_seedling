@@ -4,7 +4,7 @@
 
 - Added `CompletionReason` to `PlaybackCompletion` event
 - Added `Reflect` implementations for all public relationships
-- Insert `Name` components on audio nodes with `debug` feature
+- Insert `Name` components on audio nodes with `dev` feature
 
 ## Changes
 
@@ -13,6 +13,7 @@
 - Switched to `recursive_spawn` for `sample_effects`, permitting an
   arbitrary number of effects to be spawned at once
 - Updated Firewheel backend management
+- Removed `loudness` and `stream` from default features
 
 ## Fixes
 

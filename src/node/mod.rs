@@ -649,6 +649,8 @@ fn observe_node_insertion<T: Component + Clone>(
             // Replacing the baseline could lose information.
             Baseline(value),
             AudioEvents::new(&time),
+            #[cfg(feature = "dev")]
+            Name::new(core::any::type_name::<T>()),
         ));
 
     Ok(())
@@ -667,7 +669,11 @@ fn observe_simple_node_insertion<T: Component>(
                 .component_id::<T>()
                 .expect("`ComponentId` must be available"),
         ))
-        .insert_if_new(AudioEvents::new(&time));
+        .insert_if_new((
+            AudioEvents::new(&time),
+            #[cfg(feature = "dev")]
+            Name::new(core::any::type_name::<T>()),
+        ));
 
     Ok(())
 }
