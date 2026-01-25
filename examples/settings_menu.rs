@@ -19,7 +19,7 @@ use bevy::{
     prelude::*,
 };
 use bevy_seedling::{
-    configuration::{MusicPool, SfxBus},
+    configuration::{MusicPool, SoundEffectsBus},
     prelude::*,
 };
 
@@ -98,7 +98,7 @@ fn play_music(
 fn play_sfx(_: On<Pointer<Click>>, mut commands: Commands, server: Res<AssetServer>) {
     let source = server.load("caw.ogg");
 
-    // The default pool is routed to the `SfxBus`, so we don't
+    // The default pool is routed to the `SoundEffectsBus`, so we don't
     // need to include any special markers for sound effects.
     commands.spawn(SamplePlayer::new(source));
 }
@@ -166,17 +166,17 @@ fn update_music_volume_label(
 }
 
 // SFX
-fn lower_sfx(_: On<Pointer<Click>>, mut sfx: Single<&mut VolumeNode, With<SfxBus>>) {
+fn lower_sfx(_: On<Pointer<Click>>, mut sfx: Single<&mut VolumeNode, With<SoundEffectsBus>>) {
     sfx.volume = decrement_volume(sfx.volume);
 }
 
-fn raise_sfx(_: On<Pointer<Click>>, mut sfx: Single<&mut VolumeNode, With<SfxBus>>) {
+fn raise_sfx(_: On<Pointer<Click>>, mut sfx: Single<&mut VolumeNode, With<SoundEffectsBus>>) {
     sfx.volume = increment_volume(sfx.volume);
 }
 
 fn update_sfx_volume_label(
     mut label: Single<&mut Text, With<SfxVolumeLabel>>,
-    sfx: Single<&VolumeNode, (With<SfxBus>, Changed<VolumeNode>)>,
+    sfx: Single<&VolumeNode, (With<SoundEffectsBus>, Changed<VolumeNode>)>,
 ) {
     let percent = CONVERTER.volume_to_perceptual(sfx.volume) * 100.0;
     let text = format!("{}%", percent.round());

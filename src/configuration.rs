@@ -308,23 +308,23 @@ fn add_default_transforms(
     }
 }
 
-/// In [`GraphConfiguration::Game`], a sampler pool specifically
-/// for music is spawned.
+/// The default bus for music.
 ///
-/// This pool is unused in all other configurations,
+/// In [`GraphConfiguration::Game`], a sampler pool specifically
+/// for music is spawned. This pool is unused in all other configurations,
 /// so you can freely reuse it.
 #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct MusicPool;
 
-/// In [`GraphConfiguration::Game`], all audio besides the [`MusicPool`] is
-/// routed through this bus.
+/// The default bus for sound effects.
 ///
-/// This label is unused in all other configurations,
+/// In [`GraphConfiguration::Game`], all audio besides the [`MusicPool`] is
+/// routed through this bus. This label is unused in all other configurations,
 /// so you can freely reuse it.
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-pub struct SfxBus;
+pub struct SoundEffectsBus;
 
 /// Describes the initial audio graph configuration.
 ///
@@ -349,7 +349,7 @@ pub enum GraphConfiguration {
     /// │DefaultPool││SpatialPool││DynamicBus││MusicPool│
     /// └┬──────────┘└┬──────────┘└┬─────────┘└┬────────┘
     /// ┌▽────────────▽────────────▽┐          │
-    /// │SfxBus                     │          │
+    /// │SoundEffectsBus            │          │
     /// └┬──────────────────────────┘          │
     /// ┌▽─────────────────────────────────────▽┐
     /// │MainBus                                │
@@ -375,14 +375,14 @@ pub enum GraphConfiguration {
     ///         .chain_node(LimiterNode::new(0.003, 0.15))
     ///         .connect(AudioGraphOutput);
     ///
-    ///     commands.spawn((SfxBus, VolumeNode::default()));
+    ///     commands.spawn((SoundEffectsBus, VolumeNode::default()));
     ///
     ///     commands
     ///         .spawn((
     ///             bevy_seedling::pool::dynamic::DynamicBus,
     ///             VolumeNode::default(),
     ///         ))
-    ///         .connect(SfxBus);
+    ///         .connect(SoundEffectsBus);
     ///
     ///     // Pools
     ///     commands
@@ -390,13 +390,13 @@ pub enum GraphConfiguration {
     ///             SamplerPool(DefaultPool),
     ///             sample_effects![VolumeNode::default()],
     ///         ))
-    ///         .connect(SfxBus);
+    ///         .connect(SoundEffectsBus);
     ///     commands
     ///         .spawn((
     ///             SamplerPool(SpatialPool),
     ///             sample_effects![VolumeNode::default(), SpatialBasicNode::default()],
     ///         ))
-    ///         .connect(SfxBus);
+    ///         .connect(SoundEffectsBus);
     ///
     ///     commands.spawn((
     ///         SamplerPool(MusicPool),
@@ -516,7 +516,7 @@ fn set_up_graph(mut commands: Commands, config: Res<ConfigResource>) {
                 .chain_node(LimiterNode::new(0.003, 0.15))
                 .connect(AudioGraphOutput);
 
-            commands.spawn((SfxBus, VolumeNode::default(), Name::new("SFX Bus")));
+            commands.spawn((SoundEffectsBus, VolumeNode::default(), Name::new("SFX Bus")));
 
             commands
                 .spawn((
@@ -524,7 +524,7 @@ fn set_up_graph(mut commands: Commands, config: Res<ConfigResource>) {
                     VolumeNode::default(),
                     Name::new("Dynamic Bus"),
                 ))
-                .connect(SfxBus);
+                .connect(SoundEffectsBus);
 
             // Pools
             commands
@@ -533,7 +533,7 @@ fn set_up_graph(mut commands: Commands, config: Res<ConfigResource>) {
                     Name::new("Default Sampler Pool"),
                     sample_effects![VolumeNode::default()],
                 ))
-                .connect(SfxBus);
+                .connect(SoundEffectsBus);
 
             commands
                 .spawn((
@@ -541,7 +541,7 @@ fn set_up_graph(mut commands: Commands, config: Res<ConfigResource>) {
                     Name::new("Spatial Sampler Pool"),
                     sample_effects![VolumeNode::default(), SpatialBasicNode::default()],
                 ))
-                .connect(SfxBus);
+                .connect(SoundEffectsBus);
 
             commands.spawn((
                 SamplerPool(MusicPool),

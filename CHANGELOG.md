@@ -10,10 +10,11 @@
 
 ## Changes
 
+- Renamed `SfxBus` to `SoundEffectsBus`
 - Renamed `PlaybackCompletionEvent` to `PlaybackCompletion`
 - Switched to `recursive_spawn` for `sample_effects`, permitting an
   arbitrary number of effects to be spawned at once
-- Updated Firewheel backend management.
+- Updated Firewheel backend management
 
 ### Migration guide
 

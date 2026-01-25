@@ -79,7 +79,7 @@ bevy_ecs::define_label!(
 ///         .entity(*pool)
 ///         .disconnect(MainBus)
 ///         .chain_node(SendNode::new(Volume::Decibels(-12.0), reverb))
-///         .connect(SfxBus);
+///         .connect(SoundEffectsBus);
 /// }
 /// ```
 #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]

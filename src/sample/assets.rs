@@ -33,7 +33,7 @@ impl core::fmt::Debug for AudioSample {
 }
 
 /// A simple loader for audio samples.
-#[derive(Debug)]
+#[derive(Debug, TypePath)]
 pub struct SampleLoader {
     /// The sampling rate of the audio engine.
     pub(crate) sample_rate: crate::context::SampleRate,
@@ -103,7 +103,7 @@ impl AssetLoader for SampleLoader {
         reader.read_to_end(&mut bytes).await?;
 
         let mut hint = symphonia::core::probe::Hint::new();
-        hint.with_extension(&load_context.path().to_string_lossy());
+        hint.with_extension(&load_context.path().to_string());
 
         let mut loader = symphonium::SymphoniumLoader::new();
         let source = firewheel::load_audio_file_from_source(

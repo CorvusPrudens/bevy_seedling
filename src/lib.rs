@@ -388,7 +388,7 @@ pub mod prelude {
 
     pub use crate::configuration::{
         GraphConfiguration, InputDeviceInfo, MusicPool, OutputDeviceInfo, SeedlingStartupSystems,
-        SfxBus, SpatialPool,
+        SoundEffectsBus, SpatialPool,
     };
     pub use crate::context::AudioContext;
     pub use crate::edge::{
