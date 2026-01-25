@@ -1,6 +1,6 @@
 [package]
 name = "bevy_seedling"
-version = "0.8.0"
+version = "0.7.0"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
@@ -55,7 +55,7 @@ bevy_reflect = { version = "0.17.3", default-features = false, features = [
   "glam",
 ] }
 
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "1cf3a7c", features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "30f4621", features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
@@ -76,13 +76,13 @@ rand = { version = "0.9", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-firewheel-ircam-hrtf = { path = "../firewheel-ircam-hrtf", version = "0.3.0", optional = true, features = [
+firewheel-ircam-hrtf = { git = "https://github.com/CorvusPrudens/firewheel-ircam-hrtf", rev = "ff3e24b", version = "0.4.0", optional = true, features = [
   "bevy",
 ] }
-firewheel-web-audio = { version = "0.3.0", optional = true }
+firewheel-web-audio = { git = "https://github.com/CorvusPrudens/firewheel-web-audio", rev = "1e793e7", version = "0.4.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "1cf3a7c", features = ["wasm-bindgen"] }
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "30f4621", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
 bevy_seedling = { path = ".", features = ["hrtf"] }

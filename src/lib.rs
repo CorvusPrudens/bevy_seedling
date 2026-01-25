@@ -366,7 +366,7 @@ use bevy_app::prelude::*;
 use bevy_asset::prelude::AssetApp;
 use bevy_ecs::prelude::*;
 use context::AudioStreamConfig;
-use firewheel::{CpalBackend, backend::AudioBackend};
+use firewheel::{backend::AudioBackend, cpal::CpalBackend};
 
 // We re-export Firewheel here for convenience.
 pub use firewheel;
@@ -426,12 +426,13 @@ pub mod prelude {
     pub use crate::{SeedlingPlugin, SeedlingSystems};
 
     pub use firewheel::{
-        CpalBackend, FirewheelConfig, Volume,
+        FirewheelConfig, Volume,
         channel_config::{ChannelCount, NonZeroChannelCount},
         clock::{
             DurationMusical, DurationSamples, DurationSeconds, InstantMusical, InstantSamples,
             InstantSeconds,
         },
+        cpal::CpalBackend,
         diff::{Memo, Notify},
         nodes::{
             StereoToMonoNode,
@@ -579,7 +580,6 @@ where
     B: 'static,
     B::Config: Clone + Send + Sync + 'static,
     B::StreamError: Send + Sync + 'static,
-    B::DeviceID: core::fmt::Debug + Clone + PartialEq + Send + Sync + 'static,
 {
     fn build(&self, app: &mut App) {
         use prelude::*;

@@ -2,7 +2,7 @@
 
 use firewheel::{
     StreamInfo,
-    backend::{AudioBackend, DeviceInfo},
+    backend::{AudioBackend, DeviceInfoSimple},
     node::StreamStatus,
     processor::FirewheelProcessor,
 };
@@ -38,33 +38,31 @@ impl core::fmt::Display for ProfilingError {
 impl std::error::Error for ProfilingError {}
 
 impl AudioBackend for ProfilingBackend {
-    type AudioAPI = ();
-    type DeviceID = String;
-    type ExtraInputDeviceInfo = ();
-    type ExtraOutputDeviceInfo = ();
+    type Enumerator = ();
     type Config = ();
     type Instant = std::time::Instant;
 
     type StartStreamError = ProfilingError;
     type StreamError = ProfilingError;
 
-    fn available_input_devices(_api: Option<Self::AudioAPI>) -> Vec<DeviceInfo<Self::DeviceID>> {
+    fn enumerator() -> Self::Enumerator {}
+
+    fn input_devices_simple(&mut self) -> Vec<DeviceInfoSimple> {
         vec![]
     }
 
-    fn extra_input_device_info(
-        _device_id: &Self::DeviceID,
-        _api: Option<Self::AudioAPI>,
-    ) -> Option<Self::ExtraInputDeviceInfo> {
-        None
+    fn output_devices_simple(&mut self) -> Vec<DeviceInfoSimple> {
+        vec![DeviceInfoSimple {
+            id: "default output".into(),
+            name: "default output".into(),
+        }]
     }
 
-    fn available_output_devices(_api: Option<Self::AudioAPI>) -> Vec<DeviceInfo<Self::DeviceID>> {
-        vec![DeviceInfo {
-            id: "default output".into(),
-            name: None,
-            is_default: true,
-        }]
+    fn convert_simple_config(
+        &mut self,
+        _config: &firewheel::backend::SimpleStreamConfig,
+    ) -> Self::Config {
+        unimplemented!()
     }
 
     fn delay_from_last_process(

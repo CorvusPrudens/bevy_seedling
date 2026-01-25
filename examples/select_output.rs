@@ -12,7 +12,11 @@ struct SelectedOutput;
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
-        .add_systems(Startup, (set_up_ui, startup).chain())
+        .add_systems(Startup, set_up_ui)
+        .add_systems(
+            PostStartup,
+            device_setup.after(SeedlingStartupSystems::StreamInitialization),
+        )
         .add_systems(Update, (select_output, play_sound))
         .add_observer(observe_selection)
         .add_observer(observe_init)
@@ -20,7 +24,7 @@ fn main() {
         .run();
 }
 
-fn startup(outputs: Query<(Entity, &OutputDeviceInfo)>, mut commands: Commands) {
+fn device_setup(outputs: Query<(Entity, &OutputDeviceInfo)>, mut commands: Commands) {
     for (entity, device) in &outputs {
         info!("device: {:?}, default: {}", device.name, device.is_default);
 
@@ -80,18 +84,12 @@ fn observe_selection(
 ) -> Result {
     let output = outputs.get(trigger.event_target())?;
 
-    stream.0.output.device_id = Some(output.id.clone());
+    stream.0.output.device_id = output.id.parse().ok();
 
     let new_string = if output.is_default {
-        format!(
-            "{} (default)",
-            output.name.as_deref().unwrap_or("Unknown Device")
-        )
+        format!("{} (default)", output.name)
     } else {
-        output
-            .name
-            .clone()
-            .unwrap_or_else(|| "Unknown Device".into())
+        output.name.clone()
     };
     text.single_mut()?.0 = new_string;
 

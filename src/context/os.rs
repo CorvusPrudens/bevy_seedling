@@ -11,30 +11,15 @@ type ThreadLocalCall = Box<dyn FnOnce(&mut SeedlingContext) + Send + 'static>;
 impl InnerContext {
     // Spawn the audio process and control thread.
     #[inline(always)]
-    pub fn new<B>(
-        settings: FirewheelConfig,
-        stream_settings: B::Config,
-    ) -> bevy_ecs::prelude::Result<Self>
+    pub fn new<B>(settings: FirewheelConfig) -> Self
     where
         B: AudioBackend + 'static,
-        B::Config: Send + 'static,
         B::StreamError: Send + Sync + 'static,
     {
-        let (audio_to_bev_tx, audio_to_bev_rx) = mpsc::channel::<Result<(), String>>();
         let (bev_to_audio_tx, bev_to_audio_rx) = mpsc::channel::<ThreadLocalCall>();
 
         std::thread::spawn(move || {
-            let mut context = FirewheelCtx::<B>::new(settings);
-            let result = context.start_stream(stream_settings);
-
-            if let Err(e) = result {
-                audio_to_bev_tx
-                    .send(Err(format!("failed to start audio stream: {e:?}")))
-                    .unwrap();
-                return;
-            } else {
-                audio_to_bev_tx.send(Ok(())).unwrap();
-            }
+            let context = FirewheelCtx::<B>::new(settings);
 
             let mut context = SeedlingContext::new(context);
 
@@ -43,8 +28,7 @@ impl InnerContext {
             }
         });
 
-        audio_to_bev_rx.recv()??;
-        Ok(InnerContext(bev_to_audio_tx))
+        InnerContext(bev_to_audio_tx)
     }
 
     // Send `f` to the underlying control thread to operate on the audio context.
