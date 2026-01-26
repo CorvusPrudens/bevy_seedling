@@ -19,7 +19,7 @@ impl InnerContext {
         B: AudioBackend + 'static,
         B::StreamError: Send + Sync + 'static,
     {
-        let mut context = FirewheelCtx::<B>::new(settings);
+        let context = FirewheelCtx::<B>::new(settings);
         CONTEXT.set(SeedlingContext::new(context));
 
         Self(())

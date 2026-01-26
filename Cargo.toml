@@ -111,6 +111,9 @@ criterion = { version = "0.5", default-features = false, features = [
   "cargo_bench_support",
 ] }
 
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+getrandom = { version = "0.3", default-features = false, features = ["wasm_js"] }
+
 [[bench]]
 name = "basic"
 harness = false
