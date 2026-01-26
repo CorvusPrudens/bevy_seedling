@@ -20,7 +20,8 @@ rand = ["dep:rand"]
 loudness = ["dep:ebur128", "dep:portable-atomic"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
 web_audio = ["dep:firewheel-web-audio"]
-dev = ["bevy_ecs/debug"]
+dev = ["entity_names"]
+entity_names = []
 
 hrtf = ["dep:firewheel-ircam-hrtf"]
 # embed all HRTF subjects

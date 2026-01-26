@@ -4,7 +4,7 @@
 
 - Added `CompletionReason` to `PlaybackCompletion` event
 - Added `Reflect` implementations for all public relationships
-- Insert `Name` components on audio nodes with `dev` feature
+- Insert `Name` components on audio nodes and sample players with `entity_names` feature
 - Expose original sample rate on AudioSample assets
 
 ## Changes

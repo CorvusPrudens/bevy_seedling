@@ -92,7 +92,6 @@ should help you get up to speed on common usage patterns.
 | Flag            | Description                                | Default |
 | --------------- | ------------------------------------------ | ------- |
 | `reflect`       | Enable `bevy_reflect` derive macros.       | Yes     |
-| `dev`           | Label audio nodes with `Name`.             | Yes     |
 | `rand`          | Enable the `RandomPitch` component.        | Yes     |
 | `wav`           | Enable WAV format and PCM encoding.        | Yes     |
 | `ogg`           | Enable Ogg format and Vorbis encoding.     | Yes     |
@@ -103,8 +102,10 @@ should help you get up to speed on common usage patterns.
 | `web_audio`     | Enable the multi-threading web backend.    | No      |
 | `hrtf`          | Enable HRTF Spatialization.                | No      |
 | `hrtf_subjects` | Enable all HRTF embedded data.             | No      |
-| `loudness`      | Enable LUFS analyzer node.                 | Yes     |
-| `stream`        | Enable CPAL input and output stream nodes. | Yes     |
+| `loudness`      | Enable LUFS analyzer node.                 | No      |
+| `stream`        | Enable CPAL input and output stream nodes. | No      |
+| `dev`           | Enable helpful features for development.   | No      |
+| `entity_names`  | Add `Name`s to node and sample entities.   | No      |
 
 ## Bevy version compatibility
 

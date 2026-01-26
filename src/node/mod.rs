@@ -649,7 +649,7 @@ fn observe_node_insertion<T: Component + Clone>(
             // Replacing the baseline could lose information.
             Baseline(value),
             AudioEvents::new(&time),
-            #[cfg(feature = "dev")]
+            #[cfg(feature = "entity_names")]
             Name::new(core::any::type_name::<T>()),
         ));
 
@@ -671,7 +671,7 @@ fn observe_simple_node_insertion<T: Component>(
         ))
         .insert_if_new((
             AudioEvents::new(&time),
-            #[cfg(feature = "dev")]
+            #[cfg(feature = "entity_names")]
             Name::new(core::any::type_name::<T>()),
         ));
 
