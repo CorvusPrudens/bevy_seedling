@@ -22,58 +22,32 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_seedling = "0.6.1"
-//! bevy = { version = "0.17.2", default-features = false, features = [
-//!   "std",
-//!   "async_executor",
+//! bevy_seedling = "0.7.0"
+//! bevy = { version = "0.18.0", default-features = false, features = [
+//!   # 2d
+//!   "2d_bevy_render",
+//!   "default_app",
+//!   "picking",
+//!   "scene",
+//!
+//!   # 3d
+//!   "3d_bevy_render",
+//!
+//!   # ui
+//!   "ui_api",
+//!   "ui_bevy_render",
+//!
+//!   # default_platform
 //!   "android-game-activity",
-//!   "android_shared_stdcxx",
-//!   "animation",
-//!   "bevy_asset",
-//!   "bevy_color",
-//!   "bevy_core_pipeline",
-//!   "bevy_post_process",
-//!   "bevy_anti_alias",
 //!   "bevy_gilrs",
-//!   "bevy_gizmos",
-//!   "bevy_gltf",
-//!   "bevy_input_focus",
-//!   "bevy_log",
-//!   "bevy_mesh_picking_backend",
-//!   "bevy_pbr",
-//!   "bevy_picking",
-//!   "bevy_render",
-//!   "bevy_scene",
-//!   "bevy_image",
-//!   "bevy_mesh",
-//!   "bevy_camera",
-//!   "bevy_light",
-//!   "bevy_shader",
-//!   "bevy_sprite",
-//!   "bevy_sprite_picking_backend",
-//!   "bevy_sprite_render",
-//!   "bevy_state",
-//!   "bevy_text",
-//!   "bevy_ui",
-//!   "bevy_ui_picking_backend",
-//!   "bevy_ui_render",
-//!   "bevy_window",
 //!   "bevy_winit",
-//!   "custom_cursor",
 //!   "default_font",
-//!   "hdr",
-//!   "ktx2",
 //!   "multi_threaded",
-//!   "png",
-//!   "reflect_auto_register",
-//!   "smaa_luts",
+//!   "std",
 //!   "sysinfo_plugin",
-//!   "tonemapping_luts",
+//!   "wayland",
 //!   "webgl2",
 //!   "x11",
-//!   "wayland",
-//!   "debug",
-//!   "zstd_rust",
 //! ] }
 //! ```
 //!
@@ -163,10 +137,13 @@
 //! | `web_audio`     | Enable the multi-threading web backend.    | No      |
 //! | `hrtf`          | Enable HRTF Spatialization.                | No      |
 //! | `hrtf_subjects` | Enable all HRTF embedded data.             | No      |
-//! | `loudness`      | Enable LUFS analyzer node.                 | Yes     |
-//! | `stream`        | Enable CPAL input and output stream nodes. | Yes     |
+//! | `loudness`      | Enable LUFS analyzer node.                 | No      |
+//! | `stream`        | Enable CPAL input and output stream nodes. | No      |
+//! | `dev`           | Enable helpful features for development.   | No      |
+//! | `entity_names`  | Add [`Name`]s to node and sample entities. | No      |
 //!
 //! [`RandomPitch`]: crate::prelude::RandomPitch
+//! [`Name`]: bevy_ecs::prelude::Name
 //!
 //! ## Frequently asked questions
 //!
@@ -366,7 +343,7 @@ use bevy_app::prelude::*;
 use bevy_asset::prelude::AssetApp;
 use bevy_ecs::prelude::*;
 use context::AudioStreamConfig;
-use firewheel::{CpalBackend, backend::AudioBackend};
+use firewheel::{backend::AudioBackend, cpal::CpalBackend};
 
 // We re-export Firewheel here for convenience.
 pub use firewheel;
@@ -388,7 +365,7 @@ pub mod prelude {
 
     pub use crate::configuration::{
         GraphConfiguration, InputDeviceInfo, MusicPool, OutputDeviceInfo, SeedlingStartupSystems,
-        SfxBus, SpatialPool,
+        SoundEffectsBus, SpatialPool,
     };
     pub use crate::context::AudioContext;
     pub use crate::edge::{
@@ -409,7 +386,7 @@ pub mod prelude {
         send::{SendConfig, SendNode},
     };
     pub use crate::pool::{
-        DefaultPoolSize, PlaybackCompletionEvent, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
+        DefaultPoolSize, PlaybackCompletion, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
         dynamic::DynamicBus,
         label::{DefaultPool, PoolLabel},
         sample_effects::{EffectOf, EffectsQuery, SampleEffects},
@@ -426,12 +403,13 @@ pub mod prelude {
     pub use crate::{SeedlingPlugin, SeedlingSystems};
 
     pub use firewheel::{
-        CpalBackend, FirewheelConfig, Volume,
+        FirewheelConfig, Volume,
         channel_config::{ChannelCount, NonZeroChannelCount},
         clock::{
             DurationMusical, DurationSamples, DurationSeconds, InstantMusical, InstantSamples,
             InstantSeconds,
         },
+        cpal::CpalBackend,
         diff::{Memo, Notify},
         nodes::{
             StereoToMonoNode,

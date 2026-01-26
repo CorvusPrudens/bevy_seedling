@@ -2,8 +2,7 @@
 
 use firewheel::{
     StreamInfo,
-    backend::{AudioBackend, DeviceInfo},
-    clock::DurationSeconds,
+    backend::{AudioBackend, DeviceInfoSimple},
     node::StreamStatus,
     processor::FirewheelProcessor,
 };
@@ -39,22 +38,31 @@ impl core::fmt::Display for ProfilingError {
 impl std::error::Error for ProfilingError {}
 
 impl AudioBackend for ProfilingBackend {
+    type Enumerator = ();
     type Config = ();
     type Instant = std::time::Instant;
 
     type StartStreamError = ProfilingError;
     type StreamError = ProfilingError;
 
-    fn available_input_devices() -> Vec<DeviceInfo> {
+    fn enumerator() -> Self::Enumerator {}
+
+    fn input_devices_simple(&mut self) -> Vec<DeviceInfoSimple> {
         vec![]
     }
 
-    fn available_output_devices() -> Vec<DeviceInfo> {
-        vec![DeviceInfo {
+    fn output_devices_simple(&mut self) -> Vec<DeviceInfoSimple> {
+        vec![DeviceInfoSimple {
+            id: "default output".into(),
             name: "default output".into(),
-            num_channels: 2,
-            is_default: true,
         }]
+    }
+
+    fn convert_simple_config(
+        &mut self,
+        _config: &firewheel::backend::SimpleStreamConfig,
+    ) -> Self::Config {
+        unimplemented!()
     }
 
     fn delay_from_last_process(
@@ -73,8 +81,6 @@ impl AudioBackend for ProfilingBackend {
 
         std::thread::spawn(move || {
             let mut processor = None;
-
-            let mut seconds = DurationSeconds(0.0);
 
             let block_duration = BLOCK_SIZE as f64 / sample_rate.get() as f64;
             let input = [0f32; BLOCK_SIZE * CHANNELS];
@@ -103,17 +109,9 @@ impl AudioBackend for ProfilingBackend {
                                 input_stream_status: StreamStatus::empty(),
                                 output_stream_status: StreamStatus::empty(),
                                 dropped_frames: 0,
-                            }, // CHANNELS,
-                               // CHANNELS,
-                               // BLOCK_SIZE,
-                               // now,
-                               // start - now,
-                               // StreamStatus::empty(),
-                               // StreamStatus::empty(),
-                               // 0,
+                            },
                         );
                         std::thread::sleep(std::time::Duration::from_secs_f64(block_duration));
-                        seconds.0 += block_duration;
 
                         match receiver.try_recv() {
                             Ok(new_processor) => *processor = new_processor,
@@ -135,8 +133,8 @@ impl AudioBackend for ProfilingBackend {
                 num_stream_in_channels: 0,
                 num_stream_out_channels: 2,
                 declick_frames: NonZeroU32::new(16).unwrap(),
-                input_device_name: None,
-                output_device_name: Some("default output".into()),
+                input_device_id: None,
+                output_device_id: "default output".into(),
                 input_to_output_latency_seconds: 0.0,
             },
         ))

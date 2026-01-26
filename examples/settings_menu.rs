@@ -19,7 +19,7 @@ use bevy::{
     prelude::*,
 };
 use bevy_seedling::{
-    configuration::{MusicPool, SfxBus},
+    configuration::{MusicPool, SoundEffectsBus},
     prelude::*,
 };
 
@@ -58,10 +58,10 @@ fn setup(mut master: Single<&mut VolumeNode, With<MainBus>>, mut commands: Comma
             margin: UiRect::AUTO,
             padding: UiRect::axes(Val::Px(50.0), Val::Px(50.0)),
             border: UiRect::axes(Val::Px(2.0), Val::Px(2.0)),
+            border_radius: BorderRadius::all(Val::Px(25.0)),
             ..default()
         },
         BorderColor::all(Color::srgb(0.9, 0.9, 0.9)),
-        BorderRadius::all(Val::Px(25.0)),
         children![
             text((
                 Text::new("Sound Settings"),
@@ -98,7 +98,7 @@ fn play_music(
 fn play_sfx(_: On<Pointer<Click>>, mut commands: Commands, server: Res<AssetServer>) {
     let source = server.load("caw.ogg");
 
-    // The default pool is routed to the `SfxBus`, so we don't
+    // The default pool is routed to the `SoundEffectsBus`, so we don't
     // need to include any special markers for sound effects.
     commands.spawn(SamplePlayer::new(source));
 }
@@ -166,17 +166,17 @@ fn update_music_volume_label(
 }
 
 // SFX
-fn lower_sfx(_: On<Pointer<Click>>, mut sfx: Single<&mut VolumeNode, With<SfxBus>>) {
+fn lower_sfx(_: On<Pointer<Click>>, mut sfx: Single<&mut VolumeNode, With<SoundEffectsBus>>) {
     sfx.volume = decrement_volume(sfx.volume);
 }
 
-fn raise_sfx(_: On<Pointer<Click>>, mut sfx: Single<&mut VolumeNode, With<SfxBus>>) {
+fn raise_sfx(_: On<Pointer<Click>>, mut sfx: Single<&mut VolumeNode, With<SoundEffectsBus>>) {
     sfx.volume = increment_volume(sfx.volume);
 }
 
 fn update_sfx_volume_label(
     mut label: Single<&mut Text, With<SfxVolumeLabel>>,
-    sfx: Single<&VolumeNode, (With<SfxBus>, Changed<VolumeNode>)>,
+    sfx: Single<&VolumeNode, (With<SoundEffectsBus>, Changed<VolumeNode>)>,
 ) {
     let percent = CONVERTER.volume_to_perceptual(sfx.volume) * 100.0;
     let text = format!("{}%", percent.round());
@@ -293,10 +293,10 @@ pub fn text(text: impl Bundle) -> impl Bundle {
             padding: UiRect::axes(Val::Px(10.0), Val::Px(10.0)),
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
+            border_radius: BorderRadius::all(Val::Percent(10.0)),
             ..Default::default()
         },
         BackgroundColor(Color::srgb(0.9, 0.9, 0.9)),
-        BorderRadius::all(Val::Percent(10.0)),
         children![(text, TextColor(Color::srgb(0.1, 0.1, 0.1)))],
     )
 }

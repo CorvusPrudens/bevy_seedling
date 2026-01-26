@@ -168,8 +168,9 @@ pub use assets::{AudioSample, SampleLoader, SampleLoaderError};
 /// will be inserted, which provides information about the
 /// playhead position and playback status.
 #[derive(Debug, Component, Clone)]
-#[require(PlaybackSettings, SamplePriority, SampleQueueLifetime, QueuedSample)]
 #[component(immutable)]
+#[require(PlaybackSettings, SamplePriority, SampleQueueLifetime, QueuedSample)]
+#[cfg_attr(feature = "entity_names", require(Name::new("SamplePlayer")))]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SamplePlayer {
     /// The sample to play.

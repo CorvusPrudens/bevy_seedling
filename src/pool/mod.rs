@@ -299,6 +299,7 @@ struct PoolSamplers(Vec<Entity>);
 #[derive(Debug, Component)]
 #[relationship(relationship_target = Sampler)]
 #[component(on_remove = Self::on_remove_hook)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SamplerOf(pub Entity);
 
 impl SamplerOf {
@@ -321,10 +322,13 @@ impl SamplerOf {
 #[derive(Component)]
 #[relationship_target(relationship = SamplerOf)]
 #[component(on_insert = Self::on_insert_hook)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+#[cfg_attr(feature = "reflect", reflect(from_reflect = false))]
 pub struct Sampler {
     #[relationship]
     sampler: Entity,
     sample_rate: Option<SampleRate>,
+    #[cfg_attr(feature = "reflect", reflect(ignore))]
     state: Option<SamplerState>,
 }
 
@@ -711,16 +715,40 @@ fn populate_pool(
 /// component.
 #[derive(Debug, EntityEvent)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-pub struct PlaybackCompletionEvent(pub Entity);
+pub struct PlaybackCompletion {
+    /// The [`SamplePlayer`] entity.
+    pub entity: Entity,
+    /// The reason for completion.
+    pub reason: CompletionReason,
+}
+
+/// Provides the condition that triggered completion.
+#[derive(Debug)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub enum CompletionReason {
+    /// The sample fully completed its playback.
+    PlaybackComplete,
+    /// The playback of a sample was interrupted before completion.
+    ///
+    /// This can happen when a sample with a higher priority is queued
+    /// in a full sampler pool.
+    PlaybackInterrupted,
+    /// The sample was not able to acquire a sampler before
+    /// its [`SampleQueueLifetime`][crate::sample::SampleQueueLifetime] elapsed.
+    ///
+    /// This means the sample never actually played before this
+    /// event triggered.
+    QueueLifetimeElapsed,
+}
 
 /// Clean up sample resources according to their playback settings.
 fn remove_finished(
-    trigger: On<PlaybackCompletionEvent>,
-    samples: Query<(&PlaybackSettings, &PoolLabelContainer)>,
+    trigger: On<PlaybackCompletion>,
+    samples: Query<&PlaybackSettings>,
     mut commands: Commands,
 ) -> Result {
     let sample_entity = trigger.event_target();
-    let (settings, container) = samples.get(sample_entity)?;
+    let settings = samples.get(sample_entity)?;
 
     match settings.on_complete {
         OnComplete::Preserve => {
@@ -731,9 +759,8 @@ fn remove_finished(
         OnComplete::Remove => {
             commands
                 .entity(sample_entity)
-                .remove_by_id(container.label_id)
+                .despawn_related::<SampleEffects>()
                 .remove_with_requires::<(
-                    SampleEffects,
                     SamplePlayer,
                     PoolLabelContainer,
                     Sampler,
@@ -760,7 +787,10 @@ fn poll_finished(
         let finished = *node.play && state.0.finished() == node.play.id();
 
         if finished {
-            commands.trigger(PlaybackCompletionEvent(active.0));
+            commands.trigger(PlaybackCompletion {
+                entity: active.0,
+                reason: CompletionReason::PlaybackComplete,
+            });
         }
     }
 }
@@ -1005,6 +1035,12 @@ mod test {
 
         assert_eq!(archetype.components().len(), 1);
         assert!(entity.contains::<EmptyComponent>());
+
+        // We'll also verify that effects are not leaked
+        let total_lpfs = run(&mut app, |fx: Query<&LowPassNode>| fx.iter().len());
+        // 4 is the minimum that should exist in the pool, and the last one
+        // comes from the `SampleEffects` template
+        assert_eq!(total_lpfs, 5);
     }
 
     #[test]

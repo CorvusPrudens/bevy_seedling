@@ -1,6 +1,6 @@
 [package]
 name = "bevy_seedling"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
@@ -14,12 +14,14 @@ categories = ["game-development", "multimedia::audio"]
 exclude = ["/assets"]
 
 [features]
-default = ["stream", "wav", "ogg", "rand", "loudness", "reflect"]
+default = ["wav", "ogg", "rand", "reflect"]
 stream = ["firewheel/stream_nodes"]
 rand = ["dep:rand"]
 loudness = ["dep:ebur128", "dep:portable-atomic"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
 web_audio = ["dep:firewheel-web-audio"]
+dev = ["entity_names"]
+entity_names = []
 
 hrtf = ["dep:firewheel-ircam-hrtf"]
 # embed all HRTF subjects
@@ -40,22 +42,26 @@ adpcm = ["symphonium/adpcm"]
 profiling = []
 
 [dependencies]
-bevy_ecs = { version = "0.17.2", default-features = false }
-bevy_app = { version = "0.17.2", default-features = false }
-bevy_math = { version = "0.17.2", default-features = false, features = [
+bevy_ecs = { version = "0.18.0", default-features = false }
+bevy_app = { version = "0.18.0", default-features = false }
+bevy_math = { version = "0.18.0", default-features = false, features = [
   "curve",
   "std",
 ] }
-bevy_asset = { version = "0.17.2", default-features = false }
-bevy_transform = { version = "0.17.2", default-features = false, features = ["bevy-support"] }
-bevy_log = { version = "0.17.2", default-features = false }
-bevy_platform = { version = "0.17.2", default-features = false, features = ["alloc"] }
-bevy_time = { version = "0.17.2", default-features = false }
-bevy_reflect = { version = "0.17.2", default-features = false, features = [
+bevy_asset = { version = "0.18.0", default-features = false }
+bevy_transform = { version = "0.18.0", default-features = false, features = [
+  "bevy-support",
+] }
+bevy_log = { version = "0.18.0", default-features = false }
+bevy_platform = { version = "0.18.0", default-features = false, features = [
+  "alloc",
+] }
+bevy_time = { version = "0.18.0", default-features = false }
+bevy_reflect = { version = "0.18.0", default-features = false, features = [
   "glam",
 ] }
 
-firewheel = { version = "0.9.0", features = [
+firewheel = { version = "0.10.0", features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
@@ -63,54 +69,51 @@ firewheel = { version = "0.9.0", features = [
   "glam-30",
   "freeverb_node",
 ] }
-symphonium = { version = "0.6", default-features = false, features = [
+symphonium = { version = "0.7", default-features = false, features = [
   "opt-simd",
   "fft-resampler",
 ] }
 symphonia = { version = "0.5", default-features = false }
 smallvec = { version = "1.13", default-features = false }
-bevy_seedling_macros = { path = "./seedling_macros", version = "0.6.0" }
+bevy_seedling_macros = { path = "./seedling_macros", version = "0.7.0" }
 rand = { version = "0.9", default-features = false, features = [
   "small_rng",
   "os_rng",
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-firewheel-ircam-hrtf = { version = "0.2.0", optional = true, features = [
+firewheel-ircam-hrtf = { version = "0.4.0", optional = true, features = [
   "bevy",
 ] }
-firewheel-web-audio = { version = "0.3.0", optional = true }
+firewheel-web-audio = { version = "0.4.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { version = "0.9.0", features = ["wasm-bindgen"] }
+firewheel = { version = "0.10.0", features = [
+  "wasm-bindgen",
+] }
 
 [dev-dependencies]
-bevy_seedling = { path = ".", features = ["hrtf"] }
-bevy = { version = "0.17.2", default-features = false, features = [
-  "bevy_debug_stepping",
-  "bevy_asset",
-  "bevy_state",
-  "multi_threaded",
-  "sysinfo_plugin",
-  "std",
-  "bevy_log",
-  "bevy_core_pipeline",
-  # for examples with ui
-  "bevy_text",
+bevy_seedling = { path = ".", features = ["hrtf", "loudness"] }
+bevy = { version = "0.18.0", default-features = false, features = [
+  "2d_bevy_render",
+  "default_app",
+  "picking",
+  "ui_bevy_render",
+  "bevy_winit",
   "default_font",
-  "bevy_ui",
-  "bevy_ui_render",
-  "bevy_picking",
-  "bevy_ui_picking_backend",
-  "bevy_window",
-  "bevy_render",
+  "std",
+  "sysinfo_plugin",
   "wayland",
+  "webgl2",
   "x11",
 ] }
 criterion = { version = "0.5", default-features = false, features = [
   "plotters",
   "cargo_bench_support",
 ] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+getrandom = { version = "0.3", default-features = false, features = ["wasm_js"] }
 
 [[bench]]
 name = "basic"

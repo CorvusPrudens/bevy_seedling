@@ -1,7 +1,7 @@
 use bevy_asset::{Asset, AssetLoader};
 use bevy_reflect::TypePath;
 use firewheel::{collector::ArcGc, sample_resource::SampleResource};
-use std::sync::Arc;
+use std::{num::NonZeroU32, sync::Arc};
 
 /// A type-erased audio sample.
 ///
@@ -12,17 +12,36 @@ use std::sync::Arc;
 /// The available containers and formats can be configured with
 /// this crate's feature flags.
 #[derive(Asset, TypePath, Clone)]
-pub struct AudioSample(ArcGc<dyn SampleResource>);
+pub struct AudioSample {
+    sample: ArcGc<dyn SampleResource>,
+    original_sample_rate: NonZeroU32,
+}
 
 impl AudioSample {
     /// Create a new [`AudioSample`] from a [`SampleResource`] loaded into memory.
-    pub fn new<S: SampleResource>(sample: S) -> Self {
-        Self(ArcGc::new_unsized(|| Arc::new(sample) as _))
+    ///
+    /// If the sample resource has been resampled, `original_sample_rate` should represent
+    /// the sample rate prior to resampling.
+    pub fn new<S: SampleResource>(sample: S, original_sample_rate: NonZeroU32) -> Self {
+        Self {
+            sample: ArcGc::new_unsized(|| Arc::new(sample) as _),
+            original_sample_rate,
+        }
     }
 
     /// Share the inner value.
     pub fn get(&self) -> ArcGc<dyn SampleResource> {
-        self.0.clone()
+        self.sample.clone()
+    }
+
+    /// Return the sample resource's original sample rate.
+    ///
+    /// If the resource has been resampled, this may return
+    /// a different value than [`SampleResourceInfo::sample_rate`].
+    ///
+    /// [`SampleResourceInfo::sample_rate`]: firewheel::sample_resource::SampleResourceInfo::sample_rate
+    pub fn original_sample_rate(&self) -> NonZeroU32 {
+        self.original_sample_rate
     }
 }
 
@@ -33,7 +52,7 @@ impl core::fmt::Debug for AudioSample {
 }
 
 /// A simple loader for audio samples.
-#[derive(Debug)]
+#[derive(Debug, TypePath)]
 pub struct SampleLoader {
     /// The sampling rate of the audio engine.
     pub(crate) sample_rate: crate::context::SampleRate,
@@ -103,20 +122,21 @@ impl AssetLoader for SampleLoader {
         reader.read_to_end(&mut bytes).await?;
 
         let mut hint = symphonia::core::probe::Hint::new();
-        hint.with_extension(&load_context.path().to_string_lossy());
+        hint.with_extension(&load_context.path().to_string());
 
         let mut loader = symphonium::SymphoniumLoader::new();
         let source = firewheel::load_audio_file_from_source(
             &mut loader,
             Box::new(std::io::Cursor::new(bytes)),
             Some(hint),
-            self.sample_rate.get(),
+            Some(self.sample_rate.get()),
             Default::default(),
         )?;
 
-        Ok(AudioSample(ArcGc::new_unsized(|| {
-            Arc::new(source) as Arc<dyn SampleResource>
-        })))
+        Ok(AudioSample {
+            original_sample_rate: source.original_sample_rate(),
+            sample: ArcGc::new_unsized(|| Arc::new(source) as Arc<dyn SampleResource>),
+        })
     }
 
     fn extensions(&self) -> &[&str] {

@@ -1,3 +1,37 @@
+# 0.7.0
+
+## Features
+
+- Added `CompletionReason` to `PlaybackCompletion` event
+- Added `Reflect` implementations for all public relationships
+- Insert `Name` components on audio nodes and sample players with `entity_names` feature
+- Expose original sample rate on AudioSample assets
+
+## Changes
+
+- Renamed `SfxBus` to `SoundEffectsBus`
+- Renamed `PlaybackCompletionEvent` to `PlaybackCompletion`
+- Switched to `recursive_spawn` for `sample_effects`, permitting an
+  arbitrary number of effects to be spawned at once
+- Updated Firewheel backend management
+- Removed `loudness` and `stream` from default features
+
+## Fixes
+
+- Fixed effect leak from `OnComplete::Remove`
+- Improved correctness of pool label component removal
+
+### Migration guide
+
+Firewheel's `cpal` backend now waits until an API has been selected before
+providing its simple device configuration. As a result, device entities will
+not be available until after `SeedlingStartupSystems::StreamInitialization`
+in `PostUpdate`, and the stream is automatically started with the default
+output.
+
+Any code that relies on device entities in the `Startup` schedule will need
+to be moved to `PostStartup`.
+
 # 0.6.1
 
 ## Fixes
