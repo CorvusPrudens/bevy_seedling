@@ -37,17 +37,15 @@ pub use seedling_context::{SeedlingContext, SeedlingContextError, SeedlingContex
 pub struct AudioContext(InnerContext);
 
 impl AudioContext {
-    /// Initialize the audio process.
-    pub fn new<B>(settings: FirewheelConfig, stream_settings: B::Config) -> Result<Self>
+    /// Create the audio context.
+    ///
+    /// This will not start a stream.
+    pub fn new<B>(settings: FirewheelConfig) -> Self
     where
         B: AudioBackend + 'static,
-        B::Config: Send + 'static,
         B::StreamError: Send + Sync + 'static,
     {
-        Ok(AudioContext(InnerContext::new::<B>(
-            settings,
-            stream_settings,
-        )?))
+        AudioContext(InnerContext::new::<B>(settings))
     }
 
     /// Get an absolute timestamp from the audio thread of the current time.
@@ -88,7 +86,7 @@ impl AudioContext {
     /// # use bevy::prelude::*;
     /// # use bevy_seedling::prelude::*;
     /// fn system(mut context: ResMut<AudioContext>) {
-    ///     let input_devices = context.with(|context| context.available_input_devices());
+    ///     let input_devices = context.with(|context| context.input_devices_simple());
     /// }
     /// ```
     pub fn with<F, O>(&mut self, f: F) -> O
@@ -110,6 +108,7 @@ impl AudioContext {
 /// crate::configuration::SeedlingStartupSystems::StreamInitialization
 /// [`PostStartup`]: bevy_app::prelude::PostStartup
 #[derive(Resource, Debug, Clone)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SampleRate(sync::Arc<sync::atomic::AtomicU32>);
 
 impl SampleRate {
@@ -127,34 +126,55 @@ impl SampleRate {
 /// Mutating this resource will cause the audio stream to stop
 /// and restart, applying the latest changes.
 #[derive(Resource, Debug)]
-pub struct AudioStreamConfig<B: AudioBackend = firewheel::CpalBackend>(pub B::Config);
+pub struct AudioStreamConfig<B: AudioBackend = firewheel::cpal::CpalBackend>(pub B::Config);
 
 pub(crate) fn initialize_context<B>(
     firewheel_config: crate::prelude::FirewheelConfig,
-    stream_config: B::Config,
     commands: &mut Commands,
-    server: &AssetServer,
+) -> Result
+where
+    B: AudioBackend + 'static,
+    B::StreamError: Send + Sync + 'static,
+{
+    let context = AudioContext::new::<B>(firewheel_config);
+    commands.insert_resource(context);
+
+    Ok(())
+}
+
+pub(crate) fn start_stream<B>(
+    config: Res<AudioStreamConfig<B>>,
+    server: Res<AssetServer>,
+    mut context: ResMut<AudioContext>,
+    mut commands: Commands,
 ) -> Result
 where
     B: AudioBackend + 'static,
     B::Config: Clone + Send + Sync + 'static,
-    B::StreamError: Send + Sync + 'static,
 {
-    let mut context = AudioContext::new::<B>(firewheel_config, stream_config.clone())?;
-    let raw_sample_rate = context.with(|ctx| ctx.stream_info().unwrap().sample_rate);
-    let sample_rate = SampleRate(sync::Arc::new(sync::atomic::AtomicU32::new(
-        raw_sample_rate.get(),
-    )));
+    context.with(|context| {
+        let context = context.downcast_mut::<FirewheelCtx<B>>().expect(
+            "Attempted to initialize audio context with unexpected backend type. \
+                    `bevy_seedling` expects a single context.",
+        );
+        context
+            .start_stream(config.0.clone())
+            .map_err(|e| format!("failed to start audio stream: {e:?}"))?;
 
-    commands.insert_resource(context);
-    commands.insert_resource(sample_rate.clone());
-    server.register_loader(crate::sample::SampleLoader { sample_rate });
+        let raw_sample_rate = context.stream_info().unwrap().sample_rate;
+        let sample_rate = SampleRate(sync::Arc::new(sync::atomic::AtomicU32::new(
+            raw_sample_rate.get(),
+        )));
 
-    commands.trigger(StreamStartEvent {
-        sample_rate: raw_sample_rate,
-    });
+        commands.insert_resource(sample_rate.clone());
+        server.register_loader(crate::sample::SampleLoader { sample_rate });
 
-    Ok(())
+        commands.trigger(StreamStartEvent {
+            sample_rate: raw_sample_rate,
+        });
+
+        Ok(())
+    })
 }
 
 /// An event triggered when the audio stream first initializes.

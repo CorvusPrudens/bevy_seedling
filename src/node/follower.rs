@@ -49,6 +49,7 @@ pub struct FollowerOf(pub Entity);
 /// The relationship target for [`FollowerOf`].
 #[derive(Debug, Component)]
 #[relationship_target(relationship = FollowerOf)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct Followers(SmallVec<[Entity; 2]>);
 
 /// Apply diffing and patching between two sets of parameters

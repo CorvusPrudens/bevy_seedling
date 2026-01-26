@@ -2,7 +2,7 @@ use core::any::Any;
 use core::error::Error;
 use firewheel::{
     FirewheelCtx, StreamInfo,
-    backend::{AudioBackend, DeviceInfo},
+    backend::{AudioBackend, DeviceInfoSimple},
     channel_config::ChannelConfig,
     clock::{AudioClock, TransportState},
     error::{AddEdgeError, RemoveNodeError, UpdateError},
@@ -86,11 +86,15 @@ impl SeedlingContext {
 /// This allows applications to treat all backend identically
 /// after construction.
 pub trait SeedlingContextWrapper: core::any::Any {
-    /// Get a list of the available audio input devices.
-    fn available_input_devices(&self) -> Vec<DeviceInfo>;
+    /// Get a list of available input audio devices (for the default API).
+    ///
+    /// The first item in the list is the default device.
+    fn input_devices_simple(&mut self) -> Vec<DeviceInfoSimple>;
 
-    /// Get a list of the available audio output devices.
-    fn available_output_devices(&self) -> Vec<DeviceInfo>;
+    /// Get a list of available output audio devices (for the default API).
+    ///
+    /// The first item in the list is the default device.
+    fn output_devices_simple(&mut self) -> Vec<DeviceInfoSimple>;
 
     /// Information about the running audio stream.
     ///
@@ -281,12 +285,16 @@ where
     B: AudioBackend + core::any::Any,
     B::StreamError: core::error::Error + Send + Sync + 'static,
 {
-    fn available_input_devices(&self) -> Vec<DeviceInfo> {
-        <FirewheelCtx<B>>::available_input_devices(self)
+    fn input_devices_simple(&mut self) -> Vec<DeviceInfoSimple> {
+        <FirewheelCtx<B>>::active_backend_mut(self)
+            .map(|backend| backend.input_devices_simple())
+            .unwrap_or_default()
     }
 
-    fn available_output_devices(&self) -> Vec<DeviceInfo> {
-        <FirewheelCtx<B>>::available_output_devices(self)
+    fn output_devices_simple(&mut self) -> Vec<DeviceInfoSimple> {
+        <FirewheelCtx<B>>::active_backend_mut(self)
+            .map(|backend| backend.output_devices_simple())
+            .unwrap_or_default()
     }
 
     fn stream_info(&self) -> Option<&StreamInfo> {

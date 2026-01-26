@@ -14,23 +14,15 @@ pub struct InnerContext(());
 impl InnerContext {
     /// Spawn the audio process and control thread.
     #[inline(always)]
-    pub fn new<B>(
-        settings: FirewheelConfig,
-        stream_settings: B::Config,
-    ) -> bevy_ecs::prelude::Result<Self>
+    pub fn new<B>(settings: FirewheelConfig) -> Self
     where
         B: AudioBackend + 'static,
-        B::Config: Send + 'static,
         B::StreamError: Send + Sync + 'static,
     {
-        let mut context = FirewheelCtx::<B>::new(settings);
-        context
-            .start_stream(stream_settings)
-            .map_err(|e| format!("failed to start audio stream: {e:?}"))?;
-
+        let context = FirewheelCtx::<B>::new(settings);
         CONTEXT.set(SeedlingContext::new(context));
 
-        Ok(Self(()))
+        Self(())
     }
 
     /// Operate on the underlying context.

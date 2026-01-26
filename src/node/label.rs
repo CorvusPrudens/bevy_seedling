@@ -8,7 +8,7 @@
 //! will be automatically connected to [MainBus].
 
 use crate::edge::NodeMap;
-use bevy_ecs::{intern::Interned, prelude::*};
+use bevy_ecs::{intern::Interned, lifecycle::HookContext, prelude::*, world::DeferredWorld};
 use bevy_log::prelude::*;
 use smallvec::SmallVec;
 
@@ -210,6 +210,22 @@ impl NodeLabels {
             None => false,
         }
     }
+}
+
+/// Update an entity's node labels collection.
+#[doc(hidden)]
+pub fn insert_node_label<L: Component + NodeLabel>(mut world: DeferredWorld, context: HookContext) {
+    let value = world.get::<L>(context.entity).unwrap();
+    let interned = <L as NodeLabel>::intern(value);
+
+    let mut labels = world
+        .get::<NodeLabels>(context.entity)
+        .cloned()
+        .unwrap_or_default();
+
+    labels.insert(interned);
+
+    world.commands().entity(context.entity).insert(labels);
 }
 
 #[cfg(test)]

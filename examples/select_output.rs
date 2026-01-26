@@ -12,7 +12,11 @@ struct SelectedOutput;
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
-        .add_systems(Startup, (set_up_ui, startup).chain())
+        .add_systems(Startup, set_up_ui)
+        .add_systems(
+            PostStartup,
+            device_setup.after(SeedlingStartupSystems::StreamInitialization),
+        )
         .add_systems(Update, (select_output, play_sound))
         .add_observer(observe_selection)
         .add_observer(observe_init)
@@ -20,9 +24,9 @@ fn main() {
         .run();
 }
 
-fn startup(outputs: Query<(Entity, &OutputDeviceInfo)>, mut commands: Commands) {
+fn device_setup(outputs: Query<(Entity, &OutputDeviceInfo)>, mut commands: Commands) {
     for (entity, device) in &outputs {
-        info!("device: {}, default: {}", device.name, device.is_default);
+        info!("device: {:?}, default: {}", device.name, device.is_default);
 
         if device.is_default {
             commands.entity(entity).insert(SelectedOutput);
@@ -80,7 +84,7 @@ fn observe_selection(
 ) -> Result {
     let output = outputs.get(trigger.event_target())?;
 
-    stream.0.output.device_name = Some(output.name.clone());
+    stream.0.output.device_id = output.id.parse().ok();
 
     let new_string = if output.is_default {
         format!("{} (default)", output.name)
@@ -135,10 +139,10 @@ fn set_up_ui(mut commands: Commands) {
             margin: UiRect::AUTO,
             padding: UiRect::axes(Val::Px(50.0), Val::Px(50.0)),
             border: UiRect::axes(Val::Px(2.0), Val::Px(2.0)),
+            border_radius: BorderRadius::all(Val::Px(25.0)),
             ..default()
         },
         BorderColor::all(Color::srgb(0.9, 0.9, 0.9)),
-        BorderRadius::all(Val::Px(25.0)),
         children![
             (
                 Text::new("Device Selection"),
