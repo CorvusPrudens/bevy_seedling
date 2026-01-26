@@ -60,7 +60,7 @@ bevy_reflect = { version = "0.18.0", default-features = false, features = [
   "glam",
 ] }
 
-firewheel = { git = "https://github.com/taboky-dev/Firewheel", rev = "b3d70f9", features = [
+firewheel = { version = "0.10.0", features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
@@ -68,7 +68,7 @@ firewheel = { git = "https://github.com/taboky-dev/Firewheel", rev = "b3d70f9", 
   "glam-30",
   "freeverb_node",
 ] }
-symphonium = { version = "0.6", default-features = false, features = [
+symphonium = { version = "0.7", default-features = false, features = [
   "opt-simd",
   "fft-resampler",
 ] }
@@ -81,18 +81,18 @@ rand = { version = "0.9", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-firewheel-ircam-hrtf = { path = "../firewheel-ircam-hrtf", version = "0.4.0", optional = true, features = [
+firewheel-ircam-hrtf = { version = "0.4.0", optional = true, features = [
   "bevy",
 ] }
-firewheel-web-audio = { path = "../firewheel-web-audio", version = "0.4.0", optional = true }
+firewheel-web-audio = { version = "0.4.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/taboky-dev/Firewheel", rev = "b3d70f9", features = [
+firewheel = { version = "0.10.0", features = [
   "wasm-bindgen",
 ] }
 
 [dev-dependencies]
-bevy_seedling = { path = ".", features = ["hrtf"] }
+bevy_seedling = { path = ".", features = ["hrtf", "loudness"] }
 bevy = { version = "0.18.0", default-features = false, features = [
   "2d_bevy_render",
   "default_app",

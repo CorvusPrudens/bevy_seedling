@@ -22,7 +22,7 @@ impl InnerContext {
         let mut context = FirewheelCtx::<B>::new(settings);
         CONTEXT.set(SeedlingContext::new(context));
 
-        Ok(Self(()))
+        Self(())
     }
 
     /// Operate on the underlying context.

@@ -24,56 +24,30 @@
 //! [dependencies]
 //! bevy_seedling = "0.7.0"
 //! bevy = { version = "0.18.0", default-features = false, features = [
-//!   "std",
-//!   "async_executor",
+//!   # 2d
+//!   "2d_bevy_render",
+//!   "default_app",
+//!   "picking",
+//!   "scene",
+//!
+//!   # 3d
+//!   "3d_bevy_render",
+//!
+//!   # ui
+//!   "ui_api",
+//!   "ui_bevy_render",
+//!
+//!   # default_platform
 //!   "android-game-activity",
-//!   "android_shared_stdcxx",
-//!   "animation",
-//!   "bevy_asset",
-//!   "bevy_color",
-//!   "bevy_core_pipeline",
-//!   "bevy_post_process",
-//!   "bevy_anti_alias",
 //!   "bevy_gilrs",
-//!   "bevy_gizmos",
-//!   "bevy_gltf",
-//!   "bevy_input_focus",
-//!   "bevy_log",
-//!   "bevy_mesh_picking_backend",
-//!   "bevy_pbr",
-//!   "bevy_picking",
-//!   "bevy_render",
-//!   "bevy_scene",
-//!   "bevy_image",
-//!   "bevy_mesh",
-//!   "bevy_camera",
-//!   "bevy_light",
-//!   "bevy_shader",
-//!   "bevy_sprite",
-//!   "bevy_sprite_picking_backend",
-//!   "bevy_sprite_render",
-//!   "bevy_state",
-//!   "bevy_text",
-//!   "bevy_ui",
-//!   "bevy_ui_picking_backend",
-//!   "bevy_ui_render",
-//!   "bevy_window",
 //!   "bevy_winit",
-//!   "custom_cursor",
 //!   "default_font",
-//!   "hdr",
-//!   "ktx2",
 //!   "multi_threaded",
-//!   "png",
-//!   "reflect_auto_register",
-//!   "smaa_luts",
+//!   "std",
 //!   "sysinfo_plugin",
-//!   "tonemapping_luts",
+//!   "wayland",
 //!   "webgl2",
 //!   "x11",
-//!   "wayland",
-//!   "debug",
-//!   "zstd_rust",
 //! ] }
 //! ```
 //!
@@ -153,7 +127,7 @@
 //! | Flag            | Description                                | Default |
 //! | --------------- | ------------------------------------------ | ------- |
 //! | `reflect`       | Enable [`bevy_reflect`] derive macros.     | Yes     |
-//! | `debug`         | Label audio nodes with `Name`.             | Yes     |
+//! | `dev`           | Label audio nodes with `Name`.             | Yes     |
 //! | `rand`          | Enable the [`RandomPitch`] component.      | Yes     |
 //! | `wav`           | Enable WAV format and PCM encoding.        | Yes     |
 //! | `ogg`           | Enable Ogg format and Vorbis encoding.     | Yes     |
