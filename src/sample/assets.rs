@@ -1,6 +1,6 @@
 use bevy_asset::{Asset, AssetLoader};
 use bevy_reflect::TypePath;
-use firewheel::{collector::ArcGc, sample_resource::SampleResource};
+use firewheel::{DecodedAudio, DecodedAudioF32, collector::ArcGc, sample_resource::SampleResource};
 use std::{num::NonZeroU32, sync::Arc};
 
 /// A type-erased audio sample.
@@ -42,6 +42,24 @@ impl AudioSample {
     /// [`SampleResourceInfo::sample_rate`]: firewheel::sample_resource::SampleResourceInfo::sample_rate
     pub fn original_sample_rate(&self) -> NonZeroU32 {
         self.original_sample_rate
+    }
+}
+
+impl From<DecodedAudioF32> for AudioSample {
+    fn from(source: DecodedAudioF32) -> Self {
+        Self {
+            original_sample_rate: source.original_sample_rate(),
+            sample: ArcGc::new_unsized(|| Arc::new(source) as _),
+        }
+    }
+}
+
+impl From<DecodedAudio> for AudioSample {
+    fn from(source: DecodedAudio) -> Self {
+        Self {
+            original_sample_rate: source.original_sample_rate(),
+            sample: ArcGc::new_unsized(|| Arc::new(source) as _),
+        }
     }
 }
 
@@ -133,10 +151,7 @@ impl AssetLoader for SampleLoader {
             Default::default(),
         )?;
 
-        Ok(AudioSample {
-            original_sample_rate: source.original_sample_rate(),
-            sample: ArcGc::new_unsized(|| Arc::new(source) as Arc<dyn SampleResource>),
-        })
+        Ok(source.into())
     }
 
     fn extensions(&self) -> &[&str] {
