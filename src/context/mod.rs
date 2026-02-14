@@ -33,7 +33,7 @@ pub use seedling_context::{SeedlingContext, SeedlingContextError, SeedlingContex
 ///     });
 /// }
 /// ```
-#[derive(Debug, Resource)]
+#[derive(Debug, Resource, Component)]
 pub struct AudioContext(InnerContext);
 
 impl AudioContext {
@@ -109,7 +109,7 @@ impl AudioContext {
 /// [`PostStartup`]: bevy_app::prelude::PostStartup
 #[derive(Resource, Debug, Clone)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-pub struct SampleRate(sync::Arc<sync::atomic::AtomicU32>);
+pub struct SampleRate(pub(crate) sync::Arc<sync::atomic::AtomicU32>);
 
 impl SampleRate {
     /// Get the current sample rate.
@@ -125,7 +125,7 @@ impl SampleRate {
 ///
 /// Mutating this resource will cause the audio stream to stop
 /// and restart, applying the latest changes.
-#[derive(Resource, Debug)]
+#[derive(Resource, Component, Debug)]
 pub struct AudioStreamConfig<B: AudioBackend = firewheel::cpal::CpalBackend>(pub B::Config);
 
 pub(crate) fn initialize_context<B>(
