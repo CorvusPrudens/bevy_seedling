@@ -354,6 +354,7 @@ pub mod edge;
 pub mod error;
 pub mod node;
 pub mod nodes;
+pub mod platform;
 pub mod pool;
 pub mod sample;
 pub mod spatial;
