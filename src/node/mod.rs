@@ -687,13 +687,13 @@ fn observe_simple_node_insertion<T: Component>(
 /// When this component is removed, the underlying
 /// audio node is removed from the graph.
 #[derive(Debug, Clone, Copy, Component)]
-#[component(on_replace = Self::on_replace_hook, immutable)]
+#[component(on_discard = Self::on_discard_hook, immutable)]
 #[require(ChannelMapping)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct FirewheelNode(pub NodeID);
 
 impl FirewheelNode {
-    fn on_replace_hook(mut world: DeferredWorld, context: HookContext) {
+    fn on_discard_hook(mut world: DeferredWorld, context: HookContext) {
         let Some(node) = world.get::<FirewheelNode>(context.entity).copied() else {
             return;
         };
