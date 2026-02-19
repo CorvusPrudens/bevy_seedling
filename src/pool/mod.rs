@@ -67,7 +67,7 @@ impl Plugin for SamplePoolPlugin {
             .add_observer(remove_finished)
             .add_observer(generate_snapshots)
             .add_observer(apply_snapshots)
-            .add_observer(Sampler::observe_replace)
+            .add_observer(Sampler::observe_discard)
             .add_plugins(dynamic::DynamicPlugin);
     }
 }
@@ -414,8 +414,8 @@ impl Sampler {
     }
 
     // Whenever this link is broken, all the effects should also remove their control.
-    fn observe_replace(
-        trigger: On<Replace, Self>,
+    fn observe_discard(
+        trigger: On<Discard, Self>,
         target: Query<&SampleEffects>,
         mut commands: Commands,
     ) {
