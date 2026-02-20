@@ -67,7 +67,7 @@ firewheel = { version = "0.10.0", features = [
   "spatial_basic_node",
   "scheduled_events",
   "musical_transport",
-  "glam-31",
+  "glam-32",
   "freeverb_node",
 ] }
 symphonium = { version = "0.7", default-features = false, features = [
