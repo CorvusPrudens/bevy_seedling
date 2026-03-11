@@ -1,3 +1,11 @@
+# 0.7.1
+
+## Fixes
+
+- Fixed panic resulting from `PlaybackCompletion` observer operating
+  on a despawned entity
+- Fixed `RandomPitch` panic when range is empty
+
 # 0.7.0
 
 ## Features

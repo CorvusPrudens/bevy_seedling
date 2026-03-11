@@ -782,7 +782,13 @@ mod random {
             mut rng: ResMut<PitchRngSource>,
         ) {
             for (entity, mut settings, range) in samples.iter_mut() {
-                settings.speed = rng.0.gen_pitch(range.0.clone());
+                let speed = if range.0.is_empty() {
+                    range.0.start
+                } else {
+                    rng.0.gen_pitch(range.0.clone())
+                };
+
+                settings.speed = speed;
                 commands.entity(entity).remove::<Self>();
             }
         }
