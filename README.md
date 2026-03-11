@@ -89,23 +89,24 @@ should help you get up to speed on common usage patterns.
 
 ## Feature flags
 
-| Flag            | Description                                | Default |
-| --------------- | ------------------------------------------ | ------- |
-| `reflect`       | Enable `bevy_reflect` derive macros.       | Yes     |
-| `rand`          | Enable the `RandomPitch` component.        | Yes     |
-| `wav`           | Enable WAV format and PCM encoding.        | Yes     |
-| `ogg`           | Enable Ogg format and Vorbis encoding.     | Yes     |
-| `mp3`           | Enable mp3 format and encoding.            | No      |
-| `mkv`           | Enable mkv format.                         | No      |
-| `adpcm`         | Enable adpcm encoding.                     | No      |
-| `flac`          | Enable FLAC format and encoding.           | No      |
-| `web_audio`     | Enable the multi-threading web backend.    | No      |
-| `hrtf`          | Enable HRTF Spatialization.                | No      |
-| `hrtf_subjects` | Enable all HRTF embedded data.             | No      |
-| `loudness`      | Enable LUFS analyzer node.                 | No      |
-| `stream`        | Enable CPAL input and output stream nodes. | No      |
-| `dev`           | Enable helpful features for development.   | No      |
-| `entity_names`  | Add `Name`s to node and sample entities.   | No      |
+| Flag              | Description                                | Default |
+| ----------------- | ------------------------------------------ | ------- |
+| `reflect`         | Enable `bevy_reflect` derive macros.       | Yes     |
+| `rand`            | Enable the `RandomPitch` component.        | Yes     |
+| `wav`             | Enable WAV format and PCM encoding.        | Yes     |
+| `ogg`             | Enable Ogg format and Vorbis encoding.     | Yes     |
+| `mp3`             | Enable mp3 format and encoding.            | No      |
+| `mkv`             | Enable mkv format.                         | No      |
+| `adpcm`           | Enable adpcm encoding.                     | No      |
+| `flac`            | Enable FLAC format and encoding.           | No      |
+| `web_audio`       | Enable the multi-threading web backend.    | No      |
+| `hrtf`            | Enable HRTF Spatialization.                | No      |
+| `hrtf_subjects`   | Enable all HRTF embedded data.             | No      |
+| `loudness`        | Enable LUFS analyzer node.                 | No      |
+| `stream`          | Enable CPAL input and output stream nodes. | No      |
+| `resample_inputs` | Enable audio input resampling.             | No      |
+| `dev`             | Enable helpful features for development.   | No      |
+| `entity_names`    | Add `Name`s to node and sample entities.   | No      |
 
 ## Bevy version compatibility
 
