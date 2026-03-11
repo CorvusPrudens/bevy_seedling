@@ -16,6 +16,7 @@ exclude = ["/assets"]
 [features]
 default = ["wav", "ogg", "rand", "reflect"]
 stream = ["firewheel/stream_nodes"]
+resample_inputs = ["firewheel/cpal_resample_inputs"]
 rand = ["dep:rand"]
 loudness = ["dep:ebur128", "dep:portable-atomic"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
@@ -93,7 +94,7 @@ firewheel = { version = "0.10.0", features = [
 ] }
 
 [dev-dependencies]
-bevy_seedling = { path = ".", features = ["hrtf", "loudness"] }
+bevy_seedling = { path = ".", features = ["hrtf", "loudness", "resample_inputs"] }
 bevy = { version = "0.18.0", default-features = false, features = [
   "2d_bevy_render",
   "default_app",

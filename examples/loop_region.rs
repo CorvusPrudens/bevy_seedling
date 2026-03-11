@@ -48,8 +48,8 @@ fn manage_loop_regions(
     for (region, settings, sampler, mut last, mut events) in samples {
         let sample_position = sampler.playhead_seconds();
 
-        // Scheduling the plahead event once we're halfway through the loop
-        // should ensure it's reliably observed.
+        // Scheduling the playhead event once we're halfway through the loop
+        // should ensure it's reliably observed (unless the loop duration is less than a frame).
         let mid_point = region.0.start + (region.0.end - region.0.start) * 0.5;
 
         if last.0 <= mid_point && sample_position.0 >= mid_point {
