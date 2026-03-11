@@ -748,17 +748,20 @@ fn remove_finished(
     mut commands: Commands,
 ) -> Result {
     let sample_entity = trigger.event_target();
-    let settings = samples.get(sample_entity)?;
+
+    let (Ok(mut entity), Ok(settings)) = (
+        commands.get_entity(sample_entity),
+        samples.get(sample_entity),
+    ) else {
+        return Ok(());
+    };
 
     match settings.on_complete {
         OnComplete::Preserve => {
-            commands
-                .entity(sample_entity)
-                .remove::<(Sampler, QueuedSample, SkipTimer)>();
+            entity.remove::<(Sampler, QueuedSample, SkipTimer)>();
         }
         OnComplete::Remove => {
-            commands
-                .entity(sample_entity)
+            entity
                 .despawn_related::<SampleEffects>()
                 .remove_with_requires::<(
                     SamplePlayer,
@@ -770,7 +773,7 @@ fn remove_finished(
                 )>();
         }
         OnComplete::Despawn => {
-            commands.entity(sample_entity).despawn();
+            entity.despawn();
         }
     }
 
