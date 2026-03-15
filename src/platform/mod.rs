@@ -1,93 +1,28 @@
 //! Components that abstract over different backends.
 
+use bevy_asset::AssetServer;
 use bevy_ecs::prelude::*;
 
+use crate::context::{SampleRate, StreamStartEvent};
+
+#[cfg(feature = "cpal")]
 pub mod cpal;
 
-#[derive(EntityEvent)]
-pub struct FetchDevices {
-    pub entity: Entity,
-    pub detailed: bool,
-}
+#[cfg(any(feature = "profiling", test))]
+pub mod mock;
 
-#[derive(Component)]
-#[component(immutable)]
-pub struct HostId<T>(pub T);
+/// A [`Resource`] containing the audio context's stream configuration.
+///
+/// Mutating this resource will cause the audio stream to stop
+/// and restart, applying the latest changes.
+#[derive(Resource, Component, Debug, Default)]
+pub struct AudioStreamConfig<C>(pub C);
 
-#[derive(Component)]
-#[component(immutable)]
-pub struct DeviceId<T>(pub T);
-
-#[derive(Component)]
-#[component(immutable)]
-pub struct SampleRate(pub u32);
-
-#[derive(Component)]
-#[component(immutable)]
-pub struct BufferFrames(pub u32);
-
-#[derive(Component)]
-pub struct DefaultInputDevice;
-
-#[derive(Component)]
-pub struct DefaultOutputDevice;
-
-#[derive(Component)]
-#[relationship_target(relationship = InputDeviceOf)]
-pub struct InputDevices(Vec<Entity>);
-
-#[derive(Component)]
-#[relationship(relationship_target = InputDevices)]
-pub struct InputDeviceOf(pub Entity);
-
-#[derive(Component)]
-#[relationship_target(relationship = OutputDeviceOf)]
-pub struct OutputDevices(Vec<Entity>);
-
-#[derive(Component)]
-#[relationship(relationship_target = OutputDevices)]
-pub struct OutputDeviceOf(pub Entity);
-
-#[derive(Component)]
-#[relationship_target(relationship = SelectedInputDeviceOf)]
-pub struct SelectedInputDevice(Entity);
-
-#[derive(Component)]
-#[relationship(relationship_target = SelectedInputDevice)]
-pub struct SelectedInputDeviceOf(pub Entity);
-
-#[derive(Component)]
-#[relationship_target(relationship = SelectedOutputDeviceOf)]
-pub struct SelectedOutputDevice(Entity);
-
-#[derive(Component)]
-#[relationship(relationship_target = SelectedOutputDevice)]
-pub struct SelectedOutputDeviceOf(pub Entity);
-
-#[derive(Component)]
-#[component(immutable)]
-pub struct SampleRates(Vec<u32>);
-
-#[derive(Component)]
-#[component(immutable)]
-pub struct InputChannels(pub u32);
-
-#[derive(Component)]
-#[component(immutable)]
-pub struct OutputChannels(pub u32);
-
-#[derive(Component)]
-#[component(immutable)]
-pub struct DuplexChannels(pub u32);
-
-#[derive(Resource, Default)]
-pub struct AudioContextConfig(pub crate::prelude::FirewheelConfig);
-
-fn spawn_context<B>(config: Res<AudioContextConfig>, mut commands: Commands)
-where
-    B: firewheel::backend::AudioBackend + 'static,
-    B::StreamError: Send + Sync + 'static,
-{
-    let context = crate::context::AudioContext::new::<B>(config.0);
-    commands.spawn(context);
+pub fn initialize_stream(sample_rate: SampleRate, server: &AssetServer, mut commands: Commands) {
+    let raw_sample_rate = sample_rate.get();
+    commands.insert_resource(sample_rate.clone());
+    server.register_loader(crate::sample::SampleLoader::new(sample_rate));
+    commands.trigger(StreamStartEvent {
+        sample_rate: raw_sample_rate,
+    });
 }

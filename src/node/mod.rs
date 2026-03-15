@@ -6,7 +6,7 @@ use crate::time::{Audio, AudioTime};
 use crate::{
     SeedlingSystems,
     edge::{ChannelMapping, NodeMap},
-    prelude::AudioContext,
+    prelude::AudioGraph,
 };
 use bevy_app::prelude::*;
 use bevy_ecs::component::Components;
@@ -21,7 +21,6 @@ use bevy_platform::collections::HashSet;
 use bevy_time::Time;
 use firewheel::channel_config::ChannelConfig;
 use firewheel::clock::{DurationSeconds, EventInstant, InstantSeconds};
-use firewheel::error::UpdateError;
 use firewheel::graph::NodeEntry;
 use firewheel::{
     diff::{Diff, Patch},
@@ -195,7 +194,7 @@ fn handle_configuration_changes<
         ),
         Changed<T::Configuration>,
     >,
-    mut context: ResMut<AudioContext>,
+    mut context: ResMut<AudioGraph>,
     mut commands: Commands,
 ) -> Result {
     let changes: Vec<_> = configs.iter_mut().filter(|(.., c, b)| *c != &b.0).collect();
@@ -206,16 +205,15 @@ fn handle_configuration_changes<
     context.with(|context| {
         for (entity, node, node_id, config, mut baseline) in changes {
             // we have to get them every time, which is kind of annoying
-            let edges = context.edges();
-            let existing_inputs = edges
-                .iter()
+            let existing_inputs = context
+                .edges()
                 .filter(|e| e.dst_node == node_id.0)
-                .map(|e| firewheel::graph::Edge::clone(e))
+                .map(firewheel::graph::Edge::clone)
                 .collect::<Vec<_>>();
-            let existing_outputs = edges
-                .iter()
+            let existing_outputs = context
+                .edges()
                 .filter(|e| e.src_node == node_id.0)
-                .map(|e| firewheel::graph::Edge::clone(e))
+                .map(firewheel::graph::Edge::clone)
                 .collect::<Vec<_>>();
 
             let new_node = context.add_node(node.clone(), Some(config.clone()));
@@ -264,7 +262,7 @@ fn acquire_id<T>(
         (Entity, &T, Option<&T::Configuration>, Option<&NodeLabels>),
         (Without<FirewheelNode>, Without<EffectOf>),
     >,
-    mut context: ResMut<AudioContext>,
+    mut context: ResMut<AudioGraph>,
     mut node_map: ResMut<NodeMap>,
     mut commands: Commands,
 ) where
@@ -309,7 +307,7 @@ pub struct AudioState<T>(pub T);
 
 fn fetch_state<T, S>(
     q: Query<(Entity, &FirewheelNode), (Changed<FirewheelNode>, With<T>)>,
-    mut context: ResMut<AudioContext>,
+    mut context: ResMut<AudioGraph>,
     mut commands: Commands,
 ) where
     T: AudioNode + Component,
@@ -724,7 +722,7 @@ pub(crate) fn flush_events(
         Option<&DiffTimestamp>,
     )>,
     mut removals: ResMut<PendingRemovals>,
-    mut context: ResMut<AudioContext>,
+    mut context: ResMut<AudioGraph>,
     time: Res<bevy_time::Time<Audio>>,
     should_schedule: Res<ScheduleDiffing>,
     lookahead: Res<AudioScheduleLookahead>,
@@ -778,16 +776,17 @@ pub(crate) fn flush_events(
         let result = context.update();
 
         match result {
-            Err(UpdateError::StreamStoppedUnexpectedly(e)) => {
-                // For now, we'll assume this is always due to a device becoming unavailable.
-                // As such, we'll attempt a reinitialization.
-                warn!("Audio stream stopped: {e:?}");
+            // TODO: handle everything
+            // Err(UpdateError::StreamStoppedUnexpectedly(e)) => {
+            //     // For now, we'll assume this is always due to a device becoming unavailable.
+            //     // As such, we'll attempt a reinitialization.
+            //     warn!("Audio stream stopped: {e:?}");
 
-                // First, we'll want to make sure the devices are up-to-date.
-                commands.trigger(crate::configuration::FetchAudioIoEvent);
-                // Then, we'll attempt a restart.
-                commands.trigger(crate::configuration::RestartAudioEvent);
-            }
+            //     // First, we'll want to make sure the devices are up-to-date.
+            //     commands.trigger(crate::configuration::FetchAudioIoEvent);
+            //     // Then, we'll attempt a restart.
+            //     commands.trigger(crate::configuration::RestartAudioEvent);
+            // }
             Err(e) => {
                 error!("graph error: {e:?}");
             }
@@ -818,18 +817,16 @@ mod test {
 
         let initial_id = run(
             &mut app,
-            |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioContext>| {
+            |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioGraph>| {
                 let node = q.single().unwrap().0;
 
                 let total_nodes = context.with(|context| {
-                    let edges = context.edges();
-
-                    let inputs = edges.iter().filter(|e| e.src_node == node).count();
-                    let outputs = edges.iter().filter(|e| e.dst_node == node).count();
+                    let inputs = context.edges().filter(|e| e.src_node == node).count();
+                    let outputs = context.edges().filter(|e| e.dst_node == node).count();
 
                     assert_eq!(inputs, 2);
                     assert_eq!(outputs, 2);
-                    context.nodes().len()
+                    context.nodes().count()
                 });
 
                 // 3 + input and output
@@ -854,21 +851,19 @@ mod test {
         // splicing has succeeded
         run(
             &mut app,
-            move |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioContext>| {
+            move |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioGraph>| {
                 let node = q.single().unwrap().0;
 
                 assert_ne!(initial_id, node);
 
                 let total_nodes = context.with(|context| {
-                    let edges = context.edges();
-
-                    let inputs = edges.iter().filter(|e| e.src_node == node).count();
-                    let outputs = edges.iter().filter(|e| e.dst_node == node).count();
+                    let inputs = context.edges().filter(|e| e.src_node == node).count();
+                    let outputs = context.edges().filter(|e| e.dst_node == node).count();
 
                     assert_eq!(inputs, 2);
                     assert_eq!(outputs, 2);
 
-                    context.nodes().len()
+                    context.nodes().count()
                 });
 
                 // 3 + input and output

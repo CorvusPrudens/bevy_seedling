@@ -73,7 +73,13 @@ impl core::fmt::Debug for AudioSample {
 #[derive(Debug, TypePath)]
 pub struct SampleLoader {
     /// The sampling rate of the audio engine.
-    pub(crate) sample_rate: crate::context::SampleRate,
+    sample_rate: crate::context::SampleRate,
+}
+
+impl SampleLoader {
+    pub fn new(sample_rate: crate::context::SampleRate) -> Self {
+        Self { sample_rate }
+    }
 }
 
 /// Errors produced while loading samples.

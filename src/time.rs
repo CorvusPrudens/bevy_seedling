@@ -33,7 +33,7 @@ use bevy_time::{Time, TimeSystems};
 use firewheel::clock::{DurationSeconds, InstantSeconds};
 use std::time::Duration;
 
-use crate::context::AudioContext;
+use crate::context::AudioGraph;
 
 pub(crate) struct TimePlugin;
 
@@ -61,7 +61,7 @@ impl Audio {
     }
 }
 
-fn update_time(mut time: ResMut<Time<Audio>>, context: Option<ResMut<AudioContext>>) {
+fn update_time(mut time: ResMut<Time<Audio>>, context: Option<ResMut<AudioGraph>>) {
     let Some(mut context) = context else {
         return;
     };
