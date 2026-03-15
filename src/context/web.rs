@@ -1,10 +1,9 @@
-use crate::context::SeedlingContext;
 use core::cell::RefCell;
-use firewheel::{FirewheelConfig, FirewheelCtx, backend::AudioBackend};
+use firewheel::{FirewheelConfig, FirewheelContext, backend::AudioBackend};
 
 #[cfg(target_arch = "wasm32")]
 thread_local! {
-    static CONTEXT: RefCell<SeedlingContext> = panic!("audio context should be initialized");
+    static CONTEXT: RefCell<FirewheelContext> = panic!("audio context should be initialized");
 }
 
 /// A simple, single-threaded context wrapper.
@@ -14,13 +13,9 @@ pub struct InnerContext(());
 impl InnerContext {
     /// Spawn the audio process and control thread.
     #[inline(always)]
-    pub fn new<B>(settings: FirewheelConfig) -> Self
-    where
-        B: AudioBackend + 'static,
-        B::StreamError: Send + Sync + 'static,
-    {
-        let context = FirewheelCtx::<B>::new(settings);
-        CONTEXT.set(SeedlingContext::new(context));
+    pub fn new(settings: FirewheelConfig) -> Self {
+        let context = FirewheelContext::new(settings);
+        CONTEXT.set(context);
 
         Self(())
     }
@@ -29,7 +24,7 @@ impl InnerContext {
     #[inline(always)]
     pub fn with<F, O>(&mut self, f: F) -> O
     where
-        F: FnOnce(&mut SeedlingContext) -> O + Send,
+        F: FnOnce(&mut FirewheelContext) -> O + Send,
         O: Send + 'static,
     {
         CONTEXT.with(|c| f(&mut c.borrow_mut()))

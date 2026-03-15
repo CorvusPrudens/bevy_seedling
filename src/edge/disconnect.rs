@@ -1,10 +1,9 @@
 use super::{EdgeTarget, NodeMap, PendingEdge};
 use crate::{
-    context::AudioContext,
+    context::AudioGraph,
     node::{FirewheelNode, FirewheelNodeInfo},
 };
 use bevy_ecs::prelude::*;
-use core::ops::Deref;
 
 #[cfg(debug_assertions)]
 use core::panic::Location;
@@ -143,7 +142,7 @@ pub(crate) fn process_disconnections(
     mut disconnections: Query<(&mut PendingDisconnections, &FirewheelNode)>,
     targets: Query<(&FirewheelNode, &FirewheelNodeInfo)>,
     node_map: Res<NodeMap>,
-    mut context: ResMut<AudioContext>,
+    mut context: ResMut<AudioGraph>,
 ) {
     let disconnections = disconnections
         .iter_mut()
@@ -158,7 +157,7 @@ pub(crate) fn process_disconnections(
         for (mut pending, source_node) in disconnections.into_iter() {
             pending.0.retain(|disconnections| {
                 let Some((target_node, _target_info)) =
-                    super::fetch_target(disconnections, &node_map, &targets, (*context).deref())
+                    super::fetch_target(disconnections, &node_map, &targets, context)
                 else {
                     return false;
                 };
@@ -169,7 +168,6 @@ pub(crate) fn process_disconnections(
                     None => {
                         existing_connections = context
                             .edges()
-                            .into_iter()
                             .filter(|e| e.src_node == source_node.0 && e.dst_node == target_node)
                             .map(|e| (e.src_port, e.dst_port))
                             .collect::<Vec<_>>();
@@ -189,7 +187,7 @@ pub(crate) fn process_disconnections(
 #[cfg(test)]
 mod test {
     use crate::{
-        context::AudioContext,
+        context::AudioGraph,
         edge::{AudioGraphOutput, Connect},
         prelude::MainBus,
         test::{prepare_app, run},
@@ -218,7 +216,7 @@ mod test {
         // first, verify they're all connected
         run(
             &mut app,
-            |mut context: ResMut<AudioContext>,
+            |mut context: ResMut<AudioGraph>,
              one: Single<&FirewheelNode, With<One>>,
              two: Single<&FirewheelNode, With<Two>>,
              main: Single<&FirewheelNode, With<MainBus>>| {
@@ -228,7 +226,7 @@ mod test {
 
                 context.with(|context| {
                     // input node, output node, One, Two, and MainBus
-                    assert_eq!(context.nodes().len(), 5);
+                    assert_eq!(context.nodes().count(), 5);
 
                     let outgoing_edges_one: Vec<_> = context
                         .edges()
@@ -268,7 +266,7 @@ mod test {
         // finally, verify one and two are disconnected
         run(
             &mut app,
-            |mut context: ResMut<AudioContext>,
+            |mut context: ResMut<AudioGraph>,
              one: Single<&FirewheelNode, With<One>>,
              two: Single<&FirewheelNode, With<Two>>,
              main: Single<&FirewheelNode, With<MainBus>>| {
@@ -278,7 +276,7 @@ mod test {
 
                 context.with(|context| {
                     // input node, output node, One, Two, and MainBus
-                    assert_eq!(context.nodes().len(), 5);
+                    assert_eq!(context.nodes().count(), 5);
 
                     let outgoing_edges_one: Vec<_> = context
                         .edges()

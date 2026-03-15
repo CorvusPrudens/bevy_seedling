@@ -1,12 +1,11 @@
 use super::{EdgeTarget, NodeMap, PendingEdge};
 use crate::{
-    context::AudioContext,
+    context::AudioGraph,
     edge::ChannelMapping,
     node::{FirewheelNode, FirewheelNodeInfo},
 };
 use bevy_ecs::prelude::*;
 use bevy_log::prelude::*;
-use core::ops::Deref;
 
 #[cfg(debug_assertions)]
 use core::panic::Location;
@@ -456,7 +455,7 @@ pub(crate) fn process_connections(
     )>,
     targets: Query<(&FirewheelNode, &FirewheelNodeInfo)>,
     node_map: Res<NodeMap>,
-    mut context: ResMut<AudioContext>,
+    mut context: ResMut<AudioGraph>,
 ) {
     let connections = connections
         .iter_mut()
@@ -471,7 +470,7 @@ pub(crate) fn process_connections(
         for (mut pending, source_node, source_info, source_mapping) in connections.into_iter() {
             pending.0.retain(|connection| {
                 let Some((target_node, target_info)) =
-                    super::fetch_target(connection, &node_map, &targets, (*context).deref())
+                    super::fetch_target(connection, &node_map, &targets, context)
                 else {
                     return false;
                 };
@@ -502,7 +501,7 @@ pub(crate) fn process_connections(
 #[cfg(test)]
 mod test {
     use crate::{
-        context::AudioContext,
+        context::AudioGraph,
         edge::AudioGraphOutput,
         prelude::MainBus,
         test::{prepare_app, run},
@@ -536,7 +535,7 @@ mod test {
 
         app.world_mut()
             .run_system_once(
-                |mut context: ResMut<AudioContext>,
+                |mut context: ResMut<AudioGraph>,
                  one: Single<&FirewheelNode, With<One>>,
                  two: Single<&FirewheelNode, With<Two>>,
                  main: Single<&FirewheelNode, With<MainBus>>| {
@@ -546,7 +545,7 @@ mod test {
 
                     context.with(|context| {
                         // input node, output node, One, Two, and MainBus
-                        assert_eq!(context.nodes().len(), 5);
+                        assert_eq!(context.nodes().count(), 5);
 
                         let outgoing_edges_one: Vec<_> = context
                             .edges()
@@ -588,7 +587,7 @@ mod test {
 
         app.world_mut()
             .run_system_once(
-                |mut context: ResMut<AudioContext>,
+                |mut context: ResMut<AudioGraph>,
                  one: Single<&FirewheelNode, With<One>>,
                  two: Single<&FirewheelNode, With<Two>>,
                  three: Single<&FirewheelNode, With<Three>>| {
@@ -598,7 +597,7 @@ mod test {
 
                     context.with(|context| {
                         // input node, output node, One, Two, Three, and MainBus
-                        assert_eq!(context.nodes().len(), 6);
+                        assert_eq!(context.nodes().count(), 6);
 
                         let outgoing_edges_three: Vec<_> = context
                             .edges()
@@ -651,7 +650,7 @@ mod test {
             &mut app,
             |one: Single<&FirewheelNode, With<One>>,
              two: Single<&FirewheelNode, With<Two>>,
-             mut context: ResMut<AudioContext>| {
+             mut context: ResMut<AudioGraph>| {
                 context.with(|context| {
                     let edges = context.edges();
 
@@ -694,7 +693,7 @@ mod test {
             &mut app,
             |one: Single<&FirewheelNode, With<One>>,
              two: Single<&FirewheelNode, With<Two>>,
-             mut context: ResMut<AudioContext>| {
+             mut context: ResMut<AudioGraph>| {
                 context.with(|context| {
                     let edges = context.edges();
 

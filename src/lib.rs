@@ -343,8 +343,6 @@ extern crate self as bevy_seedling;
 use bevy_app::prelude::*;
 use bevy_asset::prelude::AssetApp;
 use bevy_ecs::prelude::*;
-use context::AudioStreamConfig;
-use firewheel::{backend::AudioBackend, cpal::CpalBackend};
 
 // We re-export Firewheel here for convenience.
 pub use firewheel;
@@ -369,7 +367,7 @@ pub mod prelude {
         GraphConfiguration, InputDeviceInfo, MusicPool, OutputDeviceInfo, SeedlingStartupSystems,
         SoundEffectsBus, SpatialPool,
     };
-    pub use crate::context::AudioContext;
+    pub use crate::context::AudioGraph;
     pub use crate::edge::{
         AudioGraphInput, AudioGraphOutput, ChannelMapping, Connect, Disconnect, EdgeTarget,
     };
@@ -411,7 +409,6 @@ pub mod prelude {
             DurationMusical, DurationSamples, DurationSeconds, InstantMusical, InstantSamples,
             InstantSeconds,
         },
-        cpal::CpalBackend,
         diff::{Memo, Notify},
         nodes::{
             StereoToMonoNode,
@@ -461,89 +458,27 @@ pub enum SeedlingSystems {
 /// to inserting `bevy_seedling`'s systems
 /// and resources.
 #[derive(Debug)]
-pub struct SeedlingPlugin<B: AudioBackend> {
-    /// [`firewheel`]'s config, forwarded directly to
-    /// the engine.
-    ///
-    /// [`firewheel`]: firewheel
-    pub config: prelude::FirewheelConfig,
+pub struct SeedlingPlugin;
 
-    /// The stream settings, forwarded directly to the backend.
-    ///
-    /// After this plugin is added, this configuration is added
-    /// as an [`AudioStreamConfig`] resource.
-    pub stream_config: B::Config,
+// impl Default for SeedlingPlugin<CpalBackend> {
+//     fn default() -> Self {
+//         SeedlingPlugin::<CpalBackend>::new()
+//     }
+// }
 
-    /// The initial graph configuration.
-    pub graph_config: configuration::GraphConfiguration,
-}
-
-impl Default for SeedlingPlugin<CpalBackend> {
-    fn default() -> Self {
-        SeedlingPlugin::<CpalBackend>::new()
-    }
-}
-
-impl<B: AudioBackend> SeedlingPlugin<B>
-where
-    B::Config: Default,
-{
-    /// Create a new default [`SeedlingPlugin`] with the specified backend.
-    pub fn new() -> Self {
-        Self {
-            config: prelude::FirewheelConfig::default(),
-            stream_config: B::Config::default(),
-            graph_config: prelude::GraphConfiguration::default(),
-        }
-    }
-}
-
-#[cfg(feature = "web_audio")]
-impl SeedlingPlugin<firewheel_web_audio::WebAudioBackend> {
-    /// Create a new default [`SeedlingPlugin`] with the [`firewheel_web_audio`] backend.
-    ///
-    /// [`firewheel_web_audio`] uses Wasm multi-threading to execute its audio processing
-    /// in the browser's high-priority audio thread. This eliminates all stuttering
-    /// induced by running the audio processing in the main browser thread, which is
-    /// what the default backend, `cpal`, does.
-    ///
-    /// Wasm multi-threading requires a few
-    /// steps, including a nightly compiler, so you'll likely want to feature-gate this
-    /// backend.
-    ///
-    /// ```
-    /// # use bevy::prelude::*;
-    /// # use bevy_seedling::prelude::*;
-    /// # fn plugin(app: &mut App) {
-    /// #[cfg(not(feature = "web_audio"))]
-    /// app.add_plugins(SeedlingPlugin::default());
-    ///
-    /// #[cfg(feature = "web_audio")]
-    /// app.add_plugins(SeedlingPlugin::new_web_audio());
-    /// # }
-    /// ```
-    ///
-    /// To build and run your app, consider using the
-    /// [Bevy CLI](https://github.com/TheBevyFlock/bevy_cli).
-    ///
-    /// ```text
-    /// bevy run --features web_audio web -U web-multi-threading
-    /// ```
-    ///
-    /// This automatically enables the required nightly features and
-    /// HTTP headers for web multi-threading. To host your game
-    /// on a site like [itch.io](itch.io), make sure you enable the
-    /// "`SharedArrayBuffer` support" checkbox. For more details,
-    /// see the [`firewheel_web_audio`] crate docs.
-    pub fn new_web_audio() -> Self {
-        Self {
-            config: prelude::FirewheelConfig::default(),
-            stream_config: <firewheel_web_audio::WebAudioBackend as AudioBackend>::Config::default(
-            ),
-            graph_config: prelude::GraphConfiguration::default(),
-        }
-    }
-}
+// impl<B: AudioBackend> SeedlingPlugin<B>
+// where
+//     B::Config: Default,
+// {
+//     /// Create a new default [`SeedlingPlugin`] with the specified backend.
+//     pub fn new() -> Self {
+//         Self {
+//             config: prelude::FirewheelConfig::default(),
+//             stream_config: B::Config::default(),
+//             graph_config: prelude::GraphConfiguration::default(),
+//         }
+//     }
+// }
 
 /// Run a system if the given resource has changed, ignoring
 /// change ticks on startup.
@@ -554,17 +489,14 @@ fn resource_changed_without_insert<R: Resource>(res: Res<R>, mut has_run: Local<
     changed
 }
 
-impl<B: AudioBackend> Plugin for SeedlingPlugin<B>
-where
-    B: 'static,
-    B::Config: Clone + Send + Sync + 'static,
-    B::StreamError: Send + Sync + 'static,
-{
+impl Plugin for SeedlingPlugin {
     fn build(&self, app: &mut App) {
         use prelude::*;
 
-        app.insert_resource(context::AudioStreamConfig::<B>(self.stream_config.clone()))
-            .insert_resource(configuration::ConfigResource(self.graph_config))
+        app.init_resource::<configuration::GraphConfiguration>()
+            .init_resource::<context::AudioGraphConfig>()
+            //.insert_resource(context::AudioStreamConfig::<B>(self.stream_config.clone()))
+            // .insert_resource(configuration::ConfigResource(self.graph_config))
             .init_resource::<edge::NodeMap>()
             .init_resource::<node::ScheduleDiffing>()
             .init_resource::<node::AudioScheduleLookahead>()
@@ -600,18 +532,22 @@ where
                 node::flush_events.in_set(SeedlingSystems::Flush),
             ),
         )
-        .add_systems(
-            PostUpdate,
-            (context::pre_restart_context, context::restart_context::<B>)
-                .chain()
-                .run_if(resource_changed_without_insert::<AudioStreamConfig<B>>),
-        )
+        .add_systems(PreStartup, context::initialize_context)
+        // .add_systems(
+        //     PostUpdate,
+        //     (
+        //         context::pre_restart_context,
+        //         context::restart_context::<B>
+        //     )
+        //         .chain()
+        //         .run_if(resource_changed_without_insert::<AudioStreamConfig>),
+        // )
         .add_observer(node::label::NodeLabels::on_add_observer)
         .add_observer(node::label::NodeLabels::on_replace_observer)
         .add_observer(sample::observe_player_insert);
 
         app.add_plugins((
-            configuration::SeedlingStartup::<B>::new(self.config),
+            // configuration::SeedlingStartup::<B>::new(self.config),
             pool::SamplePoolPlugin,
             nodes::SeedlingNodesPlugin,
             node::events::EventsPlugin,
@@ -625,8 +561,8 @@ where
         app.register_simple_node::<StreamReaderNode>()
             .register_simple_node::<StreamWriterNode>();
 
-        #[cfg(feature = "hrtf")]
-        app.register_node::<HrtfNode>();
+        // #[cfg(feature = "hrtf")]
+        // app.register_node::<HrtfNode>();
 
         #[cfg(feature = "reflect")]
         app.register_type::<SamplerPool<MusicPool>>()
@@ -637,7 +573,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::prelude::*;
+    use crate::{platform::mock::MockBackendPlugin, prelude::*};
     use bevy::{ecs::system::RunSystemOnce, prelude::*};
 
     pub fn prepare_app<F: IntoSystem<(), (), M>, M>(startup: F) -> App {
@@ -646,10 +582,12 @@ mod test {
         app.add_plugins((
             MinimalPlugins,
             AssetPlugin::default(),
-            SeedlingPlugin::<crate::utils::profiling::ProfilingBackend> {
-                graph_config: crate::configuration::GraphConfiguration::Empty,
-                ..SeedlingPlugin::<crate::utils::profiling::ProfilingBackend>::new()
-            },
+            SeedlingPlugin,
+            MockBackendPlugin,
+            // SeedlingPlugin::<crate::utils::profiling::ProfilingBackend> {
+            //     graph_config: crate::configuration::GraphConfiguration::Empty,
+            //     ..SeedlingPlugin::<crate::utils::profiling::ProfilingBackend>::new()
+            // },
             TransformPlugin,
         ))
         .add_systems(Startup, startup);

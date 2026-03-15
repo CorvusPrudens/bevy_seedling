@@ -1,12 +1,13 @@
 //! Node connection and disconnection utilities.
 
-use crate::context::{AudioContext, SeedlingContextWrapper};
+use crate::context::AudioGraph;
 use crate::node::FirewheelNodeInfo;
 use crate::node::label::InternedNodeLabel;
 use crate::prelude::{FirewheelNode, MainBus, NodeLabel};
 use bevy_ecs::prelude::*;
 use bevy_log::error_once;
 use bevy_platform::collections::HashMap;
+use firewheel::FirewheelContext;
 use firewheel::node::NodeID;
 
 #[cfg(debug_assertions)]
@@ -253,7 +254,7 @@ impl core::ops::DerefMut for NodeMap {
 /// outputs.
 pub(crate) fn auto_connect(
     nodes: Query<(Entity, &FirewheelNode), Without<PendingConnections>>,
-    mut context: ResMut<AudioContext>,
+    mut context: ResMut<AudioGraph>,
     mut commands: Commands,
 ) {
     if nodes.iter().len() == 0 {
@@ -308,7 +309,7 @@ fn fetch_target(
     connection: &PendingEdge,
     node_map: &NodeMap,
     targets: &Query<(&FirewheelNode, &FirewheelNodeInfo)>,
-    context: &dyn SeedlingContextWrapper,
+    context: &FirewheelContext,
 ) -> Option<(NodeID, FirewheelNodeInfo)> {
     match connection.target {
         EdgeTarget::Entity(entity) => {
