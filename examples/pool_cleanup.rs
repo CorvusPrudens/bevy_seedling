@@ -11,7 +11,7 @@ fn main() {
             MinimalPlugins,
             LogPlugin::default(),
             AssetPlugin::default(),
-            SeedlingPlugin::default(),
+            SeedlingPlugins,
         ))
         .add_systems(Startup, startup)
         .add_systems(Update, remove_pool.run_if(on_timer(Duration::from_secs(5))))

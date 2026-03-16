@@ -340,7 +340,7 @@
 // Naming trick to facilitate straightforward internal macro usage.
 extern crate self as bevy_seedling;
 
-use bevy_app::prelude::*;
+use bevy_app::{plugin_group, prelude::*};
 use bevy_asset::prelude::AssetApp;
 use bevy_ecs::prelude::*;
 
@@ -364,8 +364,7 @@ pub mod prelude {
     //! All `bevy_seedlings`'s important types and traits.
 
     pub use crate::configuration::{
-        GraphConfiguration, InputDeviceInfo, MusicPool, OutputDeviceInfo, SeedlingStartupSystems,
-        SoundEffectsBus, SpatialPool,
+        GraphConfiguration, MusicPool, SeedlingStartupSystems, SoundEffectsBus, SpatialPool,
     };
     pub use crate::context::AudioGraph;
     pub use crate::edge::{
@@ -385,6 +384,7 @@ pub mod prelude {
         lpf::{LowPassConfig, LowPassNode},
         send::{SendConfig, SendNode},
     };
+    pub use crate::platform::AudioStreamConfig;
     pub use crate::pool::{
         DefaultPoolSize, PlaybackCompletion, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
         dynamic::DynamicBus,
@@ -400,7 +400,7 @@ pub mod prelude {
     };
     pub use crate::time::{Audio, AudioTime};
     pub use crate::utils::perceptual_volume::PerceptualVolume;
-    pub use crate::{SeedlingPlugin, SeedlingSystems};
+    pub use crate::{SeedlingPlugins, SeedlingSystems};
 
     pub use firewheel::{
         FirewheelConfig, Volume,
@@ -419,6 +419,9 @@ pub mod prelude {
             volume_pan::VolumePanNode,
         },
     };
+
+    #[cfg(feature = "cpal")]
+    pub use crate::platform::cpal::CpalStream;
 
     #[cfg(feature = "stream")]
     pub use firewheel::nodes::stream::{
@@ -450,35 +453,31 @@ pub enum SeedlingSystems {
     Queue,
     /// The audio context is updated and flushed.
     Flush,
+    /// The audio stream is polled and unexpected device changes are handled.
+    PollStream,
 }
 
-/// `bevy_seedling`'s top-level plugin.
+/// `bevy_seedling`'s core plugin.
 ///
 /// This spawns the audio task in addition
 /// to inserting `bevy_seedling`'s systems
 /// and resources.
-#[derive(Debug)]
-pub struct SeedlingPlugin;
+#[derive(Debug, Default)]
+pub struct SeedlingCorePlugin;
 
-// impl Default for SeedlingPlugin<CpalBackend> {
-//     fn default() -> Self {
-//         SeedlingPlugin::<CpalBackend>::new()
-//     }
-// }
-
-// impl<B: AudioBackend> SeedlingPlugin<B>
-// where
-//     B::Config: Default,
-// {
-//     /// Create a new default [`SeedlingPlugin`] with the specified backend.
-//     pub fn new() -> Self {
-//         Self {
-//             config: prelude::FirewheelConfig::default(),
-//             stream_config: B::Config::default(),
-//             graph_config: prelude::GraphConfiguration::default(),
-//         }
-//     }
-// }
+plugin_group! {
+    /// `bevy_seedling`'s top-level plugin.
+    ///
+    /// This spawns the audio task in addition
+    /// to inserting `bevy_seedling`'s systems
+    /// and resources.
+    #[derive(Debug)]
+    pub struct SeedlingPlugins {
+        :SeedlingCorePlugin,
+        #[cfg(feature = "cpal")]
+        platform::cpal:::CpalPlatformPlugin
+    }
+}
 
 /// Run a system if the given resource has changed, ignoring
 /// change ticks on startup.
@@ -489,14 +488,13 @@ fn resource_changed_without_insert<R: Resource>(res: Res<R>, mut has_run: Local<
     changed
 }
 
-impl Plugin for SeedlingPlugin {
+impl Plugin for SeedlingCorePlugin {
     fn build(&self, app: &mut App) {
         use prelude::*;
 
+        // TODO: GraphConfiguration and AudioGraphConfig are terrible names
         app.init_resource::<configuration::GraphConfiguration>()
             .init_resource::<context::AudioGraphConfig>()
-            //.insert_resource(context::AudioStreamConfig::<B>(self.stream_config.clone()))
-            // .insert_resource(configuration::ConfigResource(self.graph_config))
             .init_resource::<edge::NodeMap>()
             .init_resource::<node::ScheduleDiffing>()
             .init_resource::<node::AudioScheduleLookahead>()
@@ -516,6 +514,7 @@ impl Plugin for SeedlingPlugin {
                 SeedlingSystems::Pool.after(SeedlingSystems::Connect),
                 SeedlingSystems::Queue.after(SeedlingSystems::Pool),
                 SeedlingSystems::Flush.after(SeedlingSystems::Queue),
+                SeedlingSystems::PollStream.after(SeedlingSystems::Flush),
             ),
         )
         .add_systems(
@@ -533,21 +532,12 @@ impl Plugin for SeedlingPlugin {
             ),
         )
         .add_systems(PreStartup, context::initialize_context)
-        // .add_systems(
-        //     PostUpdate,
-        //     (
-        //         context::pre_restart_context,
-        //         context::restart_context::<B>
-        //     )
-        //         .chain()
-        //         .run_if(resource_changed_without_insert::<AudioStreamConfig>),
-        // )
         .add_observer(node::label::NodeLabels::on_add_observer)
         .add_observer(node::label::NodeLabels::on_replace_observer)
         .add_observer(sample::observe_player_insert);
 
         app.add_plugins((
-            // configuration::SeedlingStartup::<B>::new(self.config),
+            configuration::SeedlingStartup,
             pool::SamplePoolPlugin,
             nodes::SeedlingNodesPlugin,
             node::events::EventsPlugin,
@@ -573,7 +563,10 @@ impl Plugin for SeedlingPlugin {
 
 #[cfg(test)]
 mod test {
-    use crate::{platform::mock::MockBackendPlugin, prelude::*};
+    use crate::{
+        platform::{cpal::CpalPlatformPlugin, mock::MockBackendPlugin},
+        prelude::*,
+    };
     use bevy::{ecs::system::RunSystemOnce, prelude::*};
 
     pub fn prepare_app<F: IntoSystem<(), (), M>, M>(startup: F) -> App {
@@ -582,14 +575,11 @@ mod test {
         app.add_plugins((
             MinimalPlugins,
             AssetPlugin::default(),
-            SeedlingPlugin,
+            SeedlingPlugins.build().disable::<CpalPlatformPlugin>(),
             MockBackendPlugin,
-            // SeedlingPlugin::<crate::utils::profiling::ProfilingBackend> {
-            //     graph_config: crate::configuration::GraphConfiguration::Empty,
-            //     ..SeedlingPlugin::<crate::utils::profiling::ProfilingBackend>::new()
-            // },
             TransformPlugin,
         ))
+        .insert_resource(GraphConfiguration::Empty)
         .add_systems(Startup, startup);
 
         app.finish();

@@ -870,6 +870,8 @@ impl PoolCommands for Commands<'_, '_> {
 
 #[cfg(test)]
 mod test {
+    use std::time::Instant;
+
     use super::*;
     use crate::{
         prelude::*,
@@ -971,6 +973,8 @@ mod test {
             ));
         });
 
+        let start = Instant::now();
+
         // Then wait until the sample player is removed.
         loop {
             let players = run(
@@ -980,6 +984,10 @@ mod test {
 
             if players == 0 {
                 break;
+            }
+
+            if start.elapsed().as_secs() > 5 {
+                panic!("test exceeded timeout");
             }
 
             app.update();
@@ -1015,6 +1023,8 @@ mod test {
             ));
         });
 
+        let start = Instant::now();
+
         // Then wait until the sample player is removed.
         loop {
             let players = run(
@@ -1024,6 +1034,10 @@ mod test {
 
             if players == 0 {
                 break;
+            }
+
+            if start.elapsed().as_secs() > 5 {
+                panic!("test exceeded timeout");
             }
 
             app.update();

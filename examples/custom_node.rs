@@ -22,7 +22,7 @@ fn main() {
             MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_millis(16))),
             bevy::log::LogPlugin::default(),
             AssetPlugin::default(),
-            SeedlingPlugin::default(),
+            SeedlingPlugins,
         ))
         // All you need to do to register your node is call
         // `RegisterNode::register_node`. This will automatically

@@ -2,16 +2,21 @@
 
 use bevy::prelude::*;
 use bevy_seedling::{
-    context::{AudioStreamConfig, StreamRestartEvent, StreamStartEvent},
+    context::{StreamRestartEvent, StreamStartEvent},
+    platform::{AudioStreamConfig, cpal::DeviceInfo},
     prelude::*,
 };
+use firewheel::cpal::{CpalConfig, default_host_enumerator};
 
 #[derive(Component)]
 struct SelectedOutput;
 
+#[derive(Component)]
+struct OutputDevice(DeviceInfo);
+
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
+        .add_plugins((DefaultPlugins, SeedlingPlugins))
         .add_systems(Startup, set_up_ui)
         .add_systems(
             PostStartup,
@@ -24,13 +29,16 @@ fn main() {
         .run();
 }
 
-fn device_setup(outputs: Query<(Entity, &OutputDeviceInfo)>, mut commands: Commands) {
-    for (entity, device) in &outputs {
+fn device_setup(mut commands: Commands) {
+    let outputs = default_host_enumerator().output_devices();
+
+    for device in outputs {
         info!("device: {:?}, default: {}", device.name, device.is_default);
 
-        if device.is_default {
-            commands.entity(entity).insert(SelectedOutput);
-        }
+        let is_default = device.is_default;
+        commands
+            .spawn(OutputDevice(device))
+            .insert_if(SelectedOutput, || is_default);
     }
 }
 
@@ -42,11 +50,11 @@ fn play_sound(keys: Res<ButtonInput<KeyCode>>, mut commands: Commands, server: R
 
 fn select_output(
     keys: Res<ButtonInput<KeyCode>>,
-    outputs: Query<(Entity, &OutputDeviceInfo, Has<SelectedOutput>)>,
+    outputs: Query<(Entity, &OutputDevice, Has<SelectedOutput>)>,
     mut commands: Commands,
 ) {
     let mut devices = outputs.iter().collect::<Vec<_>>();
-    devices.sort_unstable_by_key(|(_, device, _)| &device.name);
+    devices.sort_unstable_by_key(|(_, device, _)| &device.0.name);
 
     let Some(mut selected_index) = devices.iter().position(|(.., has_selected)| *has_selected)
     else {
@@ -78,18 +86,23 @@ fn select_output(
 
 fn observe_selection(
     trigger: On<Add, SelectedOutput>,
-    outputs: Query<&OutputDeviceInfo>,
+    outputs: Query<&OutputDevice>,
     mut text: Query<&mut Text, With<SelectedTextNode>>,
-    mut stream: ResMut<AudioStreamConfig>,
+    mut stream: ResMut<AudioStreamConfig<CpalConfig>>,
 ) -> Result {
     let output = outputs.get(trigger.event_target())?;
 
-    stream.0.output.device_id = output.id.parse().ok();
+    stream.0.output.device_id = Some(output.0.id.clone());
 
-    let new_string = if output.is_default {
-        format!("{} (default)", output.name)
+    let name = match &output.0.name {
+        Some(name) => name,
+        None => "<unknown device>",
+    };
+
+    let new_string = if output.0.is_default {
+        format!("{} (default)", name)
     } else {
-        output.name.clone()
+        name.to_string()
     };
     text.single_mut()?.0 = new_string;
 

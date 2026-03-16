@@ -19,7 +19,7 @@ fn main() {
             MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_millis(16))),
             LogPlugin::default(),
             AssetPlugin::default(),
-            SeedlingPlugin::default(),
+            SeedlingPlugins,
         ))
         .add_systems(Startup, startup)
         .add_systems(

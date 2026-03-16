@@ -118,6 +118,11 @@ impl SampleRate {
             .try_into()
             .unwrap()
     }
+
+    /// Set the current sample rate.
+    pub fn set(&self, rate: NonZeroU32) {
+        self.0.store(rate.get(), sync::atomic::Ordering::Relaxed)
+    }
 }
 
 pub(crate) fn initialize_context(
@@ -129,41 +134,6 @@ pub(crate) fn initialize_context(
 
     Ok(())
 }
-
-// pub(crate) fn start_stream<B>(
-//     config: Res<AudioStreamConfig<B>>,
-//     server: Res<AssetServer>,
-//     mut context: ResMut<AudioContext>,
-//     mut commands: Commands,
-// ) -> Result
-// where
-//     B: AudioBackend + 'static,
-//     B::Config: Clone + Send + Sync + 'static,
-// {
-//     context.with(|context| {
-//         let context = context.downcast_mut::<FirewheelCtx<B>>().expect(
-//             "Attempted to initialize audio context with unexpected backend type. \
-//                     `bevy_seedling` expects a single context.",
-//         );
-//         context
-//             .start_stream(config.0.clone())
-//             .map_err(|e| format!("failed to start audio stream: {e:?}"))?;
-
-//         let raw_sample_rate = context.stream_info().unwrap().sample_rate;
-//         let sample_rate = SampleRate(sync::Arc::new(sync::atomic::AtomicU32::new(
-//             raw_sample_rate.get(),
-//         )));
-
-//         commands.insert_resource(sample_rate.clone());
-//         server.register_loader(crate::sample::SampleLoader { sample_rate });
-
-//         commands.trigger(StreamStartEvent {
-//             sample_rate: raw_sample_rate,
-//         });
-
-//         Ok(())
-//     })
-// }
 
 /// An event triggered when the audio stream first initializes.
 #[derive(Event, Debug)]
@@ -179,7 +149,7 @@ pub struct StreamStartEvent {
 #[derive(Event, Debug)]
 pub struct PreStreamRestartEvent;
 
-pub(crate) fn pre_restart_context(mut commands: Commands) {
+pub fn pre_restart_context(mut commands: Commands) {
     commands.trigger(PreStreamRestartEvent);
 }
 
@@ -191,40 +161,3 @@ pub struct StreamRestartEvent {
     /// The current sample rate following the restart.
     pub current_rate: NonZeroU32,
 }
-
-// pub(crate) fn restart_context<B>(
-//     stream_config: Res<AudioStreamConfig<B>>,
-//     mut commands: Commands,
-//     mut audio_context: ResMut<AudioContext>,
-//     sample_rate: Res<SampleRate>,
-// ) -> Result
-// where
-//     B: AudioBackend + 'static,
-//     B::Config: Clone + Send + Sync + 'static,
-//     B::StreamError: Send + Sync + 'static,
-// {
-//     audio_context.with(|context| {
-//         let context: &mut FirewheelCtx<B> = context
-//             .downcast_mut()
-//             .ok_or("only one audio context should be active at a time")?;
-
-//         context.stop_stream();
-//         context
-//             .start_stream(stream_config.0.clone())
-//             .map_err(|e| format!("failed to restart audio stream: {e:?}"))?;
-
-//         let previous_rate = sample_rate.get();
-
-//         let current_rate = context.stream_info().unwrap().sample_rate;
-//         sample_rate
-//             .0
-//             .store(current_rate.get(), sync::atomic::Ordering::Relaxed);
-
-//         commands.trigger(StreamRestartEvent {
-//             previous_rate,
-//             current_rate,
-//         });
-
-//         Ok(())
-//     })
-// }

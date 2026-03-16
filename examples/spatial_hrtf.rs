@@ -22,7 +22,7 @@ fn main() {
             LogPlugin::default(),
             AssetPlugin::default(),
             TransformPlugin,
-            SeedlingPlugin::default(),
+            SeedlingPlugins,
         ))
         .add_systems(Startup, startup)
         .add_systems(Update, spinner)

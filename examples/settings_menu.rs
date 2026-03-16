@@ -25,7 +25,7 @@ use bevy_seedling::{
 
 fn main() {
     let mut app = App::new();
-    app.add_plugins((DefaultPlugins, SeedlingPlugin::default()))
+    app.add_plugins((DefaultPlugins, SeedlingPlugins))
         .add_systems(Startup, setup)
         .add_systems(
             Update,

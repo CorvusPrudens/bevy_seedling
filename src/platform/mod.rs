@@ -16,8 +16,41 @@ pub mod mock;
 /// Mutating this resource will cause the audio stream to stop
 /// and restart, applying the latest changes.
 #[derive(Resource, Component, Debug, Default)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct AudioStreamConfig<C>(pub C);
 
+/// When triggered globally, this attempts to automatically
+/// restart the audio stream.
+///
+/// If the current devices are no longer available, this will
+/// attempt to select the default input and output.
+///
+/// This only works with the default `cpal` backend.
+#[derive(Event, Debug)]
+#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
+pub struct RestartAudioStream;
+
+/// Bookkeeping that should be called following stream initialization.
+///
+/// For example, here's how the `cpal` stream is initialized.
+/// ```
+/// fn start_stream(
+///     mut context: ResMut<AudioGraph>,
+///     stream_config: Res<AudioStreamConfig<CpalConfig>>,
+///     server: Res<AssetServer>,
+///     mut commands: Commands,
+/// ) -> Result {
+///     let stream =
+///         context.with(|context| cpal::CpalStream::new(context, stream_config.0.clone()))?;
+///
+///     let sample_rate = SampleRate::new(stream.info().sample_rate);
+///
+///     commands.insert_resource(CpalStream(Some(SyncCell::new(stream))));
+///     super::initialize_stream(sample_rate, &server, commands);
+///
+///     Ok(())
+/// }
+/// ```
 pub fn initialize_stream(sample_rate: SampleRate, server: &AssetServer, mut commands: Commands) {
     let raw_sample_rate = sample_rate.get();
     commands.insert_resource(sample_rate.clone());
