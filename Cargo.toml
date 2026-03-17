@@ -20,8 +20,8 @@ resample_inputs = ["firewheel/cpal_resample_inputs"]
 rand = ["dep:rand"]
 loudness = ["dep:ebur128", "dep:portable-atomic"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
-cpal = ["firewheel/cpal"]
-web_audio = ["dep:firewheel-web-audio"]
+cpal = ["firewheel/cpal", "dep:cpal"]
+web_audio = ["cpal/audioworklet"]
 dev = ["entity_names"]
 entity_names = []
 
@@ -63,7 +63,7 @@ bevy_reflect = { version = "0.18.0", default-features = false, features = [
   "glam",
 ] }
 
-firewheel = { path = "../firewheel-upstream", default-features = false, features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f25b53a", default-features = false, features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
@@ -92,10 +92,10 @@ portable-atomic = { version = "1.11", optional = true, features = ["float"] }
 firewheel-ircam-hrtf = { version = "0.4.0", optional = true, features = [
   "bevy",
 ] }
-firewheel-web-audio = { version = "0.4.0", optional = true }
+cpal = { version = "0.17", default-features = false, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { path = "../firewheel-upstream", default-features = false, features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f25b53a", default-features = false, features = [
   "wasm-bindgen",
 ] }
 

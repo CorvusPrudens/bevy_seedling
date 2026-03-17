@@ -537,7 +537,7 @@ impl Plugin for SeedlingCorePlugin {
         .add_observer(sample::observe_player_insert);
 
         app.add_plugins((
-            configuration::SeedlingStartup,
+            configuration::SeedlingStartupPlugin,
             pool::SamplePoolPlugin,
             nodes::SeedlingNodesPlugin,
             node::events::EventsPlugin,

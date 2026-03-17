@@ -773,24 +773,8 @@ pub(crate) fn flush_events(
             }
         }
 
-        let result = context.update();
-
-        match result {
-            // TODO: handle everything
-            // Err(UpdateError::StreamStoppedUnexpectedly(e)) => {
-            //     // For now, we'll assume this is always due to a device becoming unavailable.
-            //     // As such, we'll attempt a reinitialization.
-            //     warn!("Audio stream stopped: {e:?}");
-
-            //     // First, we'll want to make sure the devices are up-to-date.
-            //     commands.trigger(crate::configuration::FetchAudioIoEvent);
-            //     // Then, we'll attempt a restart.
-            //     commands.trigger(crate::configuration::RestartAudioEvent);
-            // }
-            Err(e) => {
-                error!("graph error: {e:?}");
-            }
-            _ => {}
+        if let Err(e) = context.update() {
+            error!("graph error: {e:?}");
         }
     });
 }

@@ -15,21 +15,20 @@
 //! stop and restart with the new configuration.
 
 use crate::{
-    context::{AudioGraph, StreamRestartEvent, StreamStartEvent},
+    context::{StreamRestartEvent, StreamStartEvent},
     edge::{AudioGraphInput, AudioGraphOutput, PendingConnections},
     node::{FirewheelNode, FirewheelNodeInfo},
 };
 use bevy_app::prelude::*;
 use bevy_asset::prelude::*;
 use bevy_ecs::prelude::*;
-use bevy_log::prelude::*;
 use bevy_seedling_macros::{NodeLabel, PoolLabel};
 use bevy_transform::prelude::Transform;
 use std::fmt::Debug;
 
-pub struct SeedlingStartup;
+pub(crate) struct SeedlingStartupPlugin;
 
-impl Plugin for SeedlingStartup {
+impl Plugin for SeedlingStartupPlugin {
     fn build(&self, app: &mut App) {
         app.preregister_asset_loader::<crate::sample::SampleLoader>(
             crate::sample::SampleLoader::extensions(),
@@ -62,51 +61,6 @@ pub enum SeedlingStartupSystems {
     /// This is run in the [`PostStartup`] schedule.
     StreamInitialization,
 }
-
-// fn restart_audio(
-//     _: On<RestartAudioEvent>,
-//     inputs: Query<&InputDeviceInfo>,
-//     outputs: Query<&OutputDeviceInfo>,
-//     mut config: ResMut<AudioStreamConfig>,
-// ) -> Result {
-//     // Since people often won't have any input
-//     // at all, we'll be careful about selecting
-//     // a new device.
-//     if let Some(input) = &mut config.0.input {
-//         // If the current input device no longer exists, attempt to
-//         // fetch the default input, otherwise leaving the choice up
-//         // to `cpal`.
-//         if let Some(input_id) = &input.device_id {
-//             if !inputs.iter().any(|i| i.id == input_id.to_string()) {
-//                 // try to find the default input, or just pass `None`
-//                 let new_input_id = inputs
-//                     .iter()
-//                     .find(|i| i.is_default)
-//                     .map(|input| input.id.clone());
-//                 input.device_id = new_input_id.and_then(|id| id.parse().ok());
-//             }
-//         }
-//     }
-
-//     if let Some(output_id) = &config.0.output.device_id {
-//         // If the current output device no longer exists, attempt to
-//         // fetch the default output, otherwise leaving the choice up
-//         // to `cpal`.
-//         if !outputs.iter().any(|i| i.id == output_id.to_string()) {
-//             let new_output_name = outputs
-//                 .iter()
-//                 .find(|o| o.is_default)
-//                 .map(|output| output.id.clone());
-//             config.0.output.device_id = new_output_name.and_then(|id| id.parse().ok());
-//         }
-//     }
-
-//     // set it changed in case the above made
-//     // no modifications
-//     config.set_changed();
-
-//     Ok(())
-// }
 
 /// In [`GraphConfiguration::Game`], a sampler pool with spatial audio
 /// processing is spawned.

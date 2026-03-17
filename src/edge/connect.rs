@@ -547,16 +547,10 @@ mod test {
                         // input node, output node, One, Two, and MainBus
                         assert_eq!(context.nodes().count(), 5);
 
-                        let outgoing_edges_one: Vec<_> = context
-                            .edges()
-                            .into_iter()
-                            .filter(|e| e.src_node == one.0)
-                            .collect();
-                        let outgoing_edges_two: Vec<_> = context
-                            .edges()
-                            .into_iter()
-                            .filter(|e| e.src_node == two.0)
-                            .collect();
+                        let outgoing_edges_one: Vec<_> =
+                            context.edges().filter(|e| e.src_node == one.0).collect();
+                        let outgoing_edges_two: Vec<_> =
+                            context.edges().filter(|e| e.src_node == two.0).collect();
 
                         assert_eq!(outgoing_edges_one.len(), 2);
                         assert_eq!(outgoing_edges_two.len(), 2);
@@ -599,11 +593,8 @@ mod test {
                         // input node, output node, One, Two, Three, and MainBus
                         assert_eq!(context.nodes().count(), 6);
 
-                        let outgoing_edges_three: Vec<_> = context
-                            .edges()
-                            .into_iter()
-                            .filter(|e| e.src_node == three.0)
-                            .collect();
+                        let outgoing_edges_three: Vec<_> =
+                            context.edges().filter(|e| e.src_node == three.0).collect();
 
                         assert_eq!(
                             outgoing_edges_three

@@ -1,6 +1,5 @@
 //! Glue code for interfacing with the underlying audio context.
 
-use bevy_asset::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_platform::sync;
 use firewheel::{FirewheelConfig, FirewheelContext, clock::AudioClock};

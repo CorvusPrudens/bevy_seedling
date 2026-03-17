@@ -43,8 +43,8 @@ fn initialize_mock(context: &mut FirewheelContext) {
         .activate(ActivateInfo {
             sample_rate: MOCK_SAMPLE_RATE,
             max_block_frames: NonZero::new(BLOCK_SIZE as u32).unwrap(),
-            num_stream_in_channels: 0,
-            num_stream_out_channels: 2,
+            num_stream_in_channels: CHANNELS as u32,
+            num_stream_out_channels: CHANNELS as u32,
             input_to_output_latency_seconds: 0.0,
         })
         .unwrap();
