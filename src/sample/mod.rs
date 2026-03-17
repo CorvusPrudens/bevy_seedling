@@ -1,7 +1,6 @@
 //! Audio sample components.
 
 use crate::{
-    node::DiffTimestamp,
     prelude::{AudioEvents, Volume},
     time::Audio,
 };
@@ -264,12 +263,6 @@ impl SamplePlayer {
     }
 }
 
-/// We use this to, by default, ensure samples play "when they should."
-///
-/// In practice, this means that samples which take a long time to load
-/// will skip the time spent loading. If you notice this in your game,
-/// consider preloading your sound assets, or simply disable all
-/// automatic scheduling with [`ScheduleDiffing`][crate::node::ScheduleDiffing].
 pub(super) fn observe_player_insert(
     player: On<Insert, SamplePlayer>,
     time: Res<bevy_time::Time<Audio>>,
@@ -279,7 +272,6 @@ pub(super) fn observe_player_insert(
         .entity(player.event_target())
         // When re-inserting, the current playback if any should be stopped.
         .remove::<crate::pool::Sampler>()
-        .insert(DiffTimestamp::new(&time))
         .insert_if_new(AudioEvents::new(&time));
 }
 
