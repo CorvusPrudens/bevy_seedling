@@ -1,5 +1,11 @@
 # 0.7.1
 
+## Changes
+
+- Reverted playhead adjustment behavior when sample loading isn't instantaneous.
+  If you would like to preserve this behavior, simply insert a `DiffTimestamp` component
+  with the current `Time<Audio>` instant when spawning `SamplePlayer`s.
+
 ## Fixes
 
 - Fixed panic resulting from `PlaybackCompletion` observer operating
