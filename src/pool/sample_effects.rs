@@ -3,7 +3,7 @@
 use crate::utils::entity_set::{EntitySet, EntitySetIter};
 use bevy_ecs::{
     prelude::*,
-    query::{QueryData, QueryFilter, QueryManyUniqueIter, ROQueryItem},
+    query::{IterQueryData, QueryData, QueryFilter, QueryManyUniqueIter, ROQueryItem},
 };
 
 /// An effect applied to a sample player.
@@ -204,7 +204,7 @@ impl core::error::Error for EffectsQueryError {}
 /// When Bevy's related queries story matures, this trait will likely be deprecated.
 pub trait EffectsQuery<'s, D, F>
 where
-    D: QueryData,
+    D: QueryData + IterQueryData,
     F: QueryFilter,
 {
     /// Get a single effect.
@@ -313,7 +313,7 @@ where
 
 impl<'s, D, F> EffectsQuery<'s, D, F> for Query<'_, 's, D, F>
 where
-    D: QueryData,
+    D: QueryData + IterQueryData,
     F: QueryFilter,
 {
     fn get_effect(

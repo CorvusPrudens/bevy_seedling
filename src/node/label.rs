@@ -160,8 +160,8 @@ impl NodeLabels {
         Ok(())
     }
 
-    pub(crate) fn on_replace_observer(
-        trigger: On<Replace, NodeLabels>,
+    pub(crate) fn on_discard_observer(
+        trigger: On<Discard, NodeLabels>,
         labels: Query<&NodeLabels>,
         mut map: ResMut<NodeMap>,
     ) -> Result {

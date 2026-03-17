@@ -43,22 +43,22 @@ adpcm = ["symphonium/adpcm"]
 profiling = []
 
 [dependencies]
-bevy_ecs = { version = "0.18.0", default-features = false }
-bevy_app = { version = "0.18.0", default-features = false }
-bevy_math = { version = "0.18.0", default-features = false, features = [
+bevy_ecs = { version = "0.19.0-dev", default-features = false }
+bevy_app = { version = "0.19.0-dev", default-features = false }
+bevy_math = { version = "0.19.0-dev", default-features = false, features = [
   "curve",
   "std",
 ] }
-bevy_asset = { version = "0.18.0", default-features = false }
-bevy_transform = { version = "0.18.0", default-features = false, features = [
+bevy_asset = { version = "0.19.0-dev", default-features = false }
+bevy_transform = { version = "0.19.0-dev", default-features = false, features = [
   "bevy-support",
 ] }
-bevy_log = { version = "0.18.0", default-features = false }
-bevy_platform = { version = "0.18.0", default-features = false, features = [
+bevy_log = { version = "0.19.0-dev", default-features = false }
+bevy_platform = { version = "0.19.0-dev", default-features = false, features = [
   "alloc",
 ] }
-bevy_time = { version = "0.18.0", default-features = false }
-bevy_reflect = { version = "0.18.0", default-features = false, features = [
+bevy_time = { version = "0.19.0-dev", default-features = false }
+bevy_reflect = { version = "0.19.0-dev", default-features = false, features = [
   "glam",
 ] }
 
@@ -67,7 +67,7 @@ firewheel = { version = "0.10.0", features = [
   "spatial_basic_node",
   "scheduled_events",
   "musical_transport",
-  "glam-30",
+  "glam-32",
   "freeverb_node",
 ] }
 symphonium = { version = "0.7", default-features = false, features = [
@@ -89,13 +89,15 @@ firewheel-ircam-hrtf = { version = "0.4.0", optional = true, features = [
 firewheel-web-audio = { version = "0.4.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { version = "0.10.0", features = [
-  "wasm-bindgen",
-] }
+firewheel = { version = "0.10.0", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
-bevy_seedling = { path = ".", features = ["hrtf", "loudness", "resample_inputs"] }
-bevy = { version = "0.18.0", default-features = false, features = [
+bevy_seedling = { path = ".", features = [
+  "hrtf",
+  "loudness",
+  "resample_inputs",
+] }
+bevy = { version = "0.19.0-dev", default-features = false, features = [
   "2d_bevy_render",
   "default_app",
   "picking",
@@ -114,7 +116,9 @@ criterion = { version = "0.5", default-features = false, features = [
 ] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-getrandom = { version = "0.3", default-features = false, features = ["wasm_js"] }
+getrandom = { version = "0.3", default-features = false, features = [
+  "wasm_js",
+] }
 
 [[bench]]
 name = "basic"
@@ -123,3 +127,20 @@ required-features = ["profiling"]
 
 [package.metadata.docs.rs]
 all-features = true
+
+[patch."crates-io"]
+firewheel = { git = "https://github.com/ChristopherBiscardi/Firewheel", branch = "chris-0.19" }
+firewheel-ircam-hrtf = { git = "https://github.com/ChristopherBiscardi/firewheel-ircam-hrtf", branch = "chris-0.19" }
+bevy_time = { git = "https://github.com/bevyengine/bevy" }
+bevy_transform = { git = "https://github.com/bevyengine/bevy" }
+bevy = { git = "https://github.com/bevyengine/bevy" }
+bevy_app = { git = "https://github.com/bevyengine/bevy" }
+bevy_asset = { git = "https://github.com/bevyengine/bevy" }
+bevy_ecs = { git = "https://github.com/bevyengine/bevy" }
+bevy_log = { git = "https://github.com/bevyengine/bevy" }
+bevy_math = { git = "https://github.com/bevyengine/bevy" }
+bevy_platform = { git = "https://github.com/bevyengine/bevy" }
+bevy_reflect = { git = "https://github.com/bevyengine/bevy" }
+bevy_pbr = { git = "https://github.com/bevyengine/bevy" }
+bevy_macro_utils = { git = "https://github.com/bevyengine/bevy" }
+rtgc = { git = "https://codeberg.org/chrisbiscardi/rtgc", branch = "chris-0.19" }
