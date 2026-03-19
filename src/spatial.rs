@@ -179,6 +179,7 @@ fn update_2d_emitters(
 }
 
 // TODO: is there a good way to consolidate this?
+// ^ we should do this
 fn update_2d_emitters_effects(
     listeners: Query<&GlobalTransform, With<SpatialListener2D>>,
     mut emitters: Query<(&mut SpatialBasicNode, Option<&SpatialScale>, &EffectOf)>,
@@ -346,6 +347,7 @@ mod spatial_hrtf {
 
             let world_offset = emitter_pos - listener.translation;
             let local_offset = listener.rotation.inverse() * world_offset;
+            // BUG: scale is applied twice? intentional?
             let local_offset = local_offset * scale;
 
             spatial.offset = local_offset * scale;

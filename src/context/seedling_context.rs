@@ -85,6 +85,7 @@ impl SeedlingContext {
 ///
 /// This allows applications to treat all backend identically
 /// after construction.
+// TODO: this trait is huge. I think this can be avoided via the more ecs-native api im exploring
 pub trait SeedlingContextWrapper: core::any::Any {
     /// Get a list of available input audio devices (for the default API).
     ///

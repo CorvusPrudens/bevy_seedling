@@ -330,6 +330,7 @@ impl EventQueue for TimelineQueue<'_> {
     }
 }
 
+// TODO: global mutable state bad. Can we derive timeline IDs from the ECS?
 static TIMELINE_ID: AtomicU64 = AtomicU64::new(0);
 
 /// A distinct timeline event, composed of

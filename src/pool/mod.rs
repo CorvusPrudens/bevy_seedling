@@ -353,6 +353,7 @@ impl Sampler {
     /// If the sample player has not yet propagated to the audio
     /// graph, this information may not yet be available. For a
     /// fallible method, see [`try_playhead_frames`][Self::try_playhead_frames].
+    // TODO: probably better to not include a panicking api or return a default maybe?
     pub fn playhead_frames(&self) -> DurationSamples {
         self.try_playhead_frames().unwrap()
     }

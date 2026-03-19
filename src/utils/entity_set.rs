@@ -8,6 +8,7 @@ use bevy_ecs::{
 /// A thin wrapper around `std::vec::Vec<Entity>`.
 ///
 /// This type guarantees that all elements are unique.
+// TODO: why not bevy's EntityHashSet?
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::TypePath))]
 pub struct EntitySet(Vec<Entity>);

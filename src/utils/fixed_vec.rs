@@ -20,6 +20,8 @@ pub struct FixedVec<T>(Vec<T>);
 // need to derive it manually.
 impl<T: Clone> Clone for FixedVec<T> {
     fn clone(&self) -> Self {
+        // TODO: This looks like it would cause a transient alloc for the shrunk vec.
+        // Look at assembly and possibly switch to Vec::with_capacity + copy_from_slice
         let mut inner = self.0.clone();
 
         inner.reserve_exact(self.0.capacity() - self.0.len());

@@ -440,6 +440,7 @@ pub mod prelude {
 /// These are all inserted into the [`Last`] schedule.
 ///
 /// [`Last`]: bevy_app::prelude::Last
+// TODO: are we sure this should run on Last? Why not PostUpdate
 #[derive(Debug, SystemSet, PartialEq, Eq, Hash, Clone)]
 pub enum SeedlingSystems {
     /// Entities without audio nodes acquire them from the audio context.

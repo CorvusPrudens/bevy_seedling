@@ -646,6 +646,7 @@ impl firewheel::diff::Diff for PlaybackSettings {
         path: firewheel::diff::PathBuilder,
         event_queue: &mut E,
     ) {
+        // TODO: these hard-coded path indices are a fragile coupling to SamplerNode
         self.play.diff(&baseline.play, path.with(2), event_queue);
         self.play_from
             .diff(&baseline.play_from, path.with(3), event_queue);

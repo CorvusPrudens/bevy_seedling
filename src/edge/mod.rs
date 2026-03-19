@@ -150,6 +150,8 @@ pub enum EdgeTarget {
     /// An audio entity.
     Entity(Entity),
     /// An existing node from the audio graph.
+    // This is here for nodes that were added to firewheel not by seedling right?
+    // Upstream, all nodes will be added by seedling, so this will be yeeted
     Node(NodeID),
 }
 

@@ -447,6 +447,8 @@ impl core::fmt::Debug for ConnectCommands<'_> {
     }
 }
 
+// TODO: this collects all pending connections into a vec every frame.
+// this could be avoided with some restructuring i think
 pub(crate) fn process_connections(
     mut connections: Query<(
         &mut PendingConnections,

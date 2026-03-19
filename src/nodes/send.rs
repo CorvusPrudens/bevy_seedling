@@ -173,6 +173,7 @@ impl AudioNode for SendNode {
     type Configuration = SendConfig;
 
     fn info(&self, config: &Self::Configuration) -> AudioNodeInfo {
+        // BUG: name says low-pass filter but this is a send node
         AudioNodeInfo::new()
             .debug_name("low-pass filter")
             .channel_config(ChannelConfig {

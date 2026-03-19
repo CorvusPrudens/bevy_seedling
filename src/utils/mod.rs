@@ -1,4 +1,5 @@
 //! A collection of audio utilities.
+// TODO: this module should be dissolved.
 
 pub(crate) mod entity_set;
 #[cfg(any(feature = "profiling", test))]

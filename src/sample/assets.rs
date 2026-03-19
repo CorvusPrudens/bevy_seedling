@@ -1,3 +1,4 @@
+// TODO: symphonium integration should probably be feature-gated.
 use bevy_asset::{Asset, AssetLoader};
 use bevy_reflect::TypePath;
 use firewheel::{DecodedAudio, DecodedAudioF32, collector::ArcGc, sample_resource::SampleResource};

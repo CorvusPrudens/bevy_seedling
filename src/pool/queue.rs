@@ -218,6 +218,7 @@ pub(super) fn assign_work(
                 params.repeat_mode = player.repeat_mode;
                 state.0.clear_finished();
 
+                // TODO: deduplicate these two blocks with below
                 // normalize sample effects
                 if sample_effects.is_some() && pool_effects.is_none() {
                     match player.sample.path() {
@@ -387,6 +388,7 @@ pub(super) fn assign_work(
             params.repeat_mode = player.repeat_mode;
             state.0.clear_finished();
 
+            // TODO: deduplicate these two blocks with above
             // normalize sample effects
             if sample_effects.is_some() && pool_effects.is_none() {
                 match player.sample.path() {

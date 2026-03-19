@@ -3,6 +3,7 @@ use criterion::{Criterion, criterion_group, criterion_main};
 // use firewheel::{channel_config::ChannelCount, FirewheelCtx};
 
 pub fn criterion_benchmark(_c: &mut Criterion) {
+    // TODO: why is this all commented out
     // // This benchmarks straightforward processing
     // // with two nodes.
     // c.bench_function("basic processing", {
