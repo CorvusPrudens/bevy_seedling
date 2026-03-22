@@ -7,12 +7,13 @@ use bevy_ecs::{
 
 /// A thin wrapper around `std::vec::Vec<Entity>`.
 ///
-/// This type guarantees that all elements are unique.
+/// This type guarantees that all elements are unique while
+/// maintaining insertion ordering.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::TypePath))]
-pub struct EntitySet(Vec<Entity>);
+pub struct OrderedEntitySet(Vec<Entity>);
 
-impl EntitySet {
+impl OrderedEntitySet {
     fn has_duplicates(&self) -> bool {
         for i in 1..self.len() {
             if self[i..].contains(&self[i - 1]) {
@@ -25,12 +26,12 @@ impl EntitySet {
     fn assert_no_duplicates(&self) {
         assert!(
             !self.has_duplicates(),
-            "`EntitySet` must not contain duplicate entities"
+            "`OrderedEntitySet` must not contain duplicate entities"
         )
     }
 }
 
-impl MapEntities for EntitySet {
+impl MapEntities for OrderedEntitySet {
     fn map_entities<E: EntityMapper>(&mut self, entity_mapper: &mut E) {
         for entity in self.0.iter_mut() {
             *entity = entity_mapper.get_mapped(*entity);
@@ -40,7 +41,7 @@ impl MapEntities for EntitySet {
     }
 }
 
-impl core::ops::Deref for EntitySet {
+impl core::ops::Deref for OrderedEntitySet {
     type Target = [Entity];
 
     fn deref(&self) -> &Self::Target {
@@ -48,15 +49,15 @@ impl core::ops::Deref for EntitySet {
     }
 }
 
-impl RelationshipSourceCollection for EntitySet {
-    type SourceIter<'a> = EntitySetIter<'a>;
+impl RelationshipSourceCollection for OrderedEntitySet {
+    type SourceIter<'a> = OrderedEntitySetIter<'a>;
 
     fn new() -> Self {
-        EntitySet(Vec::new())
+        OrderedEntitySet(Vec::new())
     }
 
     fn with_capacity(capacity: usize) -> Self {
-        EntitySet(Vec::with_capacity(capacity))
+        OrderedEntitySet(Vec::with_capacity(capacity))
     }
 
     fn reserve(&mut self, additional: usize) {
@@ -82,7 +83,7 @@ impl RelationshipSourceCollection for EntitySet {
     }
 
     fn iter(&self) -> Self::SourceIter<'_> {
-        EntitySetIter {
+        OrderedEntitySetIter {
             iter: Vec::iter(&self.0),
         }
     }
@@ -115,11 +116,11 @@ impl RelationshipSourceCollection for EntitySet {
 }
 
 #[derive(Debug)]
-pub struct EntitySetIter<'a> {
+pub struct OrderedEntitySetIter<'a> {
     iter: Copied<core::slice::Iter<'a, Entity>>,
 }
 
-impl Iterator for EntitySetIter<'_> {
+impl Iterator for OrderedEntitySetIter<'_> {
     type Item = Entity;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -127,7 +128,7 @@ impl Iterator for EntitySetIter<'_> {
     }
 }
 
-impl DoubleEndedIterator for EntitySetIter<'_> {
+impl DoubleEndedIterator for OrderedEntitySetIter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.next_back()
     }
@@ -135,16 +136,16 @@ impl DoubleEndedIterator for EntitySetIter<'_> {
 
 /// # Safety
 ///
-/// Because [`EntitySet`] cannot be mutated in any way
+/// Because [`OrderedEntitySet`] cannot be mutated in any way
 /// that will introduce duplicate elements, this must be safe.
-unsafe impl EntitySetIterator for EntitySetIter<'_> {}
+unsafe impl EntitySetIterator for OrderedEntitySetIter<'_> {}
 
 #[cfg(feature = "reflect")]
 mod reflect {
     use super::*;
     use bevy_reflect::{FromReflect, PartialReflect, SetInfo, Typed};
 
-    impl bevy_reflect::GetTypeRegistration for EntitySet {
+    impl bevy_reflect::GetTypeRegistration for OrderedEntitySet {
         fn get_type_registration() -> bevy_reflect::TypeRegistration {
             let mut registration = bevy_reflect::TypeRegistration::of::<Self>();
             registration
@@ -161,7 +162,7 @@ mod reflect {
         }
     }
 
-    impl Typed for EntitySet {
+    impl Typed for OrderedEntitySet {
         #[inline]
         fn type_info() -> &'static bevy_reflect::TypeInfo {
             static CELL: bevy_reflect::utility::NonGenericTypeInfoCell =
@@ -170,7 +171,7 @@ mod reflect {
         }
     }
 
-    impl bevy_reflect::Reflect for EntitySet {
+    impl bevy_reflect::Reflect for OrderedEntitySet {
         #[inline]
         fn into_any(self: Box<Self>) -> Box<dyn ::core::any::Any> {
             self
@@ -212,7 +213,7 @@ mod reflect {
         }
     }
 
-    impl bevy_reflect::Set for EntitySet {
+    impl bevy_reflect::Set for OrderedEntitySet {
         fn len(&self) -> usize {
             self.0.len()
         }
@@ -289,7 +290,7 @@ mod reflect {
         }
     }
 
-    impl bevy_reflect::PartialReflect for EntitySet {
+    impl bevy_reflect::PartialReflect for OrderedEntitySet {
         #[inline]
         fn get_represented_type_info(&self) -> Option<&'static bevy_reflect::TypeInfo> {
             Some(Self::type_info())
@@ -378,7 +379,7 @@ mod reflect {
         }
     }
 
-    impl FromReflect for EntitySet {
+    impl FromReflect for OrderedEntitySet {
         fn from_reflect(reflect: &dyn bevy_reflect::PartialReflect) -> Option<Self> {
             if let bevy_reflect::ReflectRef::TupleStruct(ref_struct) =
                 bevy_reflect::PartialReflect::reflect_ref(reflect)
