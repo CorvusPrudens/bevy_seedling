@@ -591,7 +591,9 @@ where
                 edge::auto_connect
                     .before(SeedlingSystems::Connect)
                     .after(SeedlingSystems::Acquire),
-                (edge::process_connections, edge::process_disconnections)
+                // we process disconnections before connections to allow
+                // same-frame disconnect-then-reconnect functionality
+                (edge::process_disconnections, edge::process_connections)
                     .chain()
                     .in_set(SeedlingSystems::Connect),
                 node::flush_events.in_set(SeedlingSystems::Flush),

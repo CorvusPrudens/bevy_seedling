@@ -346,3 +346,93 @@ fn fetch_target(
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        prelude::*,
+        test::{prepare_app, run},
+    };
+    use bevy_ecs::prelude::*;
+
+    #[derive(Component)]
+    struct One;
+
+    #[test]
+    fn test_disconnect_then_reconnect() {
+        let mut app = prepare_app(|mut commands: Commands| {
+            commands.spawn((VolumeNode::default(), One));
+
+            commands
+                .spawn((VolumeNode::default(), MainBus))
+                .connect(AudioGraphOutput);
+        });
+
+        app.update();
+
+        // first assert they're connected
+        run(
+            &mut app,
+            |mut context: ResMut<AudioContext>,
+             one: Single<&FirewheelNode, With<One>>,
+             main: Single<&FirewheelNode, With<MainBus>>| {
+                let one = one.into_inner();
+                let main = main.into_inner();
+
+                context.with(|context| {
+                    // input node, output node, One, and MainBus
+                    assert_eq!(context.nodes().len(), 4);
+
+                    let outgoing_edges_one: Vec<_> = context
+                        .edges()
+                        .into_iter()
+                        .filter(|e| e.src_node == one.0)
+                        .collect();
+
+                    assert_eq!(outgoing_edges_one.len(), 2);
+
+                    assert!(outgoing_edges_one.iter().all(|e| e.dst_node == main.0));
+                });
+            },
+        );
+
+        // disconnect, reconnect
+        run(
+            &mut app,
+            |one: Single<Entity, With<One>>, mut commands: Commands| {
+                commands
+                    .entity(*one)
+                    .disconnect(MainBus)
+                    .connect_with(MainBus, &[(0, 0)]);
+            },
+        );
+
+        app.update();
+
+        // assert only one edge is connected
+        run(
+            &mut app,
+            |mut context: ResMut<AudioContext>,
+             one: Single<&FirewheelNode, With<One>>,
+             main: Single<&FirewheelNode, With<MainBus>>| {
+                let one = one.into_inner();
+                let main = main.into_inner();
+
+                context.with(|context| {
+                    // input node, output node, One, and MainBus
+                    assert_eq!(context.nodes().len(), 4);
+
+                    let outgoing_edges_one: Vec<_> = context
+                        .edges()
+                        .into_iter()
+                        .filter(|e| e.src_node == one.0)
+                        .collect();
+
+                    assert_eq!(outgoing_edges_one.len(), 1);
+
+                    assert!(outgoing_edges_one.iter().all(|e| e.dst_node == main.0));
+                });
+            },
+        );
+    }
+}
