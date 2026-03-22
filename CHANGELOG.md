@@ -1,3 +1,9 @@
+# 0.7.2
+
+## Fixes
+
+- Improved same-frame connection/disconnection behavior
+
 # 0.7.1
 
 ## Changes
