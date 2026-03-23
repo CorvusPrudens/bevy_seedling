@@ -527,8 +527,8 @@ impl Plugin for SeedlingCorePlugin {
         app.register_simple_node::<StreamReaderNode>()
             .register_simple_node::<StreamWriterNode>();
 
-        // #[cfg(feature = "hrtf")]
-        // app.register_node::<HrtfNode>();
+        #[cfg(feature = "hrtf")]
+        app.register_node::<HrtfNode>();
 
         #[cfg(feature = "reflect")]
         app.register_type::<SamplerPool<MusicPool>>()
