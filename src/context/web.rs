@@ -1,5 +1,5 @@
 use core::cell::RefCell;
-use firewheel::{FirewheelConfig, FirewheelContext, backend::AudioBackend};
+use firewheel::{FirewheelConfig, FirewheelContext};
 
 thread_local! {
     static CONTEXT: RefCell<FirewheelContext> = panic!("audio context should be initialized");
