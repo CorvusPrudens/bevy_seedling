@@ -1,28 +1,20 @@
-use super::SeedlingContext;
-use firewheel::{FirewheelConfig, FirewheelCtx, backend::AudioBackend};
+use firewheel::{FirewheelConfig, FirewheelContext};
 use std::sync::mpsc;
 
 /// A thread-safe wrapper around the underlying Firewheel audio context.
 #[derive(Debug)]
 pub struct InnerContext(mpsc::Sender<ThreadLocalCall>);
 
-type ThreadLocalCall = Box<dyn FnOnce(&mut SeedlingContext) + Send + 'static>;
+type ThreadLocalCall = Box<dyn FnOnce(&mut FirewheelContext) + Send + 'static>;
 
 impl InnerContext {
     // Spawn the audio process and control thread.
     #[inline(always)]
-    pub fn new<B>(settings: FirewheelConfig) -> Self
-    where
-        B: AudioBackend + 'static,
-        B::StreamError: Send + Sync + 'static,
-    {
+    pub fn new(settings: FirewheelConfig) -> Self {
         let (bev_to_audio_tx, bev_to_audio_rx) = mpsc::channel::<ThreadLocalCall>();
 
         std::thread::spawn(move || {
-            let context = FirewheelCtx::<B>::new(settings);
-
-            let mut context = SeedlingContext::new(context);
-
+            let mut context = FirewheelContext::new(settings);
             while let Ok(func) = bev_to_audio_rx.recv() {
                 (func)(&mut context);
             }
@@ -43,11 +35,11 @@ impl InnerContext {
     #[inline(always)]
     pub fn with<F, O>(&mut self, f: F) -> O
     where
-        F: FnOnce(&mut SeedlingContext) -> O + Send,
+        F: FnOnce(&mut FirewheelContext) -> O + Send,
         O: Send + 'static,
     {
         let (send, receive) = mpsc::sync_channel(1);
-        let func: Box<dyn FnOnce(&mut SeedlingContext) + Send> = Box::new(move |ctx| {
+        let func: Box<dyn FnOnce(&mut FirewheelContext) + Send> = Box::new(move |ctx| {
             let result = f(ctx);
             send.send(result).unwrap();
         });
@@ -58,8 +50,8 @@ impl InnerContext {
         // so we can pretend it has a static lifetime.
         let func = unsafe {
             core::mem::transmute::<
-                Box<dyn FnOnce(&mut SeedlingContext) + Send>,
-                Box<dyn FnOnce(&mut SeedlingContext) + Send + 'static>,
+                Box<dyn FnOnce(&mut FirewheelContext) + Send>,
+                Box<dyn FnOnce(&mut FirewheelContext) + Send + 'static>,
             >(func)
         };
 

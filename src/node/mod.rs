@@ -21,7 +21,6 @@ use bevy_platform::collections::HashSet;
 use bevy_time::Time;
 use firewheel::channel_config::ChannelConfig;
 use firewheel::clock::{DurationSeconds, EventInstant, InstantSeconds};
-use firewheel::error::UpdateError;
 use firewheel::graph::NodeEntry;
 use firewheel::{
     diff::{Diff, Patch},
@@ -37,6 +36,20 @@ pub mod label;
 
 use events::AudioEvents;
 use label::NodeLabels;
+
+pub(super) struct NodePlugin;
+
+impl Plugin for NodePlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(events::EventsPlugin)
+            .init_resource::<ScheduleDiffing>()
+            .init_resource::<AudioScheduleLookahead>()
+            .init_resource::<PendingRemovals>()
+            .add_systems(Last, flush_events.in_set(SeedlingSystems::Flush))
+            .add_observer(label::NodeLabels::on_add_observer)
+            .add_observer(label::NodeLabels::on_replace_observer);
+    }
+}
 
 /// A node's baseline instance.
 ///
@@ -206,16 +219,15 @@ fn handle_configuration_changes<
     context.with(|context| {
         for (entity, node, node_id, config, mut baseline) in changes {
             // we have to get them every time, which is kind of annoying
-            let edges = context.edges();
-            let existing_inputs = edges
-                .iter()
+            let existing_inputs = context
+                .edges()
                 .filter(|e| e.dst_node == node_id.0)
-                .map(|e| firewheel::graph::Edge::clone(e))
+                .map(firewheel::graph::Edge::clone)
                 .collect::<Vec<_>>();
-            let existing_outputs = edges
-                .iter()
+            let existing_outputs = context
+                .edges()
                 .filter(|e| e.src_node == node_id.0)
-                .map(|e| firewheel::graph::Edge::clone(e))
+                .map(firewheel::graph::Edge::clone)
                 .collect::<Vec<_>>();
 
             let new_node = context.add_node(node.clone(), Some(config.clone()));
@@ -708,7 +720,7 @@ impl FirewheelNode {
 /// This resource allows us to defer audio node removals
 /// until the audio graph is ready.
 #[derive(Debug, Default, Resource)]
-pub(crate) struct PendingRemovals(Vec<NodeID>);
+struct PendingRemovals(Vec<NodeID>);
 
 impl PendingRemovals {
     pub fn push(&mut self, node: NodeID) {
@@ -716,7 +728,7 @@ impl PendingRemovals {
     }
 }
 
-pub(crate) fn flush_events(
+fn flush_events(
     mut nodes: Query<(
         Entity,
         &FirewheelNode,
@@ -775,23 +787,8 @@ pub(crate) fn flush_events(
             }
         }
 
-        let result = context.update();
-
-        match result {
-            Err(UpdateError::StreamStoppedUnexpectedly(e)) => {
-                // For now, we'll assume this is always due to a device becoming unavailable.
-                // As such, we'll attempt a reinitialization.
-                warn!("Audio stream stopped: {e:?}");
-
-                // First, we'll want to make sure the devices are up-to-date.
-                commands.trigger(crate::configuration::FetchAudioIoEvent);
-                // Then, we'll attempt a restart.
-                commands.trigger(crate::configuration::RestartAudioEvent);
-            }
-            Err(e) => {
-                error!("graph error: {e:?}");
-            }
-            _ => {}
+        if let Err(e) = context.update() {
+            error!("graph error: {e:?}");
         }
     });
 }
@@ -822,14 +819,12 @@ mod test {
                 let node = q.single().unwrap().0;
 
                 let total_nodes = context.with(|context| {
-                    let edges = context.edges();
-
-                    let inputs = edges.iter().filter(|e| e.src_node == node).count();
-                    let outputs = edges.iter().filter(|e| e.dst_node == node).count();
+                    let inputs = context.edges().filter(|e| e.src_node == node).count();
+                    let outputs = context.edges().filter(|e| e.dst_node == node).count();
 
                     assert_eq!(inputs, 2);
                     assert_eq!(outputs, 2);
-                    context.nodes().len()
+                    context.nodes().count()
                 });
 
                 // 3 + input and output
@@ -860,15 +855,13 @@ mod test {
                 assert_ne!(initial_id, node);
 
                 let total_nodes = context.with(|context| {
-                    let edges = context.edges();
-
-                    let inputs = edges.iter().filter(|e| e.src_node == node).count();
-                    let outputs = edges.iter().filter(|e| e.dst_node == node).count();
+                    let inputs = context.edges().filter(|e| e.src_node == node).count();
+                    let outputs = context.edges().filter(|e| e.dst_node == node).count();
 
                     assert_eq!(inputs, 2);
                     assert_eq!(outputs, 2);
 
-                    context.nodes().len()
+                    context.nodes().count()
                 });
 
                 // 3 + input and output

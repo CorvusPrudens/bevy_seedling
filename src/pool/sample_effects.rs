@@ -1,6 +1,6 @@
 //! Types and traits for managing per-sample effects.
 
-use crate::utils::entity_set::{EntitySet, EntitySetIter};
+use crate::utils::entity_set::{OrderedEntitySet, OrderedEntitySetIter};
 use bevy_ecs::{
     prelude::*,
     query::{QueryData, QueryFilter, QueryManyUniqueIter, ROQueryItem},
@@ -111,7 +111,7 @@ pub struct EffectOf(pub Entity);
 #[derive(Debug, Component)]
 #[relationship_target(relationship = EffectOf, linked_spawn)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-pub struct SampleEffects(EntitySet);
+pub struct SampleEffects(OrderedEntitySet);
 
 impl core::ops::Deref for SampleEffects {
     type Target = [Entity];
@@ -284,7 +284,7 @@ where
     fn iter_effects<'a>(
         &self,
         effects: &'a SampleEffects,
-    ) -> QueryManyUniqueIter<'_, 's, D::ReadOnly, F, EntitySetIter<'a>>;
+    ) -> QueryManyUniqueIter<'_, 's, D::ReadOnly, F, OrderedEntitySetIter<'a>>;
 
     /// Mutably iterate over all effects entities that match the query.
     ///
@@ -308,7 +308,7 @@ where
     fn iter_effects_mut<'a>(
         &mut self,
         effects: &'a SampleEffects,
-    ) -> QueryManyUniqueIter<'_, 's, D, F, EntitySetIter<'a>>;
+    ) -> QueryManyUniqueIter<'_, 's, D, F, OrderedEntitySetIter<'a>>;
 }
 
 impl<'s, D, F> EffectsQuery<'s, D, F> for Query<'_, 's, D, F>
@@ -345,14 +345,14 @@ where
     fn iter_effects<'a>(
         &self,
         effects: &'a SampleEffects,
-    ) -> QueryManyUniqueIter<'_, 's, D::ReadOnly, F, EntitySetIter<'a>> {
+    ) -> QueryManyUniqueIter<'_, 's, D::ReadOnly, F, OrderedEntitySetIter<'a>> {
         self.iter_many_unique(effects.iter())
     }
 
     fn iter_effects_mut<'a>(
         &mut self,
         effects: &'a SampleEffects,
-    ) -> QueryManyUniqueIter<'_, 's, D, F, EntitySetIter<'a>> {
+    ) -> QueryManyUniqueIter<'_, 's, D, F, OrderedEntitySetIter<'a>> {
         self.iter_many_unique_mut(effects.iter())
     }
 }

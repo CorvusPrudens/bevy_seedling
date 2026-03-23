@@ -4,7 +4,6 @@ use crate::{
     node::{FirewheelNode, FirewheelNodeInfo},
 };
 use bevy_ecs::prelude::*;
-use core::ops::Deref;
 
 #[cfg(debug_assertions)]
 use core::panic::Location;
@@ -158,7 +157,7 @@ pub(crate) fn process_disconnections(
         for (mut pending, source_node) in disconnections.into_iter() {
             pending.0.retain(|disconnections| {
                 let Some((target_node, _target_info)) =
-                    super::fetch_target(disconnections, &node_map, &targets, (*context).deref())
+                    super::fetch_target(disconnections, &node_map, &targets, context)
                 else {
                     return false;
                 };
@@ -169,7 +168,6 @@ pub(crate) fn process_disconnections(
                     None => {
                         existing_connections = context
                             .edges()
-                            .into_iter()
                             .filter(|e| e.src_node == source_node.0 && e.dst_node == target_node)
                             .map(|e| (e.src_port, e.dst_port))
                             .collect::<Vec<_>>();
@@ -228,18 +226,12 @@ mod test {
 
                 context.with(|context| {
                     // input node, output node, One, Two, and MainBus
-                    assert_eq!(context.nodes().len(), 5);
+                    assert_eq!(context.nodes().count(), 5);
 
-                    let outgoing_edges_one: Vec<_> = context
-                        .edges()
-                        .into_iter()
-                        .filter(|e| e.src_node == one.0)
-                        .collect();
-                    let outgoing_edges_two: Vec<_> = context
-                        .edges()
-                        .into_iter()
-                        .filter(|e| e.src_node == two.0)
-                        .collect();
+                    let outgoing_edges_one: Vec<_> =
+                        context.edges().filter(|e| e.src_node == one.0).collect();
+                    let outgoing_edges_two: Vec<_> =
+                        context.edges().filter(|e| e.src_node == two.0).collect();
 
                     assert_eq!(outgoing_edges_one.len(), 2);
                     assert_eq!(outgoing_edges_two.len(), 2);
@@ -278,18 +270,12 @@ mod test {
 
                 context.with(|context| {
                     // input node, output node, One, Two, and MainBus
-                    assert_eq!(context.nodes().len(), 5);
+                    assert_eq!(context.nodes().count(), 5);
 
-                    let outgoing_edges_one: Vec<_> = context
-                        .edges()
-                        .into_iter()
-                        .filter(|e| e.src_node == one.0)
-                        .collect();
-                    let outgoing_edges_two: Vec<_> = context
-                        .edges()
-                        .into_iter()
-                        .filter(|e| e.src_node == two.0)
-                        .collect();
+                    let outgoing_edges_one: Vec<_> =
+                        context.edges().filter(|e| e.src_node == one.0).collect();
+                    let outgoing_edges_two: Vec<_> =
+                        context.edges().filter(|e| e.src_node == two.0).collect();
 
                     assert_eq!(outgoing_edges_one.len(), 0);
                     assert_eq!(outgoing_edges_two.len(), 2);

@@ -18,14 +18,11 @@ use bevy::{
     ecs::{spawn::SpawnWith, system::IntoObserverSystem},
     prelude::*,
 };
-use bevy_seedling::{
-    configuration::{MusicPool, SoundEffectsBus},
-    prelude::*,
-};
+use bevy_seedling::prelude::*;
 
 fn main() {
     let mut app = App::new();
-    app.add_plugins((DefaultPlugins, SeedlingPlugin::default()))
+    app.add_plugins((DefaultPlugins, SeedlingPlugins))
         .add_systems(Startup, setup)
         .add_systems(
             Update,

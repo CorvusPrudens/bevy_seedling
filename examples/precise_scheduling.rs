@@ -14,7 +14,7 @@ fn main() {
             MinimalPlugins,
             LogPlugin::default(),
             AssetPlugin::default(),
-            SeedlingPlugin::default(),
+            SeedlingPlugins,
         ))
         .add_systems(
             PostStartup,

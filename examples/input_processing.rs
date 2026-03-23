@@ -6,7 +6,7 @@
 //! I recommend starting with low volume!
 
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_seedling::prelude::*;
+use bevy_seedling::{context::AudioContextConfig, prelude::*};
 use firewheel::cpal::{CpalConfig, CpalInputConfig};
 
 fn main() {
@@ -15,20 +15,18 @@ fn main() {
             MinimalPlugins,
             LogPlugin::default(),
             AssetPlugin::default(),
-            SeedlingPlugin {
-                config: FirewheelConfig {
-                    // Ensure the graph has an input
-                    num_graph_inputs: ChannelCount::MONO,
-                    ..Default::default()
-                },
-                stream_config: CpalConfig {
-                    // Ensure we provide an input config
-                    input: Some(CpalInputConfig::default()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            SeedlingPlugins,
         ))
+        .insert_resource(AudioContextConfig(FirewheelConfig {
+            // Ensure the graph has an input
+            num_graph_inputs: ChannelCount::MONO,
+            ..Default::default()
+        }))
+        .insert_resource(AudioStreamConfig(CpalConfig {
+            // Ensure we provide an input config
+            input: Some(CpalInputConfig::default()),
+            ..Default::default()
+        }))
         .add_systems(Startup, route_input)
         .run();
 }

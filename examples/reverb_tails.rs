@@ -5,7 +5,7 @@ use bevy_seedling::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
+        .add_plugins((DefaultPlugins, SeedlingPlugins))
         .add_systems(Startup, (set_up_ui, startup).chain())
         .add_systems(
             Update,
