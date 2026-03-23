@@ -34,19 +34,22 @@ pub struct RestartAudioStream;
 ///
 /// For example, here's how the `cpal` stream is initialized.
 /// ```
+/// # use bevy::prelude::*;
+/// # use bevy_seedling::{prelude::*, platform::cpal::CpalConfig, context::SampleRate};
+/// # use bevy_seedling::platform::initialize_stream;
 /// fn start_stream(
-///     mut context: ResMut<AudioGraph>,
+///     mut context: ResMut<AudioContext>,
 ///     stream_config: Res<AudioStreamConfig<CpalConfig>>,
 ///     server: Res<AssetServer>,
 ///     mut commands: Commands,
 /// ) -> Result {
-///     let stream =
-///         context.with(|context| cpal::CpalStream::new(context, stream_config.0.clone()))?;
+///     let stream = context
+///         .with(|context| firewheel::cpal::CpalStream::new(context, stream_config.0.clone()))?;
 ///
 ///     let sample_rate = SampleRate::new(stream.info().sample_rate);
 ///
-///     commands.insert_resource(CpalStream(Some(SyncCell::new(stream))));
-///     super::initialize_stream(sample_rate, &server, commands);
+///     commands.insert_resource(CpalStream::new(stream));
+///     initialize_stream(sample_rate, &server, commands);
 ///
 ///     Ok(())
 /// }

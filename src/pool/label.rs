@@ -44,13 +44,8 @@ bevy_ecs::define_label!(
 ///
 /// fn main() {
 ///     App::default()
-///         .add_plugins((
-///             DefaultPlugins,
-///             SeedlingPlugin {
-///                 graph_config: GraphConfiguration::Empty,
-///                 ..Default::default()
-///             },
-///         ))
+///         .add_plugins((DefaultPlugins, SeedlingPlugins))
+///         .insert_resource(GraphTemplate::Empty)
 ///         .add_systems(Startup, |mut commands: Commands| {
 ///             // Make the default pool provide spatial audio.
 ///             commands.spawn((

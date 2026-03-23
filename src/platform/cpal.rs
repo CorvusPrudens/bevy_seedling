@@ -1,4 +1,4 @@
-//! Strema management for `cpal`.
+//! Stream management for `cpal`.
 
 use bevy_app::prelude::*;
 use bevy_asset::AssetServer;
@@ -47,6 +47,11 @@ impl Plugin for CpalPlatformPlugin {
 pub struct CpalStream(Option<SyncCell<cpal::CpalStream>>);
 
 impl CpalStream {
+    /// Construct a new, inhabited [`CpalStream`].
+    pub fn new(stream: cpal::CpalStream) -> Self {
+        Self(Some(SyncCell::new(stream)))
+    }
+
     /// Returns a mutable reference to [`CpalStream`][cpal::CpalStream].
     ///
     /// This is the only way to access the stream.
@@ -80,11 +85,11 @@ fn start_stream(
     server: Res<AssetServer>,
     mut commands: Commands,
 ) -> Result {
-    // TOOD: it's not possible for the user to recover if this fails
+    // TODO: it's not possible for the user to recover if this fails
     let stream = context.with(|context| cpal::CpalStream::new(context, stream_config.0.clone()))?;
 
     let sample_rate = SampleRate::new(stream.info().sample_rate);
-    commands.insert_resource(CpalStream(Some(SyncCell::new(stream))));
+    commands.insert_resource(CpalStream::new(stream));
 
     super::initialize_stream(sample_rate, &server, commands);
 

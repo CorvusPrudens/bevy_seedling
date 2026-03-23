@@ -90,7 +90,7 @@ impl AudioContext {
     /// # use bevy::prelude::*;
     /// # use bevy_seedling::prelude::*;
     /// fn system(mut context: ResMut<AudioContext>) {
-    ///     let input_devices = context.with(|context| context.input_devices_simple());
+    ///     let stream_info = context.with(|context| context.stream_info().cloned());
     /// }
     /// ```
     pub fn with<F, O>(&mut self, f: F) -> O

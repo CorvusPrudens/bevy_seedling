@@ -53,7 +53,7 @@
 //!
 //! </details>
 //!
-//! Then, you'll need to add the [`SeedlingPlugin`] to your app.
+//! Then, you'll need to add the [`SeedlingPlugins`] to your app.
 //!
 //! ```no_run
 //! use bevy::prelude::*;
@@ -61,7 +61,7 @@
 //!
 //! fn main() {
 //!     App::default()
-//!         .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
+//!         .add_plugins((DefaultPlugins, SeedlingPlugins))
 //!         .run();
 //! }
 //! ```
@@ -224,7 +224,7 @@
 //!
 //! fn main() {
 //!     App::new()
-//!         .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
+//!         .add_plugins((DefaultPlugins, SeedlingPlugins))
 //!         .register_simple_node::<CustomNode>();
 //! }
 //! ```
@@ -480,7 +480,7 @@ plugin_group! {
 
 /// Run a system if the given resource has changed, ignoring
 /// change ticks on startup.
-fn resource_changed_without_insert<R: Resource>(res: Res<R>, mut has_run: Local<bool>) -> bool {
+pub fn resource_changed_without_insert<R: Resource>(res: Res<R>, mut has_run: Local<bool>) -> bool {
     let changed = res.is_changed() && *has_run;
     *has_run = true;
 
