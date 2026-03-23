@@ -1,9 +1,22 @@
 //! Glue code for interfacing with the underlying audio context.
 
+use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_platform::sync;
 use firewheel::{FirewheelConfig, FirewheelContext, clock::AudioClock};
 use std::num::NonZeroU32;
+
+pub mod graph;
+
+pub(crate) struct ContextPlugin;
+
+impl Plugin for ContextPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<AudioContextConfig>()
+            .add_plugins(graph::GraphPlugin)
+            .add_systems(PreStartup, initialize_context);
+    }
+}
 
 #[cfg(target_arch = "wasm32")]
 mod web;
@@ -29,14 +42,14 @@ use os::InnerContext;
 /// }
 /// ```
 #[derive(Debug, Resource, Component)]
-pub struct AudioGraph(InnerContext);
+pub struct AudioContext(InnerContext);
 
-impl AudioGraph {
+impl AudioContext {
     /// Create the audio context.
     ///
     /// This will not start a stream.
     pub fn new(settings: FirewheelConfig) -> Self {
-        AudioGraph(InnerContext::new(settings))
+        AudioContext(InnerContext::new(settings))
     }
 
     /// Get an absolute timestamp from the audio thread of the current time.
@@ -89,8 +102,9 @@ impl AudioGraph {
     }
 }
 
-#[derive(Resource, Default)]
-pub struct AudioGraphConfig(pub crate::prelude::FirewheelConfig);
+/// Provides the [`AudioContext`] its [`FirewheelConfig`].
+#[derive(Resource, Default, Debug)]
+pub struct AudioContextConfig(pub FirewheelConfig);
 
 /// Provides the current audio sample rate.
 ///
@@ -106,6 +120,7 @@ pub struct AudioGraphConfig(pub crate::prelude::FirewheelConfig);
 pub struct SampleRate(pub(crate) sync::Arc<sync::atomic::AtomicU32>);
 
 impl SampleRate {
+    /// Construct a new, shared [`SampleRate`].
     pub fn new(rate: NonZeroU32) -> Self {
         Self(sync::Arc::new(sync::atomic::AtomicU32::new(rate.get())))
     }
@@ -124,11 +139,8 @@ impl SampleRate {
     }
 }
 
-pub(crate) fn initialize_context(
-    firewheel_config: Res<AudioGraphConfig>,
-    mut commands: Commands,
-) -> Result {
-    let context = AudioGraph::new(firewheel_config.0);
+fn initialize_context(firewheel_config: Res<AudioContextConfig>, mut commands: Commands) -> Result {
+    let context = AudioContext::new(firewheel_config.0);
     commands.insert_resource(context);
 
     Ok(())
@@ -148,14 +160,19 @@ pub struct StreamStartEvent {
 #[derive(Event, Debug)]
 pub struct PreStreamRestartEvent;
 
-pub fn pre_restart_context(mut commands: Commands) {
+/// Bookkeepig for pre-restart behavior.
+///
+/// This should be called by custom backend immediately before
+/// restarting a stream.
+pub fn pre_restart_stream(mut commands: Commands) {
     commands.trigger(PreStreamRestartEvent);
 }
 
 /// An event triggered when the audio stream restarts.
 #[derive(Event, Debug)]
 pub struct StreamRestartEvent {
-    /// The sample rate before the restart, which may or may not match.
+    /// The sample rate before the restart, which may or may not match
+    /// [`current_rate`][StreamRestartEvent::current_rate].
     pub previous_rate: NonZeroU32,
     /// The current sample rate following the restart.
     pub current_rate: NonZeroU32,

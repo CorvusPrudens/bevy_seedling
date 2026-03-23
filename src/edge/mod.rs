@@ -1,9 +1,11 @@
 //! Node connection and disconnection utilities.
 
-use crate::context::AudioGraph;
+use crate::SeedlingSystems;
+use crate::context::AudioContext;
 use crate::node::FirewheelNodeInfo;
 use crate::node::label::InternedNodeLabel;
 use crate::prelude::{FirewheelNode, MainBus, NodeLabel};
+use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_log::error_once;
 use bevy_platform::collections::HashMap;
@@ -19,6 +21,26 @@ mod disconnect;
 
 pub use connect::*;
 pub use disconnect::*;
+
+pub(super) struct EdgePlugin;
+
+impl Plugin for EdgePlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<NodeMap>().add_systems(
+            Last,
+            (
+                auto_connect
+                    .before(SeedlingSystems::Connect)
+                    .after(SeedlingSystems::Acquire),
+                // we process disconnections before connections to allow
+                // same-frame disconnect-then-reconnect functionality
+                (process_disconnections, process_connections)
+                    .chain()
+                    .in_set(SeedlingSystems::Connect),
+            ),
+        );
+    }
+}
 
 /// A node label for Firewheel's audio graph input.
 ///
@@ -254,7 +276,7 @@ impl core::ops::DerefMut for NodeMap {
 /// outputs.
 pub(crate) fn auto_connect(
     nodes: Query<(Entity, &FirewheelNode), Without<PendingConnections>>,
-    mut context: ResMut<AudioGraph>,
+    mut context: ResMut<AudioContext>,
     mut commands: Commands,
 ) {
     if nodes.iter().len() == 0 {
@@ -382,13 +404,10 @@ mod test {
 
                 context.with(|context| {
                     // input node, output node, One, and MainBus
-                    assert_eq!(context.nodes().len(), 4);
+                    assert_eq!(context.nodes().count(), 4);
 
-                    let outgoing_edges_one: Vec<_> = context
-                        .edges()
-                        .into_iter()
-                        .filter(|e| e.src_node == one.0)
-                        .collect();
+                    let outgoing_edges_one: Vec<_> =
+                        context.edges().filter(|e| e.src_node == one.0).collect();
 
                     assert_eq!(outgoing_edges_one.len(), 2);
 
@@ -421,13 +440,10 @@ mod test {
 
                 context.with(|context| {
                     // input node, output node, One, and MainBus
-                    assert_eq!(context.nodes().len(), 4);
+                    assert_eq!(context.nodes().count(), 4);
 
-                    let outgoing_edges_one: Vec<_> = context
-                        .edges()
-                        .into_iter()
-                        .filter(|e| e.src_node == one.0)
-                        .collect();
+                    let outgoing_edges_one: Vec<_> =
+                        context.edges().filter(|e| e.src_node == one.0).collect();
 
                     assert_eq!(outgoing_edges_one.len(), 1);
 

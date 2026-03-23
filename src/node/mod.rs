@@ -6,7 +6,7 @@ use crate::time::{Audio, AudioTime};
 use crate::{
     SeedlingSystems,
     edge::{ChannelMapping, NodeMap},
-    prelude::AudioGraph,
+    prelude::AudioContext,
 };
 use bevy_app::prelude::*;
 use bevy_ecs::component::Components;
@@ -36,6 +36,20 @@ pub mod label;
 
 use events::AudioEvents;
 use label::NodeLabels;
+
+pub(super) struct NodePlugin;
+
+impl Plugin for NodePlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(events::EventsPlugin)
+            .init_resource::<ScheduleDiffing>()
+            .init_resource::<AudioScheduleLookahead>()
+            .init_resource::<PendingRemovals>()
+            .add_systems(Last, flush_events.in_set(SeedlingSystems::Flush))
+            .add_observer(label::NodeLabels::on_add_observer)
+            .add_observer(label::NodeLabels::on_replace_observer);
+    }
+}
 
 /// A node's baseline instance.
 ///
@@ -194,7 +208,7 @@ fn handle_configuration_changes<
         ),
         Changed<T::Configuration>,
     >,
-    mut context: ResMut<AudioGraph>,
+    mut context: ResMut<AudioContext>,
     mut commands: Commands,
 ) -> Result {
     let changes: Vec<_> = configs.iter_mut().filter(|(.., c, b)| *c != &b.0).collect();
@@ -262,7 +276,7 @@ fn acquire_id<T>(
         (Entity, &T, Option<&T::Configuration>, Option<&NodeLabels>),
         (Without<FirewheelNode>, Without<EffectOf>),
     >,
-    mut context: ResMut<AudioGraph>,
+    mut context: ResMut<AudioContext>,
     mut node_map: ResMut<NodeMap>,
     mut commands: Commands,
 ) where
@@ -307,7 +321,7 @@ pub struct AudioState<T>(pub T);
 
 fn fetch_state<T, S>(
     q: Query<(Entity, &FirewheelNode), (Changed<FirewheelNode>, With<T>)>,
-    mut context: ResMut<AudioGraph>,
+    mut context: ResMut<AudioContext>,
     mut commands: Commands,
 ) where
     T: AudioNode + Component,
@@ -706,7 +720,7 @@ impl FirewheelNode {
 /// This resource allows us to defer audio node removals
 /// until the audio graph is ready.
 #[derive(Debug, Default, Resource)]
-pub(crate) struct PendingRemovals(Vec<NodeID>);
+struct PendingRemovals(Vec<NodeID>);
 
 impl PendingRemovals {
     pub fn push(&mut self, node: NodeID) {
@@ -714,7 +728,7 @@ impl PendingRemovals {
     }
 }
 
-pub(crate) fn flush_events(
+fn flush_events(
     mut nodes: Query<(
         Entity,
         &FirewheelNode,
@@ -722,7 +736,7 @@ pub(crate) fn flush_events(
         Option<&DiffTimestamp>,
     )>,
     mut removals: ResMut<PendingRemovals>,
-    mut context: ResMut<AudioGraph>,
+    mut context: ResMut<AudioContext>,
     time: Res<bevy_time::Time<Audio>>,
     should_schedule: Res<ScheduleDiffing>,
     lookahead: Res<AudioScheduleLookahead>,
@@ -801,7 +815,7 @@ mod test {
 
         let initial_id = run(
             &mut app,
-            |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioGraph>| {
+            |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioContext>| {
                 let node = q.single().unwrap().0;
 
                 let total_nodes = context.with(|context| {
@@ -835,7 +849,7 @@ mod test {
         // splicing has succeeded
         run(
             &mut app,
-            move |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioGraph>| {
+            move |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioContext>| {
                 let node = q.single().unwrap().0;
 
                 assert_ne!(initial_id, node);

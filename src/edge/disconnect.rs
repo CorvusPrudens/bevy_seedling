@@ -1,6 +1,6 @@
 use super::{EdgeTarget, NodeMap, PendingEdge};
 use crate::{
-    context::AudioGraph,
+    context::AudioContext,
     node::{FirewheelNode, FirewheelNodeInfo},
 };
 use bevy_ecs::prelude::*;
@@ -142,7 +142,7 @@ pub(crate) fn process_disconnections(
     mut disconnections: Query<(&mut PendingDisconnections, &FirewheelNode)>,
     targets: Query<(&FirewheelNode, &FirewheelNodeInfo)>,
     node_map: Res<NodeMap>,
-    mut context: ResMut<AudioGraph>,
+    mut context: ResMut<AudioContext>,
 ) {
     let disconnections = disconnections
         .iter_mut()
@@ -187,7 +187,7 @@ pub(crate) fn process_disconnections(
 #[cfg(test)]
 mod test {
     use crate::{
-        context::AudioGraph,
+        context::AudioContext,
         edge::{AudioGraphOutput, Connect},
         prelude::MainBus,
         test::{prepare_app, run},
@@ -216,7 +216,7 @@ mod test {
         // first, verify they're all connected
         run(
             &mut app,
-            |mut context: ResMut<AudioGraph>,
+            |mut context: ResMut<AudioContext>,
              one: Single<&FirewheelNode, With<One>>,
              two: Single<&FirewheelNode, With<Two>>,
              main: Single<&FirewheelNode, With<MainBus>>| {
@@ -260,7 +260,7 @@ mod test {
         // finally, verify one and two are disconnected
         run(
             &mut app,
-            |mut context: ResMut<AudioGraph>,
+            |mut context: ResMut<AudioContext>,
              one: Single<&FirewheelNode, With<One>>,
              two: Single<&FirewheelNode, With<Two>>,
              main: Single<&FirewheelNode, With<MainBus>>| {

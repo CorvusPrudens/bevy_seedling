@@ -1,3 +1,17 @@
+# 0.8.0
+
+## Changes
+
+### Backend simplification
+
+The backend management code has been significantly simplified following
+Firewheel's backend API changes.
+
+### Plugin restructuring
+
+Seedling's top-level plugin has been reduced to a ZST. Its fields have been turned
+into resources that can be overwritten or mutated.
+
 # 0.7.2
 
 ## Fixes

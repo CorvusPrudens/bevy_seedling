@@ -9,7 +9,7 @@ use firewheel::cpal::{self};
 
 use crate::{
     SeedlingSystems,
-    context::{AudioGraph, SampleRate, StreamRestartEvent},
+    context::{AudioContext, SampleRate, StreamRestartEvent},
     platform::*,
     prelude::SeedlingStartupSystems,
     resource_changed_without_insert,
@@ -32,7 +32,7 @@ impl Plugin for CpalPlatformPlugin {
             )
             .add_systems(
                 PostUpdate,
-                (crate::context::pre_restart_context, restart_stream)
+                (crate::context::pre_restart_stream, restart_stream)
                     .chain()
                     .run_if(resource_changed_without_insert::<AudioStreamConfig<CpalConfig>>),
             )
@@ -75,7 +75,7 @@ impl core::fmt::Debug for CpalStream {
 }
 
 fn start_stream(
-    mut context: ResMut<AudioGraph>,
+    mut context: ResMut<AudioContext>,
     stream_config: Res<AudioStreamConfig<CpalConfig>>,
     server: Res<AssetServer>,
     mut commands: Commands,
@@ -118,7 +118,7 @@ fn observe_restart(_: On<RestartAudioStream>, mut config: ResMut<AudioStreamConf
 fn restart_stream(
     stream_config: Res<AudioStreamConfig<CpalConfig>>,
     mut stream: ResMut<CpalStream>,
-    mut graph: ResMut<AudioGraph>,
+    mut graph: ResMut<AudioContext>,
     sample_rate: Res<SampleRate>,
     mut commands: Commands,
 ) -> Result {

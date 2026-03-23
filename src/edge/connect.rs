@@ -1,6 +1,6 @@
 use super::{EdgeTarget, NodeMap, PendingEdge};
 use crate::{
-    context::AudioGraph,
+    context::AudioContext,
     edge::ChannelMapping,
     node::{FirewheelNode, FirewheelNodeInfo},
 };
@@ -455,7 +455,7 @@ pub(crate) fn process_connections(
     )>,
     targets: Query<(&FirewheelNode, &FirewheelNodeInfo)>,
     node_map: Res<NodeMap>,
-    mut context: ResMut<AudioGraph>,
+    mut context: ResMut<AudioContext>,
 ) {
     let connections = connections
         .iter_mut()
@@ -501,7 +501,7 @@ pub(crate) fn process_connections(
 #[cfg(test)]
 mod test {
     use crate::{
-        context::AudioGraph,
+        context::AudioContext,
         edge::AudioGraphOutput,
         prelude::MainBus,
         test::{prepare_app, run},
@@ -535,7 +535,7 @@ mod test {
 
         app.world_mut()
             .run_system_once(
-                |mut context: ResMut<AudioGraph>,
+                |mut context: ResMut<AudioContext>,
                  one: Single<&FirewheelNode, With<One>>,
                  two: Single<&FirewheelNode, With<Two>>,
                  main: Single<&FirewheelNode, With<MainBus>>| {
@@ -581,7 +581,7 @@ mod test {
 
         app.world_mut()
             .run_system_once(
-                |mut context: ResMut<AudioGraph>,
+                |mut context: ResMut<AudioContext>,
                  one: Single<&FirewheelNode, With<One>>,
                  two: Single<&FirewheelNode, With<Two>>,
                  three: Single<&FirewheelNode, With<Three>>| {
@@ -641,7 +641,7 @@ mod test {
             &mut app,
             |one: Single<&FirewheelNode, With<One>>,
              two: Single<&FirewheelNode, With<Two>>,
-             mut context: ResMut<AudioGraph>| {
+             mut context: ResMut<AudioContext>| {
                 context.with(|context| {
                     let edges = context.edges();
 
@@ -684,7 +684,7 @@ mod test {
             &mut app,
             |one: Single<&FirewheelNode, With<One>>,
              two: Single<&FirewheelNode, With<Two>>,
-             mut context: ResMut<AudioGraph>| {
+             mut context: ResMut<AudioContext>| {
                 context.with(|context| {
                     let edges = context.edges();
 

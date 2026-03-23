@@ -15,7 +15,7 @@
 //! stop and restart with the new configuration.
 
 use crate::{
-    context::{StreamRestartEvent, StreamStartEvent},
+    context::{AudioContext, StreamRestartEvent, StreamStartEvent},
     edge::{AudioGraphInput, AudioGraphOutput, PendingConnections},
     node::{FirewheelNode, FirewheelNodeInfo},
 };
@@ -26,25 +26,26 @@ use bevy_seedling_macros::{NodeLabel, PoolLabel};
 use bevy_transform::prelude::Transform;
 use std::fmt::Debug;
 
-pub(crate) struct SeedlingStartupPlugin;
+pub(super) struct GraphPlugin;
 
-impl Plugin for SeedlingStartupPlugin {
+impl Plugin for GraphPlugin {
     fn build(&self, app: &mut App) {
-        app.preregister_asset_loader::<crate::sample::SampleLoader>(
-            crate::sample::SampleLoader::extensions(),
-        )
-        .add_systems(
-            PreStartup,
-            (crate::context::initialize_context, insert_io, set_up_graph)
-                .chain()
-                .in_set(SeedlingStartupSystems::GraphSetup),
-        )
-        .add_systems(
-            Last,
-            add_default_transforms.before(crate::SeedlingSystems::Acquire),
-        )
-        .add_observer(connect_io::<StreamStartEvent>)
-        .add_observer(connect_io::<StreamRestartEvent>);
+        app.init_resource::<GraphTemplate>()
+            .preregister_asset_loader::<crate::sample::SampleLoader>(
+                crate::sample::SampleLoader::extensions(),
+            )
+            .add_systems(
+                PreStartup,
+                (crate::context::initialize_context, insert_io, set_up_graph)
+                    .chain()
+                    .in_set(SeedlingStartupSystems::GraphSetup),
+            )
+            .add_systems(
+                Last,
+                add_default_transforms.before(crate::SeedlingSystems::Acquire),
+            )
+            .add_observer(connect_io::<StreamStartEvent>)
+            .add_observer(connect_io::<StreamRestartEvent>);
     }
 }
 
@@ -107,19 +108,19 @@ pub struct MusicPool;
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SoundEffectsBus;
 
-/// Describes the initial audio graph configuration.
+/// Provides a template for the initial audio graph configuration.
 ///
 /// If you're not familiar with routing audio or are unsure what you need,
-/// the [`Game`] configuration should provide a great starting point.
+/// the [`Game`] template should provide a great starting point.
 /// For those who want more control, [`Minimal`] and [`Empty`] will get
 /// out of your way.
 ///
-/// [`Game`]: GraphConfiguration::Game
-/// [`Minimal`]: GraphConfiguration::Minimal
-/// [`Empty`]: GraphConfiguration::Empty
+/// [`Game`]: GraphTemplate::Game
+/// [`Minimal`]: GraphTemplate::Minimal
+/// [`Empty`]: GraphTemplate::Empty
 #[derive(Debug, Default, Clone, Copy, Resource)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-pub enum GraphConfiguration {
+pub enum GraphTemplate {
     /// The default game template, suitable for smaller projects.
     ///
     /// After [`SeedlingStartupSystems::GraphSetup`] in [`PreStartup`], the graph will
@@ -261,7 +262,7 @@ fn connect_io<E: Event>(
     input: Query<Entity, With<AudioGraphInput>>,
     output: Query<Entity, With<AudioGraphOutput>>,
     mut commands: Commands,
-    mut context: ResMut<crate::prelude::AudioGraph>,
+    mut context: ResMut<AudioContext>,
 ) -> Result {
     context.with(|ctx| {
         let node_id = ctx.graph_in_node_id();
@@ -283,11 +284,11 @@ fn connect_io<E: Event>(
 }
 
 /// Set up the graph according to the initial configuration.
-fn set_up_graph(mut commands: Commands, config: Res<GraphConfiguration>) {
+fn set_up_graph(mut commands: Commands, config: Res<GraphTemplate>) {
     use crate::prelude::*;
 
     match *config {
-        GraphConfiguration::Game => {
+        GraphTemplate::Game => {
             // Buses
             commands
                 .spawn((MainBus, VolumeNode::default(), Name::new("Main Bus")))
@@ -331,7 +332,7 @@ fn set_up_graph(mut commands: Commands, config: Res<GraphConfiguration>) {
                 sample_effects![VolumeNode::default()],
             ));
         }
-        GraphConfiguration::Minimal => {
+        GraphTemplate::Minimal => {
             // Buses
             commands
                 .spawn((MainBus, VolumeNode::default(), Name::new("Main Bus")))
@@ -350,6 +351,6 @@ fn set_up_graph(mut commands: Commands, config: Res<GraphConfiguration>) {
                 sample_effects![VolumeNode::default()],
             ));
         }
-        GraphConfiguration::Empty => {}
+        GraphTemplate::Empty => {}
     }
 }

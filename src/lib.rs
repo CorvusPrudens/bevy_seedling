@@ -22,7 +22,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_seedling = "0.7.2"
+//! bevy_seedling = "0.8.0"
 //! bevy = { version = "0.18.0", default-features = false, features = [
 //!   # 2d
 //!   "2d_bevy_render",
@@ -347,7 +347,6 @@ use bevy_ecs::prelude::*;
 // We re-export Firewheel here for convenience.
 pub use firewheel;
 
-pub mod configuration;
 pub mod context;
 pub mod edge;
 pub mod error;
@@ -363,10 +362,10 @@ pub mod utils;
 pub mod prelude {
     //! All `bevy_seedlings`'s important types and traits.
 
-    pub use crate::configuration::{
-        GraphConfiguration, MusicPool, SeedlingStartupSystems, SoundEffectsBus, SpatialPool,
+    pub use crate::context::AudioContext;
+    pub use crate::context::graph::{
+        GraphTemplate, MusicPool, SeedlingStartupSystems, SoundEffectsBus, SpatialPool,
     };
-    pub use crate::context::AudioGraph;
     pub use crate::edge::{
         AudioGraphInput, AudioGraphOutput, ChannelMapping, Connect, Disconnect, EdgeTarget,
     };
@@ -492,14 +491,7 @@ impl Plugin for SeedlingCorePlugin {
     fn build(&self, app: &mut App) {
         use prelude::*;
 
-        // TODO: GraphConfiguration and AudioGraphConfig are terrible names
-        app.init_resource::<configuration::GraphConfiguration>()
-            .init_resource::<context::AudioGraphConfig>()
-            .init_resource::<edge::NodeMap>()
-            .init_resource::<node::ScheduleDiffing>()
-            .init_resource::<node::AudioScheduleLookahead>()
-            .init_resource::<node::PendingRemovals>()
-            .init_resource::<pool::DefaultPoolSize>()
+        app.init_resource::<pool::DefaultPoolSize>()
             .init_asset::<sample::AudioSample>()
             .register_node::<VolumeNode>()
             .register_node::<VolumePanNode>()
@@ -517,30 +509,14 @@ impl Plugin for SeedlingCorePlugin {
                 SeedlingSystems::PollStream.after(SeedlingSystems::Flush),
             ),
         )
-        .add_systems(
-            Last,
-            (
-                edge::auto_connect
-                    .before(SeedlingSystems::Connect)
-                    .after(SeedlingSystems::Acquire),
-                // we process disconnections before connections to allow
-                // same-frame disconnect-then-reconnect functionality
-                (edge::process_disconnections, edge::process_connections)
-                    .chain()
-                    .in_set(SeedlingSystems::Connect),
-                node::flush_events.in_set(SeedlingSystems::Flush),
-            ),
-        )
-        .add_systems(PreStartup, context::initialize_context)
-        .add_observer(node::label::NodeLabels::on_add_observer)
-        .add_observer(node::label::NodeLabels::on_replace_observer)
         .add_observer(sample::observe_player_insert);
 
         app.add_plugins((
-            configuration::SeedlingStartupPlugin,
+            context::ContextPlugin,
+            node::NodePlugin,
+            edge::EdgePlugin,
             pool::SamplePoolPlugin,
             nodes::SeedlingNodesPlugin,
-            node::events::EventsPlugin,
             spatial::SpatialPlugin,
             time::TimePlugin,
             #[cfg(feature = "rand")]
@@ -579,7 +555,7 @@ mod test {
             MockBackendPlugin,
             TransformPlugin,
         ))
-        .insert_resource(GraphConfiguration::Empty)
+        .insert_resource(GraphTemplate::Empty)
         .add_systems(Startup, startup);
 
         app.finish();
