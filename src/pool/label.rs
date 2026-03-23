@@ -35,7 +35,7 @@ bevy_ecs::define_label!(
 ///
 /// [`SamplePlayer`]: crate::sample::SamplePlayer
 ///
-/// Depending on your [`GraphConfiguration`][crate::prelude::GraphConfiguration], you
+/// Depending on your [`AudioGraphTemplate`][crate::prelude::AudioGraphTemplate], you
 /// can customize the default pool or even omit it entirely.
 ///
 /// ```no_run
@@ -45,7 +45,7 @@ bevy_ecs::define_label!(
 /// fn main() {
 ///     App::default()
 ///         .add_plugins((DefaultPlugins, SeedlingPlugins))
-///         .insert_resource(GraphTemplate::Empty)
+///         .insert_resource(AudioGraphTemplate::Empty)
 ///         .add_systems(Startup, |mut commands: Commands| {
 ///             // Make the default pool provide spatial audio.
 ///             commands.spawn((

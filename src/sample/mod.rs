@@ -719,7 +719,7 @@ mod random {
     ///
     /// By default, this uses [`rand::rngs::SmallRng`]. To provide
     /// your own RNG source, simply insert this resource after
-    /// adding the [`SeedlingPlugin`][crate::prelude::SeedlingPlugin].
+    /// adding the [`SeedlingPlugins`][crate::prelude::SeedlingPlugins].
     #[derive(Resource)]
     pub struct PitchRngSource(Box<dyn PitchRng + Send + Sync>);
 

@@ -112,8 +112,7 @@ pub struct AudioContextConfig(pub FirewheelConfig);
 /// in [`PostStartup`]. Internally, the resource is atomically synchronized,
 /// so this can't be used for detecting changes in the sample rate.
 ///
-/// [`SeedlingStartupSystems::StreamInitialization`]:
-/// crate::configuration::SeedlingStartupSystems::StreamInitialization
+/// [`SeedlingStartupSystems::StreamInitialization`]: graph::SeedlingStartupSystems::StreamInitialization
 /// [`PostStartup`]: bevy_app::prelude::PostStartup
 #[derive(Resource, Debug, Clone)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]

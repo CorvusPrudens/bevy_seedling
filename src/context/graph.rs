@@ -2,17 +2,17 @@
 //!
 //! `bevy_seedling` initializes audio in two stages.
 //!
-//! 1. In [`PreStartup`], the selected [`GraphConfiguration`] is
-//!    established and [`InputDeviceInfo`] and [`OutputDeviceInfo`] entities
-//!    are spawned.
+//! 1. In [`PreStartup`], the selected [`AudioGraphTemplate`] is populated.
 //! 2. In [`PostUpdate`], the [`AudioStreamConfig`] resource is used to
 //!    start the audio stream.
 //!
-//! This two-stage initialization allows systems in [`Startup`] to query
-//! for device information and configure the audio stream before it's
+//! This two-stage initialization allows systems in [`Startup`] to
+//! configure the audio stream before it's
 //! initialized. Following this initialization in [`PostStartup`], any
 //! further changes to [`AudioStreamConfig`] will cause the stream to
 //! stop and restart with the new configuration.
+//!
+//! [`AudioStreamConfig`]: crate::prelude::AudioStreamConfig
 
 use crate::{
     context::{AudioContext, StreamRestartEvent, StreamStartEvent},
@@ -30,7 +30,7 @@ pub(super) struct GraphPlugin;
 
 impl Plugin for GraphPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<GraphTemplate>()
+        app.init_resource::<AudioGraphTemplate>()
             .preregister_asset_loader::<crate::sample::SampleLoader>(
                 crate::sample::SampleLoader::extensions(),
             )
@@ -63,7 +63,7 @@ pub enum SeedlingStartupSystems {
     StreamInitialization,
 }
 
-/// In [`GraphConfiguration::Game`], a sampler pool with spatial audio
+/// In [`AudioGraphTemplate::Game`], a sampler pool with spatial audio
 /// processing is spawned.
 ///
 /// This pool is unused in all other configurations,
@@ -92,7 +92,7 @@ fn add_default_transforms(
 
 /// The default bus for music.
 ///
-/// In [`GraphConfiguration::Game`], a sampler pool specifically
+/// In [`AudioGraphTemplate::Game`], a sampler pool specifically
 /// for music is spawned. This pool is unused in all other configurations,
 /// so you can freely reuse it.
 #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
@@ -101,7 +101,7 @@ pub struct MusicPool;
 
 /// The default bus for sound effects.
 ///
-/// In [`GraphConfiguration::Game`], all audio besides the [`MusicPool`] is
+/// In [`AudioGraphTemplate::Game`], all audio besides the [`MusicPool`] is
 /// routed through this bus. This label is unused in all other configurations,
 /// so you can freely reuse it.
 #[derive(NodeLabel, Debug, Clone, PartialEq, Eq, Hash)]
@@ -115,12 +115,12 @@ pub struct SoundEffectsBus;
 /// For those who want more control, [`Minimal`] and [`Empty`] will get
 /// out of your way.
 ///
-/// [`Game`]: GraphTemplate::Game
-/// [`Minimal`]: GraphTemplate::Minimal
-/// [`Empty`]: GraphTemplate::Empty
+/// [`Game`]: AudioGraphTemplate::Game
+/// [`Minimal`]: AudioGraphTemplate::Minimal
+/// [`Empty`]: AudioGraphTemplate::Empty
 #[derive(Debug, Default, Clone, Copy, Resource)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-pub enum GraphTemplate {
+pub enum AudioGraphTemplate {
     /// The default game template, suitable for smaller projects.
     ///
     /// After [`SeedlingStartupSystems::GraphSetup`] in [`PreStartup`], the graph will
@@ -234,7 +234,7 @@ pub enum GraphTemplate {
     ///
     /// [`VolumeNode`]: crate::prelude::VolumeNode
     /// [`DefaultPool`]: crate::prelude::DefaultPool
-    /// [`Game`]: GraphConfiguration::Game
+    /// [`Game`]: AudioGraphTemplate::Game
     Minimal,
 
     /// A completely empty graph.
@@ -284,11 +284,11 @@ fn connect_io<E: Event>(
 }
 
 /// Set up the graph according to the initial configuration.
-fn set_up_graph(mut commands: Commands, config: Res<GraphTemplate>) {
+fn set_up_graph(mut commands: Commands, config: Res<AudioGraphTemplate>) {
     use crate::prelude::*;
 
     match *config {
-        GraphTemplate::Game => {
+        AudioGraphTemplate::Game => {
             // Buses
             commands
                 .spawn((MainBus, VolumeNode::default(), Name::new("Main Bus")))
@@ -332,7 +332,7 @@ fn set_up_graph(mut commands: Commands, config: Res<GraphTemplate>) {
                 sample_effects![VolumeNode::default()],
             ));
         }
-        GraphTemplate::Minimal => {
+        AudioGraphTemplate::Minimal => {
             // Buses
             commands
                 .spawn((MainBus, VolumeNode::default(), Name::new("Main Bus")))
@@ -351,6 +351,6 @@ fn set_up_graph(mut commands: Commands, config: Res<GraphTemplate>) {
                 sample_effects![VolumeNode::default()],
             ));
         }
-        GraphTemplate::Empty => {}
+        AudioGraphTemplate::Empty => {}
     }
 }

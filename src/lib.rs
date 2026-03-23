@@ -111,8 +111,8 @@
 //!   - [Disconnecting nodes][crate::edge::Disconnect]
 //!   - [Sends][prelude::SendNode]
 //!   - [The main bus][prelude::MainBus]
-//! - [Stream configuration][crate::configuration]
-//! - [Graph configuration][crate::configuration::GraphConfiguration]
+//! - [Context configuration][crate::context::AudioContextConfig]
+//! - [Graph template][crate::context::graph::AudioGraphTemplate]
 //!
 //! ### Event scheduling
 //! - [The `AudioEvents` component][crate::prelude::AudioEvents]
@@ -364,7 +364,7 @@ pub mod prelude {
 
     pub use crate::context::AudioContext;
     pub use crate::context::graph::{
-        GraphTemplate, MusicPool, SeedlingStartupSystems, SoundEffectsBus, SpatialPool,
+        AudioGraphTemplate, MusicPool, SeedlingStartupSystems, SoundEffectsBus, SpatialPool,
     };
     pub use crate::edge::{
         AudioGraphInput, AudioGraphOutput, ChannelMapping, Connect, Disconnect, EdgeTarget,
@@ -555,7 +555,7 @@ mod test {
             MockBackendPlugin,
             TransformPlugin,
         ))
-        .insert_resource(GraphTemplate::Empty)
+        .insert_resource(AudioGraphTemplate::Empty)
         .add_systems(Startup, startup);
 
         app.finish();
