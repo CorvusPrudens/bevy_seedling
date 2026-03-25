@@ -15,7 +15,6 @@ exclude = ["/assets"]
 
 [features]
 default = ["wav", "ogg", "rand", "reflect", "cpal"]
-stream = ["firewheel/stream_nodes"]
 resample_inputs = ["firewheel/cpal_resample_inputs"]
 rand = ["dep:rand"]
 loudness = ["dep:ebur128", "dep:portable-atomic"]
@@ -47,7 +46,7 @@ adpcm = ["symphonia", "symphonium/adpcm"]
 
 # Enables profiling and testing backend compilation.
 # This is mainly intended for internal use.
-profiling = []
+profiling = ["dep:audioadapter-buffers"]
 
 [dependencies]
 bevy_ecs = { version = "0.18.0", default-features = false }
@@ -68,8 +67,9 @@ bevy_time = { version = "0.18.0", default-features = false }
 bevy_reflect = { version = "0.18.0", default-features = false, features = [
   "glam",
 ] }
+bevy_utils = { version = "0.18.0", default-features = false }
 
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f25b53a", default-features = false, features = [
+firewheel = { path = "../firewheel-upstream", default-features = false, features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
@@ -80,7 +80,7 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f25b53a", def
   "std",
   "tracing",
 ] }
-symphonium = { version = "0.7", default-features = false, features = [
+symphonium = { version = "0.8", default-features = false, features = [
   "opt-simd",
   "fft-resampler",
 ], optional = true }
@@ -97,13 +97,17 @@ firewheel-ircam-hrtf = { git = "https://github.com/CorvusPrudens/firewheel-ircam
   "bevy",
 ] }
 cpal = { version = "0.17", default-features = false, optional = true }
+audioadapter-buffers = { version = "2.0", default-features = false, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f25b53a", default-features = false, features = [
+firewheel = { path = "../firewheel-upstream", default-features = false, features = [
   "wasm-bindgen",
 ] }
 
 [dev-dependencies]
+firewheel = { path = "../firewheel-upstream", default-features = false, features = [
+  "fast_filter_nodes",
+] }
 bevy_seedling = { path = ".", features = ["hrtf", "loudness", "resample_inputs"] }
 bevy = { version = "0.18.0", default-features = false, features = [
   "2d_bevy_render",
@@ -122,6 +126,7 @@ criterion = { version = "0.5", default-features = false, features = [
   "plotters",
   "cargo_bench_support",
 ] }
+audioadapter-buffers = { version = "2.0", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.3", default-features = false, features = ["wasm_js"] }

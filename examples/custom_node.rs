@@ -12,6 +12,7 @@ use bevy_seedling::firewheel::{
     },
 };
 use bevy_seedling::prelude::*;
+use firewheel::node::NodeError;
 use std::time::Duration;
 
 fn main() {
@@ -70,23 +71,23 @@ impl AudioNode for CustomVolumeNode {
     // Firehweel's `EmptyConfig` type in such a scenario.
     type Configuration = VolumeConfig;
 
-    fn info(&self, config: &Self::Configuration) -> AudioNodeInfo {
-        AudioNodeInfo::new()
+    fn info(&self, config: &Self::Configuration) -> Result<AudioNodeInfo, NodeError> {
+        Ok(AudioNodeInfo::new()
             .debug_name("custom volume")
             .channel_config(ChannelConfig {
                 num_inputs: config.channels.get(),
                 num_outputs: config.channels.get(),
-            })
+            }))
     }
 
     fn construct_processor(
         &self,
         _config: &Self::Configuration,
         _cx: ConstructProcessorContext,
-    ) -> impl AudioNodeProcessor {
-        VolumeProcessor {
+    ) -> Result<impl AudioNodeProcessor, NodeError> {
+        Ok(VolumeProcessor {
             params: self.clone(),
-        }
+        })
     }
 }
 

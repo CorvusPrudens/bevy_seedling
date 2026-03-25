@@ -14,8 +14,8 @@ use firewheel::{
     event::ProcEvents,
     mask::{MaskType, SilenceMask},
     node::{
-        AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcExtra, ProcInfo, ProcessStatus,
+        AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, NodeError,
+        ProcBuffers, ProcExtra, ProcInfo, ProcessStatus,
     },
     param::smoother::{SmoothedParamBuffer, SmootherConfig},
 };
@@ -172,36 +172,36 @@ impl Default for SendConfig {
 impl AudioNode for SendNode {
     type Configuration = SendConfig;
 
-    fn info(&self, config: &Self::Configuration) -> AudioNodeInfo {
-        AudioNodeInfo::new()
+    fn info(&self, config: &Self::Configuration) -> Result<AudioNodeInfo, NodeError> {
+        Ok(AudioNodeInfo::new()
             .debug_name("low-pass filter")
             .channel_config(ChannelConfig {
                 num_inputs: config.channels.get(),
                 // TODO: remove panic
                 num_outputs: ChannelCount::new(config.channels.get().get() * 2)
                     .expect("send channel count must not exceed 32"),
-            })
+            }))
     }
 
     fn construct_processor(
         &self,
         config: &Self::Configuration,
         ctx: ConstructProcessorContext,
-    ) -> impl AudioNodeProcessor {
+    ) -> Result<impl AudioNodeProcessor, NodeError> {
         // We pre-calculate the silence mask since it's kind of annoying.
         let mut silence_mask = 0;
         for i in 0..config.channels.get().get() {
             silence_mask |= 1 << i;
         }
 
-        SendProcessor {
+        Ok(SendProcessor {
             gain: SmoothedParamBuffer::new(
                 self.send_volume.amp(),
                 config.smooth_config,
                 ctx.stream_info,
             ),
             silence_mask: !silence_mask,
-        }
+        })
     }
 }
 
@@ -211,17 +211,18 @@ struct SendProcessor {
 }
 
 impl AudioNodeProcessor for SendProcessor {
+    fn events(&mut self, _info: &ProcInfo, events: &mut ProcEvents, _extra: &mut ProcExtra) {
+        for SendNodePatch::SendVolume(v) in events.drain_patches::<SendNode>() {
+            self.gain.set_value(v.amp_clamped(DEFAULT_AMP_EPSILON));
+        }
+    }
+
     fn process(
         &mut self,
         proc_info: &ProcInfo,
         ProcBuffers { inputs, outputs }: ProcBuffers,
-        events: &mut ProcEvents,
         _: &mut ProcExtra,
     ) -> ProcessStatus {
-        for SendNodePatch::SendVolume(v) in events.drain_patches::<SendNode>() {
-            self.gain.set_value(v.amp_clamped(DEFAULT_AMP_EPSILON));
-        }
-
         if proc_info.in_silence_mask.all_channels_silent(inputs.len()) {
             return ProcessStatus::ClearAllOutputs;
         }

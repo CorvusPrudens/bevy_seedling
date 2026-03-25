@@ -1,6 +1,6 @@
 //! Audio node registration and management.
 
-use crate::error::SeedlingError;
+use crate::error::{SeedlingError, render_errors};
 use crate::pool::sample_effects::EffectOf;
 use crate::time::{Audio, AudioTime};
 use crate::{
@@ -19,6 +19,9 @@ use bevy_ecs::{
 use bevy_log::prelude::*;
 use bevy_platform::collections::HashSet;
 use bevy_time::Time;
+use bevy_utils::prelude::DebugName;
+use core::any::TypeId;
+use core::ops::DerefMut;
 use firewheel::channel_config::ChannelConfig;
 use firewheel::clock::{DurationSeconds, EventInstant, InstantSeconds};
 use firewheel::graph::NodeEntry;
@@ -27,8 +30,6 @@ use firewheel::{
     event::{NodeEvent, NodeEventType},
     node::{AudioNode, NodeID},
 };
-use std::any::TypeId;
-use std::ops::DerefMut;
 
 pub mod events;
 pub mod follower;
@@ -46,8 +47,55 @@ impl Plugin for NodePlugin {
             .init_resource::<AudioScheduleLookahead>()
             .init_resource::<PendingRemovals>()
             .add_systems(Last, flush_events.in_set(SeedlingSystems::Flush))
+            .add_systems(
+                Last,
+                AudioBypass::update_bypassed.in_set(SeedlingSystems::Queue),
+            )
             .add_observer(label::NodeLabels::on_add_observer)
-            .add_observer(label::NodeLabels::on_replace_observer);
+            .add_observer(label::NodeLabels::on_replace_observer)
+            .add_observer(AudioBypass::remove_bypass);
+    }
+}
+
+/// Bypass an audio node.
+#[derive(Component, Clone, Debug)]
+pub struct AudioBypass;
+
+impl AudioBypass {
+    fn remove_bypass(
+        trigger: On<Remove, AudioBypass>,
+        node: Query<&FirewheelNode>,
+        time: Res<Time<Audio>>,
+        mut context: ResMut<AudioContext>,
+    ) -> Result {
+        let node = node.get(trigger.entity)?;
+
+        context.with(|context| {
+            context.queue_event(NodeEvent {
+                node_id: node.0,
+                time: None,
+                event: NodeEventType::SetBypassed(false),
+            });
+        });
+
+        Ok(())
+    }
+
+    fn update_bypassed(
+        bypassed: Query<&FirewheelNode, Changed<AudioBypass>>,
+        time: Res<Time<Audio>>,
+        mut context: ResMut<AudioContext>,
+    ) {
+        context.with(|context| {
+            for node in bypassed {
+                info!("queuing!!");
+                context.queue_event(NodeEvent {
+                    node_id: node.0,
+                    time: None,
+                    event: NodeEventType::SetBypassed(true),
+                });
+            }
+        });
     }
 }
 
@@ -150,8 +198,8 @@ fn apply_patch<T: Patch>(value: &mut T, event: &NodeEventType) -> Result {
         return Ok(());
     };
 
-    let patch = T::patch(data, path).map_err(|e| SeedlingError::PatchError {
-        ty: core::any::type_name::<T>(),
+    let patch = T::patch(data, path).map_err(|e| SeedlingError::Patch {
+        ty: DebugName::type_name::<T>(),
         error: e,
     })?;
 
@@ -216,6 +264,8 @@ fn handle_configuration_changes<
         return Ok(());
     }
 
+    let mut errors = Vec::new();
+
     context.with(|context| {
         for (entity, node, node_id, config, mut baseline) in changes {
             // we have to get them every time, which is kind of annoying
@@ -231,6 +281,14 @@ fn handle_configuration_changes<
                 .collect::<Vec<_>>();
 
             let new_node = context.add_node(node.clone(), Some(config.clone()));
+            let new_node = match new_node {
+                Ok(id) => id,
+                Err(e) => {
+                    errors.push(e.to_string());
+                    continue;
+                }
+            };
+
             let info = FirewheelNodeInfo::new(context.node_info(new_node).unwrap());
 
             commands
@@ -244,31 +302,40 @@ fn handle_configuration_changes<
                 // an error.
                 .take(info.channel_config.num_inputs.get() as usize)
             {
-                context.connect(
+                if let Err(e) = context.connect(
                     edge.src_node,
                     new_node,
                     &[(edge.src_port, edge.dst_port)],
                     true,
-                )?;
+                ) {
+                    errors.push(e.to_string());
+                    continue;
+                }
             }
 
             for edge in existing_outputs
                 .into_iter()
                 .take(info.channel_config.num_outputs.get() as usize)
             {
-                context.connect(
+                if let Err(e) = context.connect(
                     new_node,
                     edge.dst_node,
                     &[(edge.src_port, edge.dst_port)],
                     true,
-                )?;
+                ) {
+                    errors.push(e.to_string());
+                    continue;
+                }
             }
 
             baseline.0 = config.clone();
         }
+    });
 
-        Ok(())
-    })
+    render_errors(
+        "Failed to initialize one or more nodes after configuration change",
+        errors,
+    )
 }
 
 fn acquire_id<T>(
@@ -279,16 +346,27 @@ fn acquire_id<T>(
     mut context: ResMut<AudioContext>,
     mut node_map: ResMut<NodeMap>,
     mut commands: Commands,
-) where
+) -> Result
+where
     T: AudioNode<Configuration: Component + Clone> + Component + Clone,
 {
     if q.iter().len() == 0 {
-        return;
+        return Ok(());
     }
+
+    let mut errors = Vec::new();
 
     context.with(|context| {
         for (entity, container, config, labels) in q.iter() {
             let node = context.add_node(container.clone(), config.cloned());
+            let node = match node {
+                Ok(id) => id,
+                Err(e) => {
+                    errors.push(e.to_string());
+                    continue;
+                }
+            };
+
             let info = FirewheelNodeInfo::new(context.node_info(node).unwrap());
 
             for label in labels.iter().flat_map(|l| l.iter()) {
@@ -298,6 +376,8 @@ fn acquire_id<T>(
             commands.entity(entity).insert((FirewheelNode(node), info));
         }
     });
+
+    render_errors("Failed to initialize one or more nodes", errors)
 }
 
 fn insert_baseline<T: Component + Clone>(
@@ -323,14 +403,17 @@ fn fetch_state<T, S>(
     q: Query<(Entity, &FirewheelNode), (Changed<FirewheelNode>, With<T>)>,
     mut context: ResMut<AudioContext>,
     mut commands: Commands,
-) where
+) -> Result
+where
     T: AudioNode + Component,
     S: Clone + Send + Sync + 'static,
 {
     // likely not expensive enough to matter, relative to context switching
     if q.iter().count() == 0 {
-        return;
+        return Ok(());
     }
+
+    let mut errors = Vec::new();
 
     context.with(|context| {
         for (entity, node) in q.iter() {
@@ -338,16 +421,15 @@ fn fetch_state<T, S>(
                 Some(state) => {
                     commands.entity(entity).insert(AudioState(state.clone()));
                 }
-                None => {
-                    bevy_log::error!(
-                        "Failed to fetch state `{}` for node `{}`",
-                        core::any::type_name::<S>(),
-                        core::any::type_name::<T>(),
-                    );
-                }
+                None => errors.push(SeedlingError::MissingState {
+                    node: DebugName::type_name::<T>(),
+                    state: DebugName::type_name::<S>(),
+                }),
             }
         }
     });
+
+    render_errors("Failed to fetch one or more state types", errors)
 }
 
 #[derive(Resource, Default)]
@@ -741,11 +823,13 @@ fn flush_events(
     should_schedule: Res<ScheduleDiffing>,
     lookahead: Res<AudioScheduleLookahead>,
     mut commands: Commands,
-) {
+) -> Result {
+    let mut errors = Vec::new();
+
     context.with(|context| {
         for node in removals.0.drain(..) {
-            if context.remove_node(node).is_err() {
-                error!("attempted to remove non-existent or invalid node from audio graph");
+            if let Err(e) = context.remove_node(node) {
+                error!("{e}");
             }
         }
 
@@ -759,9 +843,9 @@ fn flush_events(
                 let time = should_schedule.0.then(|| match timestamp {
                     Some(t) => {
                         commands.entity(node_entity).remove::<DiffTimestamp>();
-                        EventInstant::Seconds(t.0)
+                        EventInstant::AtClockSeconds(t.0)
                     }
-                    None => EventInstant::Seconds(now),
+                    None => EventInstant::AtClockSeconds(now),
                 });
 
                 context.queue_event(NodeEvent {
@@ -777,20 +861,21 @@ fn flush_events(
                         context.queue_event(NodeEvent {
                             node_id: node.0,
                             event,
-                            time: Some(EventInstant::Seconds(time)),
+                            time: Some(EventInstant::AtClockSeconds(time)),
                         })
                     })
                 {
-                    // TODO: improve this
-                    bevy_log::error!("failed to apply animation patch: {e:?}");
+                    errors.push(e);
                 }
             }
         }
 
         if let Err(e) = context.update() {
-            error!("graph error: {e:?}");
+            errors.push(SeedlingError::Update(e));
         }
     });
+
+    render_errors("Failed to flush all events", errors)
 }
 
 #[cfg(test)]

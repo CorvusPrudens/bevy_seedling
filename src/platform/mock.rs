@@ -1,5 +1,6 @@
 //! A mock backend for testing.
 
+use audioadapter_buffers::direct::InterleavedSlice;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use firewheel::{ActivateInfo, FirewheelContext, node::StreamStatus};
@@ -55,21 +56,22 @@ fn initialize_mock(context: &mut FirewheelContext) {
 
         loop {
             let start = std::time::Instant::now();
-
             let now = std::time::Instant::now();
 
-            processor.process_interleaved(
+            let input = InterleavedSlice::new(&input, CHANNELS, BLOCK_SIZE).unwrap();
+            let mut output = InterleavedSlice::new_mut(&mut output, CHANNELS, BLOCK_SIZE).unwrap();
+
+            processor.process(
                 &input,
                 &mut output,
                 firewheel::backend::BackendProcessInfo {
-                    num_in_channels: CHANNELS,
-                    num_out_channels: CHANNELS,
                     frames: BLOCK_SIZE,
                     process_timestamp: Some(now),
                     duration_since_stream_start: start - now,
                     input_stream_status: StreamStatus::empty(),
                     output_stream_status: StreamStatus::empty(),
                     dropped_frames: 0,
+                    process_to_playback_delay: None,
                 },
             );
 

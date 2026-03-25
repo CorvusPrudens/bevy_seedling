@@ -8,7 +8,7 @@ use firewheel::{
     diff::{Diff, Patch},
     event::ProcEvents,
     node::{
-        AudioNode, AudioNodeInfo, AudioNodeProcessor, ProcBuffers, ProcExtra, ProcInfo,
+        AudioNode, AudioNodeInfo, AudioNodeProcessor, NodeError, ProcBuffers, ProcExtra, ProcInfo,
         ProcStreamCtx, ProcessStatus,
     },
 };
@@ -99,31 +99,31 @@ struct ItdProcessor {
 impl AudioNode for ItdNode {
     type Configuration = ItdConfig;
 
-    fn info(&self, config: &Self::Configuration) -> AudioNodeInfo {
-        AudioNodeInfo::new()
+    fn info(&self, config: &Self::Configuration) -> Result<AudioNodeInfo, NodeError> {
+        Ok(AudioNodeInfo::new()
             .debug_name("itd node")
             .channel_config(ChannelConfig::new(
                 config.input_config.input_channels().get(),
                 2,
-            ))
+            )))
     }
 
     fn construct_processor(
         &self,
         configuration: &Self::Configuration,
         cx: firewheel::node::ConstructProcessorContext,
-    ) -> impl firewheel::node::AudioNodeProcessor {
+    ) -> Result<impl firewheel::node::AudioNodeProcessor, NodeError> {
         let maximum_samples = maximum_samples(
             configuration.inter_ear_distance,
             cx.stream_info.sample_rate.get() as f32,
         );
 
-        ItdProcessor {
+        Ok(ItdProcessor {
             left: DelayLine::new(maximum_samples),
             right: DelayLine::new(maximum_samples),
             inter_ear_distance: configuration.inter_ear_distance,
             input_config: configuration.input_config,
-        }
+        })
     }
 }
 
@@ -134,13 +134,7 @@ fn maximum_samples(distance: f32, sample_rate: f32) -> usize {
 }
 
 impl AudioNodeProcessor for ItdProcessor {
-    fn process(
-        &mut self,
-        proc_info: &ProcInfo,
-        ProcBuffers { inputs, outputs }: ProcBuffers,
-        events: &mut ProcEvents,
-        _: &mut ProcExtra,
-    ) -> ProcessStatus {
+    fn events(&mut self, _info: &ProcInfo, events: &mut ProcEvents, _extra: &mut ProcExtra) {
         for patch in events.drain_patches::<ItdNode>() {
             let ItdNodePatch::Direction(direction) = patch;
             let direction = direction.normalize_or_zero();
@@ -154,7 +148,15 @@ impl AudioNodeProcessor for ItdProcessor {
             self.left.set_read_head(Vec3::X.dot(direction));
             self.right.set_read_head(Vec3::NEG_X.dot(direction));
         }
+    }
 
+    fn process(
+        &mut self,
+        proc_info: &ProcInfo,
+        ProcBuffers { inputs, outputs }: ProcBuffers,
+        // events: &mut ProcEvents,
+        _: &mut ProcExtra,
+    ) -> ProcessStatus {
         if proc_info.in_silence_mask.all_channels_silent(2) {
             return ProcessStatus::ClearAllOutputs;
         }

@@ -4,6 +4,7 @@ use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_math::FloatExt;
 use bevy_time::{Time, TimeSystems};
+use bevy_utils::prelude::DebugName;
 use core::sync::atomic::AtomicU64;
 use firewheel::{
     Volume,
@@ -260,8 +261,8 @@ impl AudioEvents {
         for event in &self.timeline {
             event
                 .apply(start..=end, value)
-                .map_err(|e| SeedlingError::PatchError {
-                    ty: core::any::type_name::<T>(),
+                .map_err(|e| SeedlingError::Patch {
+                    ty: DebugName::type_name::<T>(),
                     error: e,
                 })?;
         }

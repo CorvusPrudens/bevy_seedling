@@ -139,7 +139,6 @@
 //! | `hrtf`            | Enable HRTF Spatialization.                | No      |
 //! | `hrtf_subjects`   | Enable all HRTF embedded data.             | No      |
 //! | `loudness`        | Enable LUFS analyzer node.                 | No      |
-//! | `stream`          | Enable CPAL input and output stream nodes. | No      |
 //! | `resample_inputs` | Enable audio input resampling.             | No      |
 //! | `dev`             | Enable helpful features for development.   | No      |
 //! | `entity_names`    | Add [`Name`]s to node and sample entities. | No      |
@@ -371,17 +370,15 @@ pub mod prelude {
         AudioGraphInput, AudioGraphOutput, ChannelMapping, Connect, Disconnect, EdgeTarget,
     };
     pub use crate::node::{
-        FirewheelNode, RegisterNode,
+        AudioBypass, FirewheelNode, RegisterNode,
         events::{AudioEvents, VolumeFade},
         label::{MainBus, NodeLabel},
     };
     #[cfg(feature = "loudness")]
     pub use crate::nodes::loudness::{LoudnessConfig, LoudnessNode, LoudnessState};
     pub use crate::nodes::{
-        bpf::{BandPassConfig, BandPassNode},
         itd::{ItdConfig, ItdNode},
         limiter::{LimiterConfig, LimiterNode},
-        lpf::{LowPassConfig, LowPassNode},
         send::{SendConfig, SendNode},
     };
     pub use crate::platform::AudioStreamConfig;
@@ -526,12 +523,8 @@ impl Plugin for SeedlingCorePlugin {
             sample::SymphoniumLoaderPlugin,
         ));
 
-        #[cfg(feature = "stream")]
-        app.register_simple_node::<StreamReaderNode>()
-            .register_simple_node::<StreamWriterNode>();
-
-        #[cfg(feature = "hrtf")]
-        app.register_node::<HrtfNode>();
+        // #[cfg(feature = "hrtf")]
+        // app.register_node::<HrtfNode>();
 
         #[cfg(feature = "reflect")]
         app.register_type::<SamplerPool<MusicPool>>()
@@ -547,6 +540,7 @@ mod test {
         prelude::*,
     };
     use bevy::{ecs::system::RunSystemOnce, prelude::*};
+    use firewheel::nodes::fast_filters::lowpass::FastLowpassNode;
 
     pub fn prepare_app<F: IntoSystem<(), (), M>, M>(startup: F) -> App {
         let mut app = App::new();
@@ -559,6 +553,7 @@ mod test {
             TransformPlugin,
         ))
         .insert_resource(AudioGraphTemplate::Empty)
+        .register_node::<FastLowpassNode>()
         .add_systems(Startup, startup);
 
         app.finish();
