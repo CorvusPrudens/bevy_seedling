@@ -139,6 +139,7 @@
 //! | `hrtf`            | Enable HRTF Spatialization.                | No      |
 //! | `hrtf_subjects`   | Enable all HRTF embedded data.             | No      |
 //! | `loudness`        | Enable LUFS analyzer node.                 | No      |
+//! | `effects`         | Enable extra effects and analyzers.        | No      |
 //! | `resample_inputs` | Enable audio input resampling.             | No      |
 //! | `dev`             | Enable helpful features for development.   | No      |
 //! | `entity_names`    | Add [`Name`]s to node and sample entities. | No      |
@@ -374,9 +375,12 @@ pub mod prelude {
         events::{AudioEvents, VolumeFade},
         label::{MainBus, NodeLabel},
     };
+    #[cfg(feature = "effects")]
+    pub use crate::nodes::effects::*;
     #[cfg(feature = "loudness")]
     pub use crate::nodes::loudness::{LoudnessConfig, LoudnessNode, LoudnessState};
     pub use crate::nodes::{
+        core::*,
         itd::{ItdConfig, ItdNode},
         limiter::{LimiterConfig, LimiterNode},
         send::{SendConfig, SendNode},
@@ -407,24 +411,10 @@ pub mod prelude {
             InstantSeconds,
         },
         diff::{Memo, Notify},
-        nodes::{
-            StereoToMonoNode,
-            freeverb::FreeverbNode,
-            sampler::{PlayFrom, PlaybackSpeedQuality, RepeatMode, SamplerConfig, SamplerNode},
-            spatial_basic::SpatialBasicNode,
-            volume::{VolumeNode, VolumeNodeConfig},
-            volume_pan::VolumePanNode,
-        },
     };
 
     #[cfg(feature = "cpal")]
     pub use crate::platform::cpal::CpalStream;
-
-    #[cfg(feature = "stream")]
-    pub use firewheel::nodes::stream::{
-        reader::{StreamReaderConfig, StreamReaderNode},
-        writer::{StreamWriterConfig, StreamWriterNode},
-    };
 
     #[cfg(feature = "hrtf")]
     pub use firewheel_ircam_hrtf::{self as hrtf, HrtfConfig, HrtfNode};
@@ -490,12 +480,7 @@ impl Plugin for SeedlingCorePlugin {
         use prelude::*;
 
         app.init_resource::<pool::DefaultPoolSize>()
-            .init_asset::<sample::AudioSample>()
-            .register_node::<VolumeNode>()
-            .register_node::<VolumePanNode>()
-            .register_node::<SpatialBasicNode>()
-            .register_node::<FreeverbNode>()
-            .register_simple_node::<StereoToMonoNode>();
+            .init_asset::<sample::AudioSample>();
 
         app.configure_sets(
             Last,
@@ -522,9 +507,6 @@ impl Plugin for SeedlingCorePlugin {
             #[cfg(feature = "symphonia")]
             sample::SymphoniumLoaderPlugin,
         ));
-
-        // #[cfg(feature = "hrtf")]
-        // app.register_node::<HrtfNode>();
 
         #[cfg(feature = "reflect")]
         app.register_type::<SamplerPool<MusicPool>>()

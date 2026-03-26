@@ -104,6 +104,7 @@ should help you get up to speed on common usage patterns.
 | `hrtf`            | Enable HRTF Spatialization.                | No      |
 | `hrtf_subjects`   | Enable all HRTF embedded data.             | No      |
 | `loudness`        | Enable LUFS analyzer node.                 | No      |
+| `effects`         | Enable extra effects and analyzers.        | No      |
 | `resample_inputs` | Enable audio input resampling.             | No      |
 | `dev`             | Enable helpful features for development.   | No      |
 | `entity_names`    | Add `Name`s to node and sample entities.   | No      |

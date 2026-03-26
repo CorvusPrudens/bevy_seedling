@@ -12,6 +12,10 @@ Firewheel's backend API changes.
 Seedling's top-level plugin has been reduced to a ZST. Its fields have been turned
 into resources that can be overwritten or mutated.
 
+### Node reshuffling
+
+A handful of nodes, including the one pole filters, have moved to Firewheel.
+
 ### Miscellaneous
 
 - Placed `symphonia` and associated crates behind the `symphonia` feature

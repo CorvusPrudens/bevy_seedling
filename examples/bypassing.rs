@@ -5,9 +5,8 @@
 //! Note that this may result in positive feedback on some setups.
 //! I recommend starting with low volume!
 
-use bevy::{input::InputPlugin, log::LogPlugin, prelude::*};
-use bevy_seedling::{context::AudioContextConfig, prelude::*};
-use firewheel::cpal::{CpalConfig, CpalInputConfig};
+use bevy::prelude::*;
+use bevy_seedling::prelude::*;
 
 fn main() {
     App::new()
