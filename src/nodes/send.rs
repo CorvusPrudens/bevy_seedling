@@ -10,7 +10,7 @@ use firewheel::{
     Volume,
     channel_config::{ChannelConfig, ChannelCount, NonZeroChannelCount},
     diff::{Diff, Patch},
-    dsp::volume::DEFAULT_AMP_EPSILON,
+    dsp::volume::DEFAULT_MIN_AMP,
     event::ProcEvents,
     mask::{MaskType, SilenceMask},
     node::{
@@ -213,7 +213,7 @@ struct SendProcessor {
 impl AudioNodeProcessor for SendProcessor {
     fn events(&mut self, _info: &ProcInfo, events: &mut ProcEvents, _extra: &mut ProcExtra) {
         for SendNodePatch::SendVolume(v) in events.drain_patches::<SendNode>() {
-            self.gain.set_value(v.amp_clamped(DEFAULT_AMP_EPSILON));
+            self.gain.set_value(v.amp_clamped(DEFAULT_MIN_AMP));
         }
     }
 
