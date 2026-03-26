@@ -24,20 +24,26 @@ cpal = ["firewheel/cpal", "dep:cpal"]
 web_audio = ["cpal/audioworklet"]
 dev = ["entity_names"]
 entity_names = []
+symphonium = [
+  "dep:symphonium",
+  "dep:symphonia",
+  "firewheel/symphonium",
+  "firewheel/symphonium_resample",
+]
 
 hrtf = ["dep:firewheel-ircam-hrtf"]
 # embed all HRTF subjects
 hrtf_subjects = ["firewheel-ircam-hrtf?/all_subjects"]
 
 # formats
-wav = ["symphonium/wav", "symphonium/pcm"]
-ogg = ["symphonium/ogg", "symphonium/vorbis"]
-flac = ["symphonium/flac"]
-mkv = ["symphonium/mkv"]
+wav = ["symphonium", "symphonium/wav", "symphonium/pcm"]
+ogg = ["symphonium", "symphonium/ogg", "symphonium/vorbis"]
+flac = ["symphonium", "symphonium/flac"]
+mkv = ["symphonium", "symphonium/mkv"]
 
 # codecs
-mp3 = ["symphonium/mp3"]
-adpcm = ["symphonium/adpcm"]
+mp3 = ["symphonium", "symphonium/mp3"]
+adpcm = ["symphonium", "symphonium/adpcm"]
 
 # Enables profiling and testing backend compilation.
 # This is mainly intended for internal use.
@@ -72,15 +78,13 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f25b53a", def
   "freeverb_node",
   "sampler_node",
   "std",
-  "symphonium",
-  "symphonium_resample",
   "tracing",
 ] }
 symphonium = { version = "0.7", default-features = false, features = [
   "opt-simd",
   "fft-resampler",
-] }
-symphonia = { version = "0.5", default-features = false }
+], optional = true }
+symphonia = { version = "0.5", default-features = false, optional = true }
 smallvec = { version = "1.13", default-features = false }
 bevy_seedling_macros = { path = "./seedling_macros", version = "0.7.0" }
 rand = { version = "0.9", default-features = false, features = [

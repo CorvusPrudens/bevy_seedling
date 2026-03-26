@@ -20,7 +20,6 @@ use crate::{
     node::{FirewheelNode, FirewheelNodeInfo},
 };
 use bevy_app::prelude::*;
-use bevy_asset::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_seedling_macros::{NodeLabel, PoolLabel};
 use bevy_transform::prelude::Transform;
@@ -30,10 +29,16 @@ pub(super) struct GraphPlugin;
 
 impl Plugin for GraphPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<AudioGraphTemplate>()
-            .preregister_asset_loader::<crate::sample::SampleLoader>(
+        #[cfg(feature = "symphonium")]
+        {
+            use bevy_asset::AssetApp;
+
+            app.preregister_asset_loader::<crate::sample::SampleLoader>(
                 crate::sample::SampleLoader::extensions(),
-            )
+            );
+        }
+
+        app.init_resource::<AudioGraphTemplate>()
             .add_systems(
                 PreStartup,
                 (crate::context::initialize_context, insert_io, set_up_graph)

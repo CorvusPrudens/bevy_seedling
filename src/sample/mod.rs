@@ -16,7 +16,10 @@ use std::time::Duration;
 
 mod assets;
 
-pub use assets::{AudioSample, SampleLoader, SampleLoaderError};
+pub use assets::AudioSample;
+
+#[cfg(feature = "symphonium")]
+pub use assets::{SampleLoader, SampleLoaderError};
 
 /// A component that queues sample playback.
 ///

@@ -1,5 +1,6 @@
 //! Components that abstract over different backends.
 
+#[cfg(feature = "symphonium")]
 use bevy_asset::AssetServer;
 use bevy_ecs::prelude::*;
 
@@ -54,9 +55,14 @@ pub struct RestartAudioStream;
 ///     Ok(())
 /// }
 /// ```
-pub fn initialize_stream(sample_rate: SampleRate, server: &AssetServer, mut commands: Commands) {
+pub fn initialize_stream(
+    sample_rate: SampleRate,
+    #[cfg(feature = "symphonium")] server: &AssetServer,
+    mut commands: Commands,
+) {
     let raw_sample_rate = sample_rate.get();
     commands.insert_resource(sample_rate.clone());
+    #[cfg(feature = "symphonium")]
     server.register_loader(crate::sample::SampleLoader::new(sample_rate));
     commands.trigger(StreamStartEvent {
         sample_rate: raw_sample_rate,
