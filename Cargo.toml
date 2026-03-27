@@ -24,9 +24,9 @@ cpal = ["firewheel/cpal", "dep:cpal"]
 web_audio = ["cpal/audioworklet"]
 dev = ["entity_names"]
 entity_names = []
-symphonium = [
-  "dep:symphonium",
+symphonia = [
   "dep:symphonia",
+  "dep:symphonium",
   "firewheel/symphonium",
   "firewheel/symphonium_resample",
 ]
@@ -36,14 +36,14 @@ hrtf = ["dep:firewheel-ircam-hrtf"]
 hrtf_subjects = ["firewheel-ircam-hrtf?/all_subjects"]
 
 # formats
-wav = ["symphonium", "symphonium/wav", "symphonium/pcm"]
-ogg = ["symphonium", "symphonium/ogg", "symphonium/vorbis"]
-flac = ["symphonium", "symphonium/flac"]
-mkv = ["symphonium", "symphonium/mkv"]
+wav = ["symphonia", "symphonium/wav", "symphonium/pcm"]
+ogg = ["symphonia", "symphonium/ogg", "symphonium/vorbis"]
+flac = ["symphonia", "symphonium/flac"]
+mkv = ["symphonia", "symphonium/mkv"]
 
 # codecs
-mp3 = ["symphonium", "symphonium/mp3"]
-adpcm = ["symphonium", "symphonium/adpcm"]
+mp3 = ["symphonia", "symphonium/mp3"]
+adpcm = ["symphonia", "symphonium/adpcm"]
 
 # Enables profiling and testing backend compilation.
 # This is mainly intended for internal use.

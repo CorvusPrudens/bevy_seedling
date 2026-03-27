@@ -45,7 +45,7 @@ impl AudioSample {
     }
 }
 
-#[cfg(feature = "symphonium")]
+#[cfg(feature = "symphonia")]
 impl From<firewheel::DecodedAudioF32> for AudioSample {
     fn from(source: firewheel::DecodedAudioF32) -> Self {
         Self {
@@ -55,7 +55,7 @@ impl From<firewheel::DecodedAudioF32> for AudioSample {
     }
 }
 
-#[cfg(feature = "symphonium")]
+#[cfg(feature = "symphonia")]
 impl From<firewheel::DecodedAudio> for AudioSample {
     fn from(source: firewheel::DecodedAudio) -> Self {
         Self {
@@ -71,7 +71,7 @@ impl core::fmt::Debug for AudioSample {
     }
 }
 
-#[cfg(feature = "symphonium")]
+#[cfg(feature = "symphonia")]
 pub mod loader {
     use super::AudioSample;
     use bevy_app::prelude::*;

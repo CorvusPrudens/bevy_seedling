@@ -522,7 +522,7 @@ impl Plugin for SeedlingCorePlugin {
             time::TimePlugin,
             #[cfg(feature = "rand")]
             sample::RandomPlugin,
-            #[cfg(feature = "symphonium")]
+            #[cfg(feature = "symphonia")]
             sample::SymphoniumLoaderPlugin,
         ));
 
