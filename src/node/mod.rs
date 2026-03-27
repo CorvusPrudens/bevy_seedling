@@ -73,7 +73,7 @@ impl AudioBypass {
         context.with(|context| {
             context.queue_event(NodeEvent {
                 node_id: node.0,
-                time: None,
+                time: Some(EventInstant::AtClockSeconds(time.now())),
                 event: NodeEventType::SetBypassed(false),
             });
         });
@@ -86,12 +86,12 @@ impl AudioBypass {
         time: Res<Time<Audio>>,
         mut context: ResMut<AudioContext>,
     ) {
+        let now = time.now();
         context.with(|context| {
             for node in bypassed {
-                info!("queuing!!");
                 context.queue_event(NodeEvent {
                     node_id: node.0,
-                    time: None,
+                    time: Some(EventInstant::AtClockSeconds(now)),
                     event: NodeEventType::SetBypassed(true),
                 });
             }
