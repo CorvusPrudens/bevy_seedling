@@ -15,10 +15,8 @@ exclude = ["/assets"]
 
 [features]
 default = ["wav", "ogg", "rand", "reflect", "cpal"]
-stream = ["firewheel/stream_nodes"]
 resample_inputs = ["firewheel/cpal_resample_inputs"]
 rand = ["dep:rand"]
-loudness = ["dep:ebur128", "dep:portable-atomic"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
 cpal = ["firewheel/cpal", "dep:cpal"]
 web_audio = ["cpal/audioworklet"]
@@ -31,10 +29,6 @@ symphonia = [
   "firewheel/symphonium_resample",
 ]
 
-hrtf = ["dep:firewheel-ircam-hrtf"]
-# embed all HRTF subjects
-hrtf_subjects = ["firewheel-ircam-hrtf?/all_subjects"]
-
 # formats
 wav = ["symphonia", "symphonium/wav", "symphonium/pcm"]
 ogg = ["symphonia", "symphonium/ogg", "symphonium/vorbis"]
@@ -45,9 +39,16 @@ mkv = ["symphonia", "symphonium/mkv"]
 mp3 = ["symphonia", "symphonium/mp3"]
 adpcm = ["symphonia", "symphonium/adpcm"]
 
+# nodes
+hrtf = ["dep:firewheel-ircam-hrtf"]
+# embed all HRTF subjects
+hrtf_subjects = ["firewheel-ircam-hrtf?/all_subjects"]
+loudness = ["dep:ebur128", "dep:portable-atomic"]
+effects = ["firewheel/all_nodes"]
+
 # Enables profiling and testing backend compilation.
 # This is mainly intended for internal use.
-profiling = []
+profiling = ["dep:audioadapter-buffers"]
 
 [dependencies]
 bevy_ecs = { version = "0.18.0", default-features = false }
@@ -68,8 +69,9 @@ bevy_time = { version = "0.18.0", default-features = false }
 bevy_reflect = { version = "0.18.0", default-features = false, features = [
   "glam",
 ] }
+bevy_utils = { version = "0.18.0", default-features = false }
 
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f25b53a", default-features = false, features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fff0eb1", default-features = false, features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
@@ -80,7 +82,7 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f25b53a", def
   "std",
   "tracing",
 ] }
-symphonium = { version = "0.7", default-features = false, features = [
+symphonium = { version = "0.8", default-features = false, features = [
   "opt-simd",
   "fft-resampler",
 ], optional = true }
@@ -93,18 +95,22 @@ rand = { version = "0.9", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-firewheel-ircam-hrtf = { git = "https://github.com/CorvusPrudens/firewheel-ircam-hrtf", rev = "df14395", optional = true, features = [
+firewheel-ircam-hrtf = { git = "https://github.com/CorvusPrudens/firewheel-ircam-hrtf", rev = "fa5e6d1", optional = true, features = [
   "bevy",
 ] }
 cpal = { version = "0.17", default-features = false, optional = true }
+audioadapter-buffers = { version = "2.0", default-features = false, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f25b53a", default-features = false, features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fff0eb1", default-features = false, features = [
   "wasm-bindgen",
 ] }
 
 [dev-dependencies]
-bevy_seedling = { path = ".", features = ["hrtf", "loudness", "resample_inputs"] }
+bevy_seedling = { path = ".", features = ["hrtf", "loudness", "resample_inputs", "effects"] }
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fff0eb1", default-features = false, features = [
+  "fast_filter_nodes",
+] }
 bevy = { version = "0.18.0", default-features = false, features = [
   "2d_bevy_render",
   "default_app",
@@ -122,6 +128,7 @@ criterion = { version = "0.5", default-features = false, features = [
   "plotters",
   "cargo_bench_support",
 ] }
+audioadapter-buffers = { version = "2.0", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.3", default-features = false, features = ["wasm_js"] }

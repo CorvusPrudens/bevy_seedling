@@ -141,7 +141,7 @@ jobs:
       - name: Build examples
         run: |
           RUSTFLAGS='--cfg getrandom_backend="wasm_js" --deny warnings' cargo build \
-            --examples --target="wasm32-unknown-unknown" --features=ogg,stream,bevy/bevy_asset
+            --examples --target="wasm32-unknown-unknown" --features=ogg,bevy/bevy_asset
 
   # Verify semver compliance
   semver:

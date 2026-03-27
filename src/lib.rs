@@ -78,7 +78,7 @@
 //!     // Play a sound... with effects :O
 //!     commands.spawn((
 //!         SamplePlayer::new(server.load("my_ambience.wav")).looping(),
-//!         sample_effects![LowPassNode { frequency: 500.0 }],
+//!         sample_effects![FastLowpassNode::<2>::from_cutoff_hz(500.0)],
 //!     ));
 //! }
 //! ```
@@ -139,7 +139,7 @@
 //! | `hrtf`            | Enable HRTF Spatialization.                | No      |
 //! | `hrtf_subjects`   | Enable all HRTF embedded data.             | No      |
 //! | `loudness`        | Enable LUFS analyzer node.                 | No      |
-//! | `stream`          | Enable CPAL input and output stream nodes. | No      |
+//! | `effects`         | Enable extra effects and analyzers.        | No      |
 //! | `resample_inputs` | Enable audio input resampling.             | No      |
 //! | `dev`             | Enable helpful features for development.   | No      |
 //! | `entity_names`    | Add [`Name`]s to node and sample entities. | No      |
@@ -371,17 +371,18 @@ pub mod prelude {
         AudioGraphInput, AudioGraphOutput, ChannelMapping, Connect, Disconnect, EdgeTarget,
     };
     pub use crate::node::{
-        FirewheelNode, RegisterNode,
+        AudioBypass, FirewheelNode, RegisterNode,
         events::{AudioEvents, VolumeFade},
         label::{MainBus, NodeLabel},
     };
+    #[cfg(feature = "effects")]
+    pub use crate::nodes::effects::*;
     #[cfg(feature = "loudness")]
     pub use crate::nodes::loudness::{LoudnessConfig, LoudnessNode, LoudnessState};
     pub use crate::nodes::{
-        bpf::{BandPassConfig, BandPassNode},
+        core::*,
         itd::{ItdConfig, ItdNode},
         limiter::{LimiterConfig, LimiterNode},
-        lpf::{LowPassConfig, LowPassNode},
         send::{SendConfig, SendNode},
     };
     pub use crate::platform::AudioStreamConfig;
@@ -410,24 +411,10 @@ pub mod prelude {
             InstantSeconds,
         },
         diff::{Memo, Notify},
-        nodes::{
-            StereoToMonoNode,
-            freeverb::FreeverbNode,
-            sampler::{PlayFrom, PlaybackSpeedQuality, RepeatMode, SamplerConfig, SamplerNode},
-            spatial_basic::SpatialBasicNode,
-            volume::{VolumeNode, VolumeNodeConfig},
-            volume_pan::VolumePanNode,
-        },
     };
 
     #[cfg(feature = "cpal")]
     pub use crate::platform::cpal::CpalStream;
-
-    #[cfg(feature = "stream")]
-    pub use firewheel::nodes::stream::{
-        reader::{StreamReaderConfig, StreamReaderNode},
-        writer::{StreamWriterConfig, StreamWriterNode},
-    };
 
     #[cfg(feature = "hrtf")]
     pub use firewheel_ircam_hrtf::{self as hrtf, HrtfConfig, HrtfNode};
@@ -493,12 +480,7 @@ impl Plugin for SeedlingCorePlugin {
         use prelude::*;
 
         app.init_resource::<pool::DefaultPoolSize>()
-            .init_asset::<sample::AudioSample>()
-            .register_node::<VolumeNode>()
-            .register_node::<VolumePanNode>()
-            .register_node::<SpatialBasicNode>()
-            .register_node::<FreeverbNode>()
-            .register_simple_node::<StereoToMonoNode>();
+            .init_asset::<sample::AudioSample>();
 
         app.configure_sets(
             Last,
@@ -526,13 +508,6 @@ impl Plugin for SeedlingCorePlugin {
             sample::SymphoniumLoaderPlugin,
         ));
 
-        #[cfg(feature = "stream")]
-        app.register_simple_node::<StreamReaderNode>()
-            .register_simple_node::<StreamWriterNode>();
-
-        #[cfg(feature = "hrtf")]
-        app.register_node::<HrtfNode>();
-
         #[cfg(feature = "reflect")]
         app.register_type::<SamplerPool<MusicPool>>()
             .register_type::<SamplerPool<DefaultPool>>()
@@ -547,6 +522,7 @@ mod test {
         prelude::*,
     };
     use bevy::{ecs::system::RunSystemOnce, prelude::*};
+    use firewheel::nodes::fast_filters::lowpass::FastLowpassNode;
 
     pub fn prepare_app<F: IntoSystem<(), (), M>, M>(startup: F) -> App {
         let mut app = App::new();
@@ -559,6 +535,7 @@ mod test {
             TransformPlugin,
         ))
         .insert_resource(AudioGraphTemplate::Empty)
+        .register_node::<FastLowpassNode>()
         .add_systems(Startup, startup);
 
         app.finish();

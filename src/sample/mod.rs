@@ -85,7 +85,7 @@ pub use assets::loader::{SampleLoader, SampleLoaderError};
 ///         SamplePlayer::new(server.load("my_sample.wav")),
 ///         sample_effects![
 ///             SpatialBasicNode::default(),
-///             LowPassNode { frequency: 500.0 }
+///             FastLowpassNode::<2>::from_cutoff_hz(500.0),
 ///         ],
 ///     ));
 /// }

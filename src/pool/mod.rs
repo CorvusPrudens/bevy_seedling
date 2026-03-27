@@ -122,7 +122,7 @@ impl Plugin for SamplePoolPlugin {
 ///
 /// commands.spawn((
 ///     SamplerPool(EffectsPool),
-///     sample_effects![LowPassNode::default(), SpatialBasicNode::default()],
+///     sample_effects![FastLowpassNode::<2>::default(), SpatialBasicNode::default()],
 /// ));
 /// # }
 /// ```
@@ -138,7 +138,7 @@ impl Plugin for SamplePoolPlugin {
 /// # fn spawn_pools(mut commands: Commands) {
 /// # #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
 /// # struct SimplePool;
-/// let filter = commands.spawn(LowPassNode::default()).id();
+/// let filter = commands.spawn(FastLowpassNode::<2>::default()).id();
 ///
 /// commands.spawn(SamplerPool(SimplePool)).connect(filter);
 /// # }
@@ -879,6 +879,7 @@ mod test {
         test::{prepare_app, run},
     };
     use bevy_seedling_macros::PoolLabel;
+    use firewheel::nodes::fast_filters::lowpass::FastLowpassNode;
 
     #[derive(PoolLabel, Clone, Debug, PartialEq, Eq, Hash)]
     struct TestPool;
@@ -888,7 +889,7 @@ mod test {
         let mut app = prepare_app(|mut commands: Commands| {
             commands.spawn((
                 SamplerPool(TestPool),
-                sample_effects![LowPassNode::default()],
+                sample_effects![FastLowpassNode::<2>::default()],
             ));
         });
 
@@ -906,7 +907,7 @@ mod test {
             commands.spawn((
                 SamplerPool(TestPool),
                 PoolSize(4..=32),
-                sample_effects![LowPassNode::default()],
+                sample_effects![FastLowpassNode::<2>::default()],
             ));
         });
 
@@ -932,7 +933,7 @@ mod test {
         let mut app = prepare_app(|mut commands: Commands, server: Res<AssetServer>| {
             commands.spawn((
                 SamplerPool(TestPool),
-                sample_effects![LowPassNode::default()],
+                sample_effects![FastLowpassNode::<2>::default()],
             ));
             commands.spawn((
                 TestPool,
@@ -969,7 +970,7 @@ mod test {
                 SamplePlayer::new(server.load("sine_440hz_1ms.wav")),
                 EmptyComponent,
                 PlaybackSettings::default().remove(),
-                sample_effects![LowPassNode::default()],
+                sample_effects![FastLowpassNode::<2>::default()],
             ));
         });
 
@@ -1009,7 +1010,7 @@ mod test {
         let mut app = prepare_app(|mut commands: Commands, server: Res<AssetServer>| {
             commands.spawn((
                 SamplerPool(TestPool),
-                sample_effects![LowPassNode::default()],
+                sample_effects![FastLowpassNode::<2>::default()],
             ));
 
             commands.spawn((
@@ -1054,7 +1055,7 @@ mod test {
         assert!(entity.contains::<EmptyComponent>());
 
         // We'll also verify that effects are not leaked
-        let total_lpfs = run(&mut app, |fx: Query<&LowPassNode>| fx.iter().len());
+        let total_lpfs = run(&mut app, |fx: Query<&FastLowpassNode>| fx.iter().len());
         // 4 is the minimum that should exist in the pool, and the last one
         // comes from the `SampleEffects` template
         assert_eq!(total_lpfs, 5);

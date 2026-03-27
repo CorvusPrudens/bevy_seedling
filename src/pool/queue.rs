@@ -610,6 +610,8 @@ pub(super) fn assign_default(
 
 #[cfg(test)]
 mod test {
+    use firewheel::nodes::fast_filters::lowpass::FastLowpassNode;
+
     use super::*;
     use crate::{
         prelude::*,
@@ -677,7 +679,7 @@ mod test {
             commands.spawn((
                 Effects,
                 SamplePlayer::new(server.load("caw.ogg")),
-                sample_effects![LowPassNode::default()],
+                sample_effects![FastLowpassNode::<2>::default()],
             ));
 
             commands.spawn((Empty, SamplePlayer::new(server.load("caw.ogg"))));
@@ -709,25 +711,25 @@ mod test {
         let mut app = prepare_app(|mut commands: Commands, server: Res<AssetServer>| {
             commands.spawn((
                 SamplerPool(DefaultPool),
-                sample_effects![SpatialBasicNode::default(), LowPassNode::default()],
+                sample_effects![SpatialBasicNode::default(), FastLowpassNode::<2>::default()],
             ));
 
             commands.spawn((
                 Subset,
                 SamplePlayer::new(server.load("caw.ogg")),
-                sample_effects![LowPassNode::default()],
+                sample_effects![FastLowpassNode::<2>::default()],
             ));
 
             commands.spawn((
                 Full,
                 SamplePlayer::new(server.load("caw.ogg")),
-                sample_effects![SpatialBasicNode::default(), LowPassNode::default()],
+                sample_effects![SpatialBasicNode::default(), FastLowpassNode::<2>::default()],
             ));
 
             commands.spawn((
                 Unordered,
                 SamplePlayer::new(server.load("caw.ogg")),
-                sample_effects![LowPassNode::default(), SpatialBasicNode::default(),],
+                sample_effects![FastLowpassNode::<2>::default(), SpatialBasicNode::default(),],
             ));
 
             commands.spawn((Empty, SamplePlayer::new(server.load("caw.ogg"))));

@@ -58,18 +58,16 @@ impl AudioContext {
     /// ```
     /// # use bevy::prelude::*;
     /// # use bevy_seedling::prelude::*;
-    /// fn mute_all(mut q: Query<&mut BandPassNode>, mut context: ResMut<AudioContext>) {
+    /// fn mute_all(
+    ///     mut q: Query<(&FastBandpassNode, &mut AudioEvents)>,
+    ///     mut context: ResMut<AudioContext>,
+    /// ) {
     ///     let now = context.now().seconds;
-    ///     for mut filter in q.iter_mut() {
-    ///         filter
-    ///             .frequency
-    ///             .push_curve(
-    ///                 0.,
-    ///                 now,
-    ///                 now + DurationSeconds(1.),
-    ///                 EaseFunction::ExponentialOut,
-    ///             )
-    ///             .unwrap();
+    ///     for (filter, mut events) in q.iter_mut() {
+    ///         // In exactly one second from now, set the cutoff to 0.
+    ///         events.schedule(now + DurationSeconds(1.0), filter, |f| {
+    ///             f.cutoff_hz = 0.0;
+    ///         });
     ///     }
     /// }
     /// ```

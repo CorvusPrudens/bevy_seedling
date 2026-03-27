@@ -4,6 +4,7 @@ use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_math::FloatExt;
 use bevy_time::{Time, TimeSystems};
+use bevy_utils::prelude::DebugName;
 use core::sync::atomic::AtomicU64;
 use firewheel::{
     Volume,
@@ -69,13 +70,13 @@ impl Plugin for EventsPlugin {
 /// ```
 /// # use bevy::prelude::*;
 /// # use bevy_seedling::prelude::*;
-/// fn arbitrary(lpf: Single<(&LowPassNode, &mut AudioEvents)>, time: Res<Time<Audio>>) {
+/// fn arbitrary(lpf: Single<(&FastLowpassNode, &mut AudioEvents)>, time: Res<Time<Audio>>) {
 ///     let (filter, mut events) = lpf.into_inner();
 ///
 ///     // In exactly 2.5 seconds from now, set the filter's cutoff frequency
 ///     // to 250 Hz.
 ///     events.schedule(time.delay(DurationSeconds(2.5)), filter, |filter| {
-///         filter.frequency = 250.0;
+///         filter.cutoff_hz = 250.0;
 ///     });
 /// }
 /// ```
@@ -260,8 +261,8 @@ impl AudioEvents {
         for event in &self.timeline {
             event
                 .apply(start..=end, value)
-                .map_err(|e| SeedlingError::PatchError {
-                    ty: core::any::type_name::<T>(),
+                .map_err(|e| SeedlingError::Patch {
+                    ty: DebugName::type_name::<T>(),
                     error: e,
                 })?;
         }

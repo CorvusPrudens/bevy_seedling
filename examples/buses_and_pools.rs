@@ -45,7 +45,7 @@ fn startup(server: Res<AssetServer>, mut commands: Commands) {
         .spawn((VolumeNode::default(), EffectsBus))
         // Any arbitrary effects chain can go here, but
         // let's just insert a reverb, a low-pass filter, and finally a limiter.
-        .chain_node(LowPassNode::default())
+        .chain_node(FastLowpassNode::<2>::default())
         .chain_node(FreeverbNode::default());
 
     // Let's create a new sample player pool and route it to our effects bus.
@@ -66,9 +66,9 @@ fn startup(server: Res<AssetServer>, mut commands: Commands) {
     // ┌▽─────────┐
     // │EffectsBus│
     // └┬─────────┘
-    // ┌▽──────────┐
-    // │LowPassNode│
-    // └┬──────────┘
+    // ┌▽──────────────┐
+    // │FastLowpassNode│
+    // └┬──────────────┘
     // ┌▽───────────┐
     // │FreeverbNode│
     // └┬───────────┘
@@ -81,12 +81,16 @@ fn startup(server: Res<AssetServer>, mut commands: Commands) {
     // through the effects to the main bus, which finally reaches the output.
 }
 
-fn modulate_frequency(mut node: Single<&mut LowPassNode>, mut angle: Local<f32>, time: Res<Time>) {
+fn modulate_frequency(
+    mut node: Single<&mut FastLowpassNode>,
+    mut angle: Local<f32>,
+    time: Res<Time>,
+) {
     let period = 10.0;
     *angle += time.delta_secs() * core::f32::consts::TAU / period;
 
     let sin = angle.sin() * 0.5 + 0.5;
-    node.frequency = 200.0 + sin * sin * 3500.0;
+    node.cutoff_hz = 200.0 + sin * sin * 3500.0;
 }
 
 fn modulate_amplitude(

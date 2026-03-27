@@ -8,7 +8,9 @@ use firewheel::{
     collector::ArcGc,
     diff::{Diff, Notify, Patch},
     event::ProcEvents,
-    node::{AudioNode, AudioNodeProcessor, ProcBuffers, ProcExtra, ProcInfo, ProcStreamCtx},
+    node::{
+        AudioNode, AudioNodeProcessor, NodeError, ProcBuffers, ProcExtra, ProcInfo, ProcStreamCtx,
+    },
 };
 use portable_atomic::AtomicF64;
 
@@ -125,13 +127,16 @@ impl LoudnessState {
 impl AudioNode for LoudnessNode {
     type Configuration = LoudnessConfig;
 
-    fn info(&self, configuration: &Self::Configuration) -> firewheel::node::AudioNodeInfo {
+    fn info(
+        &self,
+        configuration: &Self::Configuration,
+    ) -> Result<firewheel::node::AudioNodeInfo, NodeError> {
         let channel_count = channel_count(configuration.channel_map.as_deref());
 
         let sample_peak = (0..channel_count).map(|_| Default::default()).collect();
         let true_peak = (0..channel_count).map(|_| Default::default()).collect();
 
-        firewheel::node::AudioNodeInfo::new()
+        Ok(firewheel::node::AudioNodeInfo::new()
             .debug_name("loudness meter")
             .channel_config(ChannelConfig {
                 num_inputs: channel_count.into(),
@@ -144,15 +149,15 @@ impl AudioNode for LoudnessNode {
                 loudness_range: Default::default(),
                 sample_peak,
                 true_peak,
-            })))
+            }))))
     }
 
     fn construct_processor(
         &self,
         configuration: &Self::Configuration,
         cx: firewheel::node::ConstructProcessorContext,
-    ) -> impl firewheel::node::AudioNodeProcessor {
-        LoudnessProcessor {
+    ) -> Result<impl firewheel::node::AudioNodeProcessor, NodeError> {
+        Ok(LoudnessProcessor {
             analyzer: construct_analyzer(
                 cx.stream_info.sample_rate.get(),
                 configuration.channel_map.as_deref(),
@@ -160,7 +165,7 @@ impl AudioNode for LoudnessNode {
             ignore_silence: configuration.ignore_silence,
             channel_map: configuration.channel_map.clone(),
             state: cx.custom_state().cloned().unwrap(),
-        }
+        })
     }
 }
 
@@ -190,17 +195,18 @@ fn construct_analyzer(sample_rate: u32, map: Option<&[Channel]>) -> EbuR128 {
 }
 
 impl AudioNodeProcessor for LoudnessProcessor {
+    fn events(&mut self, _info: &ProcInfo, events: &mut ProcEvents, _extra: &mut ProcExtra) {
+        for LoudnessNodePatch::Reset(_) in events.drain_patches::<LoudnessNode>() {
+            self.analyzer.reset();
+        }
+    }
+
     fn process(
         &mut self,
         proc_info: &ProcInfo,
         buffers: ProcBuffers,
-        events: &mut ProcEvents,
         _: &mut ProcExtra,
     ) -> firewheel::node::ProcessStatus {
-        for LoudnessNodePatch::Reset(_) in events.drain_patches::<LoudnessNode>() {
-            self.analyzer.reset();
-        }
-
         if self.ignore_silence
             && proc_info
                 .in_silence_mask

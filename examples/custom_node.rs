@@ -12,6 +12,7 @@ use bevy_seedling::firewheel::{
     },
 };
 use bevy_seedling::prelude::*;
+use firewheel::node::NodeError;
 use std::time::Duration;
 
 fn main() {
@@ -70,23 +71,23 @@ impl AudioNode for CustomVolumeNode {
     // Firehweel's `EmptyConfig` type in such a scenario.
     type Configuration = VolumeConfig;
 
-    fn info(&self, config: &Self::Configuration) -> AudioNodeInfo {
-        AudioNodeInfo::new()
+    fn info(&self, config: &Self::Configuration) -> Result<AudioNodeInfo, NodeError> {
+        Ok(AudioNodeInfo::new()
             .debug_name("custom volume")
             .channel_config(ChannelConfig {
                 num_inputs: config.channels.get(),
                 num_outputs: config.channels.get(),
-            })
+            }))
     }
 
     fn construct_processor(
         &self,
         _config: &Self::Configuration,
         _cx: ConstructProcessorContext,
-    ) -> impl AudioNodeProcessor {
-        VolumeProcessor {
+    ) -> Result<impl AudioNodeProcessor, NodeError> {
+        Ok(VolumeProcessor {
             params: self.clone(),
-        }
+        })
     }
 }
 
@@ -99,20 +100,21 @@ struct VolumeProcessor {
 }
 
 impl AudioNodeProcessor for VolumeProcessor {
-    fn process(
-        &mut self,
-        proc_info: &ProcInfo,
-        ProcBuffers { inputs, outputs }: ProcBuffers,
-        events: &mut ProcEvents,
-        _: &mut ProcExtra,
-    ) -> ProcessStatus {
+    fn events(&mut self, _info: &ProcInfo, events: &mut ProcEvents, _extra: &mut ProcExtra) {
         // This will iterate over this node's events,
         // applying any patches sent from the ECS in a
         // realtime-safe way.
         for patch in events.drain_patches::<CustomVolumeNode>() {
             self.params.apply(patch);
         }
+    }
 
+    fn process(
+        &mut self,
+        proc_info: &ProcInfo,
+        ProcBuffers { inputs, outputs }: ProcBuffers,
+        _: &mut ProcExtra,
+    ) -> ProcessStatus {
         // Firewheel will inform you if an input channel is silent. If they're
         // all silent, we can simply skip processing and save CPU time.
         if proc_info.in_silence_mask.all_channels_silent(inputs.len()) {

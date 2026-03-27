@@ -11,8 +11,8 @@ use firewheel::{
     dsp::filter::smoothing_filter::{SmoothingFilter, SmoothingFilterCoeff},
     event::ProcEvents,
     node::{
-        AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, ProcBuffers,
-        ProcExtra, ProcInfo, ProcStreamCtx, ProcessStatus,
+        AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, NodeError,
+        ProcBuffers, ProcExtra, ProcInfo, ProcStreamCtx, ProcessStatus,
     },
 };
 
@@ -242,21 +242,24 @@ struct Limiter {
 impl AudioNode for LimiterNode {
     type Configuration = LimiterConfig;
 
-    fn info(&self, config: &Self::Configuration) -> firewheel::node::AudioNodeInfo {
-        AudioNodeInfo::new()
+    fn info(
+        &self,
+        config: &Self::Configuration,
+    ) -> Result<firewheel::node::AudioNodeInfo, NodeError> {
+        Ok(AudioNodeInfo::new()
             .debug_name("limiter")
             .channel_config(ChannelConfig {
                 num_inputs: config.channels.get(),
                 num_outputs: config.channels.get(),
-            })
+            }))
     }
 
     fn construct_processor(
         &self,
         config: &Self::Configuration,
         cx: ConstructProcessorContext,
-    ) -> impl AudioNodeProcessor {
-        Limiter::new(
+    ) -> Result<impl AudioNodeProcessor, NodeError> {
+        Ok(Limiter::new(
             cx.stream_info.sample_rate,
             config.lookahead.unwrap_or(self.attack),
             self.attack,
@@ -264,7 +267,7 @@ impl AudioNode for LimiterNode {
             config.headroom,
             config.channels.get().get(),
             cx.stream_info.max_block_frames,
-        )
+        ))
     }
 }
 
@@ -315,13 +318,7 @@ impl Limiter {
 }
 
 impl AudioNodeProcessor for Limiter {
-    fn process(
-        &mut self,
-        proc_info: &ProcInfo,
-        buffers: ProcBuffers,
-        events: &mut ProcEvents,
-        _: &mut ProcExtra,
-    ) -> ProcessStatus {
+    fn events(&mut self, _info: &ProcInfo, events: &mut ProcEvents, _extra: &mut ProcExtra) {
         for patch in events.drain_patches::<LimiterNode>() {
             match patch {
                 LimiterNodePatch::Attack(atk) => {
@@ -332,7 +329,14 @@ impl AudioNodeProcessor for Limiter {
                 }
             }
         }
+    }
 
+    fn process(
+        &mut self,
+        proc_info: &ProcInfo,
+        buffers: ProcBuffers,
+        _: &mut ProcExtra,
+    ) -> ProcessStatus {
         if proc_info
             .in_silence_mask
             .all_channels_silent(buffers.inputs.len())
