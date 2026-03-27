@@ -4,6 +4,13 @@ use firewheel::{collector::ArcGc, sample_resource::SampleResource};
 use std::{num::NonZeroU32, sync::Arc};
 
 /// A type-erased audio sample.
+///
+/// Decoding for PCM WAV, Ogg Vorbis, and a number of other
+/// formats is supported through `symphonia` and the associated
+/// `bevy_seedling` features.
+///
+/// You can also disable `symphonia` entirely and provide a custom
+/// asset loader.
 #[derive(Asset, TypePath, Clone)]
 pub struct AudioSample {
     sample: ArcGc<dyn SampleResource>,
