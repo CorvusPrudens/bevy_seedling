@@ -78,7 +78,7 @@
 //!     // Play a sound... with effects :O
 //!     commands.spawn((
 //!         SamplePlayer::new(server.load("my_ambience.wav")).looping(),
-//!         sample_effects![LowPassNode { frequency: 500.0 }],
+//!         sample_effects![FastLowpassNode::<2>::from_cutoff_hz(500.0)],
 //!     ));
 //! }
 //! ```

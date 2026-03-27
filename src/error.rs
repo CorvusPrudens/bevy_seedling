@@ -34,7 +34,7 @@ pub enum SeedlingError {
         /// an effect.
         empty_entity: Entity,
     },
-    /// An error that occured during node construction.
+    /// An error that occurred during node construction.
     Node(String),
     /// Failed to fetch a node's state from the audio context.
     MissingState {

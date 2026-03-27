@@ -170,10 +170,10 @@ impl core::error::Error for EffectsQueryError {}
 /// it can be cumbersome to manually join relationship-dependent queries.
 /// This trait eases the burden with a few convenience methods.
 ///
-/// For example, if you want to query over all [`LowPassNode`]s whose
+/// For example, if you want to query over all [`FastLowpassNode`]s whose
 /// sample entity contains some marker:
 ///
-/// [`LowPassNode`]: crate::prelude::LowPassNode
+/// [`FastLowpassNode`]: crate::prelude::FastLowpassNode
 /// ```
 /// # use bevy::prelude::*;
 /// # use bevy_seedling::prelude::*;
@@ -184,12 +184,12 @@ impl core::error::Error for EffectsQueryError {}
 /// commands.spawn((
 ///     Marker,
 ///     SamplePlayer::new(server.load("my_sample.wav")),
-///     sample_effects![LowPassNode::default()],
+///     sample_effects![FastLowpassNode::<2>::default()],
 /// ));
 ///
 /// fn effects_of_marker(
 ///     samples: Query<&SampleEffects, With<Marker>>,
-///     low_pass: Query<&LowPassNode>,
+///     low_pass: Query<&FastLowpassNode>,
 /// ) -> Result {
 ///     for effects in samples {
 ///         let low_pass = low_pass.get_effect(effects)?;
@@ -220,11 +220,11 @@ where
     ///
     /// fn log_underwater_freq(
     ///     samples: Query<&SampleEffects, With<UnderwaterSound>>,
-    ///     low_pass: Query<&LowPassNode>,
+    ///     low_pass: Query<&FastLowpassNode>,
     /// ) -> Result {
     ///     for effects in samples {
-    ///         let frequency = low_pass.get_effect(effects)?.frequency;
-    ///         info!("Frequency: {frequency}hz");
+    ///         let cutoff = low_pass.get_effect(effects)?.cutoff_hz;
+    ///         info!("Frequency: {cutoff}hz");
     ///     }
     ///
     ///     Ok(())
@@ -249,10 +249,10 @@ where
     ///
     /// fn set_underwater_freq(
     ///     samples: Query<&SampleEffects, With<UnderwaterSound>>,
-    ///     mut low_pass: Query<&mut LowPassNode>,
+    ///     mut low_pass: Query<&mut FastLowpassNode>,
     /// ) -> Result {
     ///     for effects in samples {
-    ///         low_pass.get_effect_mut(effects)?.frequency = 500.0;
+    ///         low_pass.get_effect_mut(effects)?.cutoff_hz = 500.0;
     ///     }
     ///
     ///     Ok(())
@@ -274,10 +274,10 @@ where
     ///
     /// fn log_underwater_freq(
     ///     samples: Query<&SampleEffects, With<UnderwaterSound>>,
-    ///     low_pass: Query<&LowPassNode>,
+    ///     low_pass: Query<&FastLowpassNode>,
     /// ) {
     ///     for node in samples.iter().flat_map(|s| low_pass.iter_effects(s)) {
-    ///         info!("Frequency: {}", node.frequency);
+    ///         info!("Frequency: {}", node.cutoff_hz);
     ///     }
     /// }
     /// ```
@@ -296,11 +296,11 @@ where
     ///
     /// fn set_underwater_freq(
     ///     samples: Query<&SampleEffects, With<UnderwaterSound>>,
-    ///     mut low_pass: Query<&mut LowPassNode>,
+    ///     mut low_pass: Query<&mut FastLowpassNode>,
     /// ) {
     ///     for effects in samples {
     ///         for mut node in low_pass.iter_effects_mut(effects) {
-    ///             node.frequency = 500.0;
+    ///             node.cutoff_hz = 500.0;
     ///         }
     ///     }
     /// }

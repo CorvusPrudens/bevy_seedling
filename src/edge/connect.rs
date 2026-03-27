@@ -47,7 +47,9 @@ impl PendingConnections {
 /// let node_entity = commands.spawn(VolumeNode::default()).id();
 ///
 /// // Connect another node to it.
-/// commands.spawn(LowPassNode::default()).connect(node_entity);
+/// commands
+///     .spawn(FastLowpassNode::<2>::default())
+///     .connect(node_entity);
 /// # }
 /// ```
 ///
@@ -88,7 +90,7 @@ impl PendingConnections {
 /// fn spawn_chain(mut commands: Commands) {
 ///     // Once spawned with this label, any other node can connect
 ///     // to this one without knowing its exact `Entity`.
-///     commands.spawn((EffectsChain, LowPassNode::default()));
+///     commands.spawn((EffectsChain, FastLowpassNode::<2>::default()));
 /// }
 ///
 /// fn add_to_chain(mut commands: Commands) {
@@ -96,9 +98,9 @@ impl PendingConnections {
 ///     //
 ///     // Keep in mind this new connection point is only
 ///     // visible within this system, since we don't spawn
-///     // `BandPassNode` with any labels.
+///     // `FastBandpassNode` with any labels.
 ///     let additional_processing = commands
-///         .spawn(BandPassNode::default())
+///         .spawn(FastBandpassNode::<2>::default())
 ///         .connect(EffectsChain);
 /// }
 /// ```
@@ -114,7 +116,7 @@ impl PendingConnections {
 /// # fn system(mut commands: Commands) {
 /// commands
 ///     .spawn(VolumeNode::default())
-///     .chain_node(LowPassNode::default())
+///     .chain_node(FastLowpassNode::<2>::default())
 ///     .chain_node(SpatialBasicNode::default());
 /// # }
 /// ```
@@ -129,11 +131,11 @@ impl PendingConnections {
 /// # fn system(mut commands: Commands) {
 /// let chain_head = commands
 ///     .spawn(VolumeNode::default())
-///     .chain_node(LowPassNode::default())
+///     .chain_node(FastLowpassNode::<2>::default())
 ///     .chain_node(SpatialBasicNode::default())
 ///     .head();
 ///
-/// commands.spawn(BandPassNode::default()).connect(chain_head);
+/// commands.spawn(FastBandpassNode::<2>::default()).connect(chain_head);
 /// # }
 /// ```
 ///
@@ -151,16 +153,9 @@ impl PendingConnections {
 /// # use bevy::prelude::*;
 /// # use bevy_seedling::prelude::*;
 /// # fn system(mut commands: Commands) {
-/// commands.spawn(VolumeNode::default()).chain_node_with(
-///     (
-///         LowPassNode::default(),
-///         LowPassConfig {
-///             channels: NonZeroChannelCount::new(1).unwrap(),
-///             ..Default::default()
-///         },
-///     ),
-///     &[(0, 0), (1, 0)],
-/// );
+/// commands
+///     .spawn(VolumeNode::default())
+///     .chain_node_with(FastLowpassNode::<1>::default(), &[(0, 0), (1, 0)]);
 /// # }
 /// ```
 ///
@@ -168,10 +163,10 @@ impl PendingConnections {
 /// first element is the output of the source, and the second is
 /// the input of the destination. So, in the example above, the
 /// left and right channels of [`VolumeNode`] are both connected
-/// to the single input of [`LowPassNode`].
+/// to the single input of [`FastLowpassNode`].
 ///
 /// [`VolumeNode`]: crate::prelude::VolumeNode
-/// [`LowPassNode`]: crate::prelude::LowPassNode
+/// [`FastLowpassNode`]: crate::prelude::FastLowpassNode
 ///
 /// The above example is also unnecessary in most circumstances.
 /// The [`ChannelMapping`] component, a required component on all
@@ -226,8 +221,8 @@ pub trait Connect<'a>: Sized {
     /// # use bevy_seedling::prelude::*;
     /// # fn head(mut commands: Commands, server: Res<AssetServer>) {
     /// commands
-    ///     .spawn(LowPassNode::default())
-    ///     .chain_node(BandPassNode::default())
+    ///     .spawn(FastLowpassNode::<2>::default())
+    ///     .chain_node(FastBandpassNode::<2>::default())
     ///     .chain_node(VolumeNode::default());
     /// # }
     /// ```
@@ -250,8 +245,8 @@ pub trait Connect<'a>: Sized {
     /// # use bevy_seedling::prelude::*;
     /// fn head(mut commands: Commands, server: Res<AssetServer>) {
     ///     let chain_input = commands
-    ///         .spawn(LowPassNode::default())
-    ///         .chain_node(BandPassNode::default())
+    ///         .spawn(FastLowpassNode::<2>::default())
+    ///         .chain_node(FastBandpassNode::<2>::default())
     ///         .chain_node(VolumeNode::default())
     ///         .head();
     ///

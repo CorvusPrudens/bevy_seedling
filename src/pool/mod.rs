@@ -122,7 +122,7 @@ impl Plugin for SamplePoolPlugin {
 ///
 /// commands.spawn((
 ///     SamplerPool(EffectsPool),
-///     sample_effects![LowPassNode::default(), SpatialBasicNode::default()],
+///     sample_effects![FastLowpassNode::<2>::default(), SpatialBasicNode::default()],
 /// ));
 /// # }
 /// ```
@@ -138,7 +138,7 @@ impl Plugin for SamplePoolPlugin {
 /// # fn spawn_pools(mut commands: Commands) {
 /// # #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
 /// # struct SimplePool;
-/// let filter = commands.spawn(LowPassNode::default()).id();
+/// let filter = commands.spawn(FastLowpassNode::<2>::default()).id();
 ///
 /// commands.spawn(SamplerPool(SimplePool)).connect(filter);
 /// # }
