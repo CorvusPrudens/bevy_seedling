@@ -1,6 +1,5 @@
 //! Components that abstract over different backends.
 
-use bevy_asset::AssetServer;
 use bevy_ecs::prelude::*;
 
 use crate::context::{SampleRate, StreamStartEvent};
@@ -40,7 +39,6 @@ pub struct RestartAudioStream;
 /// fn start_stream(
 ///     mut context: ResMut<AudioContext>,
 ///     stream_config: Res<AudioStreamConfig<CpalConfig>>,
-///     server: Res<AssetServer>,
 ///     mut commands: Commands,
 /// ) -> Result {
 ///     let stream = context
@@ -49,15 +47,14 @@ pub struct RestartAudioStream;
 ///     let sample_rate = SampleRate::new(stream.info().sample_rate);
 ///
 ///     commands.insert_resource(CpalStream::new(stream));
-///     initialize_stream(sample_rate, &server, commands);
+///     initialize_stream(sample_rate, commands);
 ///
 ///     Ok(())
 /// }
 /// ```
-pub fn initialize_stream(sample_rate: SampleRate, server: &AssetServer, mut commands: Commands) {
+pub fn initialize_stream(sample_rate: SampleRate, mut commands: Commands) {
     let raw_sample_rate = sample_rate.get();
     commands.insert_resource(sample_rate.clone());
-    server.register_loader(crate::sample::SampleLoader::new(sample_rate));
     commands.trigger(StreamStartEvent {
         sample_rate: raw_sample_rate,
     });

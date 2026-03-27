@@ -1,16 +1,16 @@
-use bevy_asset::{Asset, AssetLoader};
+use bevy_asset::Asset;
 use bevy_reflect::TypePath;
-use firewheel::{DecodedAudio, DecodedAudioF32, collector::ArcGc, sample_resource::SampleResource};
+use firewheel::{collector::ArcGc, sample_resource::SampleResource};
 use std::{num::NonZeroU32, sync::Arc};
 
 /// A type-erased audio sample.
 ///
-/// Samples are loaded via [`symphonia`] and resampled eagerly.
-/// As a result, you may notice some latency when loading longer
-/// samples with low optimization levels.
+/// Decoding for PCM WAV, Ogg Vorbis, and a number of other
+/// formats is supported through `symphonia` and the associated
+/// `bevy_seedling` features.
 ///
-/// The available containers and formats can be configured with
-/// this crate's feature flags.
+/// You can also disable `symphonia` entirely and provide a custom
+/// asset loader.
 #[derive(Asset, TypePath, Clone)]
 pub struct AudioSample {
     sample: ArcGc<dyn SampleResource>,
@@ -45,8 +45,9 @@ impl AudioSample {
     }
 }
 
-impl From<DecodedAudioF32> for AudioSample {
-    fn from(source: DecodedAudioF32) -> Self {
+#[cfg(feature = "symphonia")]
+impl From<firewheel::DecodedAudioF32> for AudioSample {
+    fn from(source: firewheel::DecodedAudioF32) -> Self {
         Self {
             original_sample_rate: source.original_sample_rate(),
             sample: ArcGc::new_unsized(|| Arc::new(source) as _),
@@ -54,8 +55,9 @@ impl From<DecodedAudioF32> for AudioSample {
     }
 }
 
-impl From<DecodedAudio> for AudioSample {
-    fn from(source: DecodedAudio) -> Self {
+#[cfg(feature = "symphonia")]
+impl From<firewheel::DecodedAudio> for AudioSample {
+    fn from(source: firewheel::DecodedAudio) -> Self {
         Self {
             original_sample_rate: source.original_sample_rate(),
             sample: ArcGc::new_unsized(|| Arc::new(source) as _),
@@ -69,102 +71,135 @@ impl core::fmt::Debug for AudioSample {
     }
 }
 
-/// A simple loader for audio samples.
-#[derive(Debug, TypePath)]
-pub struct SampleLoader {
-    /// The sampling rate of the audio engine.
-    sample_rate: crate::context::SampleRate,
-}
+#[cfg(feature = "symphonia")]
+pub mod loader {
+    use super::AudioSample;
+    use bevy_app::prelude::*;
+    use bevy_asset::{AssetApp, AssetLoader, AssetServer};
+    use bevy_ecs::prelude::*;
+    use bevy_reflect::TypePath;
 
-impl SampleLoader {
-    /// Create a new sample loader.
-    ///
-    /// `sample_rate` should be cloned directly from the resource
-    /// that lives in the same world.
-    pub fn new(sample_rate: crate::context::SampleRate) -> Self {
-        Self { sample_rate }
-    }
-}
+    pub struct SymphoniumLoaderPlugin;
 
-/// Errors produced while loading samples.
-#[derive(Debug)]
-pub enum SampleLoaderError {
-    /// An I/O error, such as missing files.
-    StdIo(std::io::Error),
-    /// An error directly from `symphonium`.
-    Symphonium(String),
-}
-
-impl From<std::io::Error> for SampleLoaderError {
-    fn from(value: std::io::Error) -> Self {
-        Self::StdIo(value)
-    }
-}
-
-impl From<symphonium::error::LoadError> for SampleLoaderError {
-    fn from(value: symphonium::error::LoadError) -> Self {
-        Self::Symphonium(value.to_string())
-    }
-}
-
-impl std::error::Error for SampleLoaderError {}
-
-impl std::fmt::Display for SampleLoaderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::StdIo(stdio) => stdio.fmt(f),
-            Self::Symphonium(sy) => f.write_str(sy),
+    impl Plugin for SymphoniumLoaderPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_observer(init_loader)
+                .preregister_asset_loader::<SampleLoader>(SampleLoader::extensions());
         }
     }
-}
 
-impl SampleLoader {
-    pub(crate) const fn extensions() -> &'static [&'static str] {
-        &[
-            #[cfg(feature = "wav")]
-            "wav",
-            #[cfg(feature = "ogg")]
-            "ogg",
-            #[cfg(feature = "mp3")]
-            "mp3",
-            #[cfg(feature = "flac")]
-            "flac",
-            #[cfg(feature = "mkv")]
-            "mkv",
-        ]
-    }
-}
-
-impl AssetLoader for SampleLoader {
-    type Asset = AudioSample;
-    type Settings = ();
-    type Error = SampleLoaderError;
-
-    async fn load(
-        &self,
-        reader: &mut dyn bevy_asset::io::Reader,
-        _settings: &Self::Settings,
-        load_context: &mut bevy_asset::LoadContext<'_>,
-    ) -> Result<Self::Asset, Self::Error> {
-        let mut bytes = Vec::new();
-        reader.read_to_end(&mut bytes).await?;
-
-        let mut hint = symphonia::core::probe::Hint::new();
-        hint.with_extension(&load_context.path().to_string());
-
-        let mut loader = symphonium::SymphoniumLoader::new();
-        let source = firewheel::load_audio_file_from_source(
-            &mut loader,
-            Box::new(std::io::Cursor::new(bytes)),
-            Some(hint),
-            Some(self.sample_rate.get()),
-            Default::default(),
-        )?;
-
-        Ok(source.into())
+    /// A simple loader for audio samples.
+    ///
+    /// Samples are loaded via [`symphonia`] and resampled eagerly.
+    /// As a result, you may notice some latency when loading longer
+    /// samples with low optimization levels.
+    ///
+    /// The available containers and formats can be configured with
+    /// this crate's feature flags.
+    #[derive(Debug, TypePath)]
+    pub struct SampleLoader {
+        /// The sampling rate of the audio engine.
+        sample_rate: crate::context::SampleRate,
     }
 
-    fn extensions(&self) -> &[&str] {
-        Self::extensions()
+    impl SampleLoader {
+        /// Create a new sample loader.
+        ///
+        /// `sample_rate` should be cloned directly from the resource
+        /// that lives in the same world.
+        pub fn new(sample_rate: crate::context::SampleRate) -> Self {
+            Self { sample_rate }
+        }
+    }
+
+    /// Errors produced while loading samples.
+    #[derive(Debug)]
+    pub enum SampleLoaderError {
+        /// An I/O error, such as missing files.
+        StdIo(std::io::Error),
+        /// An error directly from `symphonium`.
+        Symphonium(String),
+    }
+
+    impl From<std::io::Error> for SampleLoaderError {
+        fn from(value: std::io::Error) -> Self {
+            Self::StdIo(value)
+        }
+    }
+
+    impl From<symphonium::error::LoadError> for SampleLoaderError {
+        fn from(value: symphonium::error::LoadError) -> Self {
+            Self::Symphonium(value.to_string())
+        }
+    }
+
+    impl std::error::Error for SampleLoaderError {}
+
+    impl std::fmt::Display for SampleLoaderError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::StdIo(stdio) => stdio.fmt(f),
+                Self::Symphonium(sy) => f.write_str(sy),
+            }
+        }
+    }
+
+    impl SampleLoader {
+        pub(crate) const fn extensions() -> &'static [&'static str] {
+            &[
+                #[cfg(feature = "wav")]
+                "wav",
+                #[cfg(feature = "ogg")]
+                "ogg",
+                #[cfg(feature = "mp3")]
+                "mp3",
+                #[cfg(feature = "flac")]
+                "flac",
+                #[cfg(feature = "mkv")]
+                "mkv",
+            ]
+        }
+    }
+
+    impl AssetLoader for SampleLoader {
+        type Asset = AudioSample;
+        type Settings = ();
+        type Error = SampleLoaderError;
+
+        async fn load(
+            &self,
+            reader: &mut dyn bevy_asset::io::Reader,
+            _settings: &Self::Settings,
+            load_context: &mut bevy_asset::LoadContext<'_>,
+        ) -> Result<Self::Asset, Self::Error> {
+            let mut bytes = Vec::new();
+            reader.read_to_end(&mut bytes).await?;
+
+            let mut hint = symphonia::core::probe::Hint::new();
+            hint.with_extension(&load_context.path().to_string());
+
+            let mut loader = symphonium::SymphoniumLoader::new();
+            let source = firewheel::load_audio_file_from_source(
+                &mut loader,
+                Box::new(std::io::Cursor::new(bytes)),
+                Some(hint),
+                Some(self.sample_rate.get()),
+                Default::default(),
+            )?;
+
+            Ok(source.into())
+        }
+
+        fn extensions(&self) -> &[&str] {
+            Self::extensions()
+        }
+    }
+
+    fn init_loader(
+        _: On<crate::context::StreamStartEvent>,
+        sample_rate: Res<crate::context::SampleRate>,
+        server: Res<AssetServer>,
+    ) {
+        server.register_loader(SampleLoader::new(sample_rate.clone()));
     }
 }

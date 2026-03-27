@@ -1,7 +1,6 @@
 //! Stream management for `cpal`.
 
 use bevy_app::prelude::*;
-use bevy_asset::AssetServer;
 use bevy_ecs::prelude::*;
 use bevy_log::{error, warn};
 use bevy_platform::cell::SyncCell;
@@ -82,7 +81,6 @@ impl core::fmt::Debug for CpalStream {
 fn start_stream(
     mut context: ResMut<AudioContext>,
     stream_config: Res<AudioStreamConfig<CpalConfig>>,
-    server: Res<AssetServer>,
     mut commands: Commands,
 ) -> Result {
     // TODO: it's not possible for the user to recover if this fails
@@ -91,7 +89,7 @@ fn start_stream(
     let sample_rate = SampleRate::new(stream.info().sample_rate);
     commands.insert_resource(CpalStream::new(stream));
 
-    super::initialize_stream(sample_rate, &server, commands);
+    super::initialize_stream(sample_rate, commands);
 
     Ok(())
 }

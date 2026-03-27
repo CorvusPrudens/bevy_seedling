@@ -7,7 +7,6 @@ use std::num::{NonZero, NonZeroU32};
 
 use crate::{
     context::{AudioContext, SampleRate},
-    platform::*,
     prelude::SeedlingStartupSystems,
 };
 
@@ -28,11 +27,11 @@ impl Plugin for MockBackendPlugin {
 
 const MOCK_SAMPLE_RATE: NonZeroU32 = NonZeroU32::new(48000).unwrap();
 
-fn start_stream(mut context: ResMut<AudioContext>, server: Res<AssetServer>, commands: Commands) {
+fn start_stream(mut context: ResMut<AudioContext>, commands: Commands) {
     context.with(initialize_mock);
 
     let sample_rate = SampleRate::new(MOCK_SAMPLE_RATE);
-    super::initialize_stream(sample_rate, &server, commands);
+    super::initialize_stream(sample_rate, commands);
 }
 
 fn initialize_mock(context: &mut FirewheelContext) {

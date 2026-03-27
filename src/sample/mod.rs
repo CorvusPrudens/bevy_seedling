@@ -16,7 +16,12 @@ use std::time::Duration;
 
 mod assets;
 
-pub use assets::{AudioSample, SampleLoader, SampleLoaderError};
+pub use assets::AudioSample;
+
+#[cfg(feature = "symphonia")]
+pub(crate) use assets::loader::SymphoniumLoaderPlugin;
+#[cfg(feature = "symphonia")]
+pub use assets::loader::{SampleLoader, SampleLoaderError};
 
 /// A component that queues sample playback.
 ///
