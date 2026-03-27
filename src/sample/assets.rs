@@ -65,13 +65,21 @@ impl core::fmt::Debug for AudioSample {
 }
 
 #[cfg(feature = "symphonium")]
-pub use loader::{SampleLoader, SampleLoaderError};
-
-#[cfg(feature = "symphonium")]
-mod loader {
+pub mod loader {
     use super::AudioSample;
-    use bevy_asset::AssetLoader;
+    use bevy_app::prelude::*;
+    use bevy_asset::{AssetApp, AssetLoader, AssetServer};
+    use bevy_ecs::prelude::*;
     use bevy_reflect::TypePath;
+
+    pub struct SymphoniumLoaderPlugin;
+
+    impl Plugin for SymphoniumLoaderPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_observer(init_loader)
+                .preregister_asset_loader::<SampleLoader>(SampleLoader::extensions());
+        }
+    }
 
     /// A simple loader for audio samples.
     ///
@@ -178,5 +186,13 @@ mod loader {
         fn extensions(&self) -> &[&str] {
             Self::extensions()
         }
+    }
+
+    fn init_loader(
+        _: On<crate::context::StreamStartEvent>,
+        sample_rate: Res<crate::context::SampleRate>,
+        server: Res<AssetServer>,
+    ) {
+        server.register_loader(SampleLoader::new(sample_rate.clone()));
     }
 }

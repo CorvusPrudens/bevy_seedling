@@ -29,15 +29,6 @@ pub(super) struct GraphPlugin;
 
 impl Plugin for GraphPlugin {
     fn build(&self, app: &mut App) {
-        #[cfg(feature = "symphonium")]
-        {
-            use bevy_asset::AssetApp;
-
-            app.preregister_asset_loader::<crate::sample::SampleLoader>(
-                crate::sample::SampleLoader::extensions(),
-            );
-        }
-
         app.init_resource::<AudioGraphTemplate>()
             .add_systems(
                 PreStartup,

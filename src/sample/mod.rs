@@ -19,7 +19,9 @@ mod assets;
 pub use assets::AudioSample;
 
 #[cfg(feature = "symphonium")]
-pub use assets::{SampleLoader, SampleLoaderError};
+pub(crate) use assets::loader::SymphoniumLoaderPlugin;
+#[cfg(feature = "symphonium")]
+pub use assets::loader::{SampleLoader, SampleLoaderError};
 
 /// A component that queues sample playback.
 ///

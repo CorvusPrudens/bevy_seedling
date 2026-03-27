@@ -1,8 +1,6 @@
 //! A mock backend for testing.
 
 use bevy_app::prelude::*;
-#[cfg(feature = "symphonium")]
-use bevy_asset::AssetServer;
 use bevy_ecs::prelude::*;
 use firewheel::{ActivateInfo, FirewheelContext, node::StreamStatus};
 use std::num::{NonZero, NonZeroU32};
@@ -29,20 +27,11 @@ impl Plugin for MockBackendPlugin {
 
 const MOCK_SAMPLE_RATE: NonZeroU32 = NonZeroU32::new(48000).unwrap();
 
-fn start_stream(
-    mut context: ResMut<AudioContext>,
-    #[cfg(feature = "symphonium")] server: Res<AssetServer>,
-    commands: Commands,
-) {
+fn start_stream(mut context: ResMut<AudioContext>, commands: Commands) {
     context.with(initialize_mock);
 
     let sample_rate = SampleRate::new(MOCK_SAMPLE_RATE);
-    super::initialize_stream(
-        sample_rate,
-        #[cfg(feature = "symphonium")]
-        &server,
-        commands,
-    );
+    super::initialize_stream(sample_rate, commands);
 }
 
 fn initialize_mock(context: &mut FirewheelContext) {
