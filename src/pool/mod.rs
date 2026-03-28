@@ -829,6 +829,7 @@ impl<T: PoolLabel + Component + Clone> PoolDespawn<T> {
 }
 
 impl<T: PoolLabel + Component + Clone> Command for PoolDespawn<T> {
+    type Out = ();
     fn apply(self, world: &mut World) {
         let mut roots = world.query_filtered::<(Entity, &PoolLabelContainer), (
             With<SamplerPool<T>>,
