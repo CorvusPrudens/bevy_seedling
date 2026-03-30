@@ -312,37 +312,37 @@ mod test {
         )
     }
 
-    // #[test]
-    // fn test_full_diff() {
-    //     let mut a = Timeline::new(0f32);
-    //
-    //     for _ in 0..8 {
-    //         a.push_curve(
-    //             2f32,
-    //             InstantSeconds(1.),
-    //             InstantSeconds(2.),
-    //             EaseFunction::Linear,
-    //         )
-    //         .unwrap();
-    //     }
-    //
-    //     let mut b = a.clone();
-    //
-    //     b.push_curve(
-    //         1f32,
-    //         InstantSeconds(1.),
-    //         InstantSeconds(2.),
-    //         EaseFunction::Linear,
-    //     )
-    //     .unwrap();
-    //
-    //     let mut events = Vec::new();
-    //     b.diff(&a, events.push(event), Default::default(), &mut events);
-    //
-    //     assert!(
-    //         matches!(&events.as_slice(), &[NodeEventType::Param { data, .. }] if matches!(data, ParamData::F32(d) if d.end_value() == 1.))
-    //     )
-    // }
+    #[test]
+    fn test_full_diff() {
+        let mut a = Timeline::new(0f32);
+
+        for _ in 0..8 {
+            a.push_curve(
+                2f32,
+                InstantSeconds(1.),
+                InstantSeconds(2.),
+                EaseFunction::Linear,
+            )
+            .unwrap();
+        }
+
+        let mut b = a.clone();
+
+        b.push_curve(
+            1f32,
+            InstantSeconds(1.),
+            InstantSeconds(2.),
+            EaseFunction::Linear,
+        )
+        .unwrap();
+
+        let mut events = Vec::new();
+        b.diff(&a, Default::default(), &mut events);
+
+        assert!(
+            matches!(&events.as_slice(), &[NodeEventType::Param { data, .. }] if data.downcast_ref::<TimelineEvent<f32>>().unwrap().end_value() == 1.)
+        );
+    }
 
     #[test]
     fn test_linear_curve() {

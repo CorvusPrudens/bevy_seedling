@@ -174,7 +174,7 @@ impl AudioNode for SendNode {
 
     fn info(&self, config: &Self::Configuration) -> Result<AudioNodeInfo, NodeError> {
         Ok(AudioNodeInfo::new()
-            .debug_name("low-pass filter")
+            .debug_name("send node")
             .channel_config(ChannelConfig {
                 num_inputs: config.channels.get(),
                 // TODO: remove panic
