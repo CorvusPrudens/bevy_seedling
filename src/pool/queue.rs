@@ -117,6 +117,115 @@ pub(super) fn grow_pools(
     Ok(())
 }
 
+/// Reconcile a sample's effects with the pool's effects, cloning pool defaults for any missing entries.
+///
+/// Returns `true` if the caller should skip this sample.
+fn normalize_effects(
+    sample_entity: Entity,
+    sample_effects: Option<&SampleEffects>,
+    pool_effects: Option<&SampleEffects>,
+    player: &SamplePlayer,
+    pool_shape: &PoolShape,
+    effects: &mut Query<&EffectId, With<EffectOf>>,
+    commands: &mut Commands,
+) -> bool {
+    if sample_effects.is_some() && pool_effects.is_none() {
+        match player.sample.path() {
+            Some(path) => warn!(
+                "Queued sample \"{}\" with effects in an effect-less pool.",
+                path
+            ),
+            None => warn!("Queued sample with effects in an effect-less pool."),
+        }
+    }
+
+    let Some(pool_effects) = pool_effects else {
+        return false;
+    };
+
+    match sample_effects {
+        Some(sample_effects) => {
+            let component_ids =
+                match super::fetch_effect_ids(sample_effects, &mut effects.as_query_lens()) {
+                    Ok(ids) => ids,
+                    Err(e) => {
+                        error!("{e}");
+                        return true;
+                    }
+                };
+
+            if component_ids != pool_shape.0 {
+                // N will never be large enough for this to be a concern
+                if component_ids.iter().any(|id| !pool_shape.0.contains(id)) {
+                    match player.sample.path() {
+                        Some(path) => warn!(
+                            "Queued sample \"{}\" contains one or more effects that the pool does not.",
+                            path
+                        ),
+                        None => warn!(
+                            "Queued sample contains one or more effects that the pool does not."
+                        ),
+                    }
+                }
+
+                let mut new_effects = Vec::new();
+                new_effects.reserve_exact(pool_shape.0.len());
+                let mut clone_into = Vec::new();
+
+                for (effect, id) in pool_effects.iter().zip(&pool_shape.0) {
+                    match component_ids.iter().position(|c| c == id) {
+                        Some(index) => {
+                            new_effects.push(sample_effects[index]);
+                        }
+                        None => {
+                            let empty = commands.spawn_empty().id();
+
+                            clone_into.push((empty, effect));
+                            new_effects.push(empty);
+                        }
+                    }
+                }
+
+                commands
+                    .entity(sample_entity)
+                    .remove_related::<EffectOf>(sample_effects)
+                    .add_related::<EffectOf>(&new_effects);
+
+                commands.queue(move |world: &mut World| {
+                    let mut cloner = EntityCloner::build_opt_out(world);
+                    cloner.deny::<EffectOf>();
+                    let mut cloner = cloner.finish();
+
+                    for (dest, src) in clone_into {
+                        cloner.clone_entity(world, src, dest);
+                    }
+                });
+            }
+        }
+        None => {
+            let pool_effects: Vec<_> = pool_effects.iter().collect();
+            commands.queue(move |world: &mut World| {
+                let mut cloner = EntityCloner::build_opt_out(world);
+                cloner.deny::<EffectOf>();
+                let mut cloner = cloner.finish();
+
+                let mut sample_effects = Vec::new();
+                sample_effects.reserve_exact(pool_effects.len());
+                for effect in pool_effects {
+                    let sample_effect = cloner.spawn_clone(world, effect);
+                    sample_effects.push(sample_effect);
+                }
+
+                world
+                    .entity_mut(sample_entity)
+                    .add_related::<EffectOf>(&sample_effects);
+            });
+        }
+    }
+
+    false
+}
+
 /// Scan through the set of pending sample players
 /// and assign work to the most appropriate sampler node.
 pub(super) fn assign_work(
@@ -218,100 +327,16 @@ pub(super) fn assign_work(
                 params.repeat_mode = player.repeat_mode;
                 state.0.clear_finished();
 
-                // normalize sample effects
-                if sample_effects.is_some() && pool_effects.is_none() {
-                    match player.sample.path() {
-                        Some(path) => warn!(
-                            "Queued sample \"{}\" with effects in an effect-less pool.",
-                            path
-                        ),
-                        None => warn!("Queued sample with effects in an effect-less pool."),
-                    }
-                }
-
-                if let Some(pool_effects) = pool_effects {
-                    match sample_effects {
-                        Some(sample_effects) => {
-                            let component_ids = match super::fetch_effect_ids(
-                                sample_effects,
-                                &mut effects.as_query_lens(),
-                            ) {
-                                Ok(ids) => ids,
-                                Err(e) => {
-                                    error!("{e}");
-
-                                    continue;
-                                }
-                            };
-
-                            if component_ids != pool_shape.0 {
-                                // N will never be large enough for this to be a concern
-                                if component_ids.iter().any(|id| !pool_shape.0.contains(id)) {
-                                    match player.sample.path() {
-                                        Some(path) => warn!(
-                                            "Queued sample \"{}\" contains one or more effects that the pool does not.",
-                                            path
-                                        ),
-                                        None => warn!(
-                                            "Queued sample contains one or more effects that the pool does not."
-                                        ),
-                                    }
-                                }
-
-                                let mut new_effects = Vec::new();
-                                new_effects.reserve_exact(pool_shape.0.len());
-                                let mut clone_into = Vec::new();
-
-                                for (effect, id) in pool_effects.iter().zip(&pool_shape.0) {
-                                    match component_ids.iter().position(|c| c == id) {
-                                        Some(index) => {
-                                            new_effects.push(sample_effects[index]);
-                                        }
-                                        None => {
-                                            let empty = commands.spawn_empty().id();
-
-                                            clone_into.push((empty, effect));
-                                            new_effects.push(empty);
-                                        }
-                                    }
-                                }
-
-                                commands
-                                    .entity(sample_entity)
-                                    .remove_related::<EffectOf>(sample_effects)
-                                    .add_related::<EffectOf>(&new_effects);
-
-                                commands.queue(move |world: &mut World| {
-                                    let mut cloner = EntityCloner::build_opt_out(world);
-                                    cloner.deny::<EffectOf>();
-                                    let mut cloner = cloner.finish();
-
-                                    for (dest, src) in clone_into {
-                                        cloner.clone_entity(world, src, dest);
-                                    }
-                                });
-                            }
-                        }
-                        None => {
-                            let pool_effects: Vec<_> = pool_effects.iter().collect();
-                            commands.queue(move |world: &mut World| {
-                                let mut cloner = EntityCloner::build_opt_out(world);
-                                cloner.deny::<EffectOf>();
-                                let mut cloner = cloner.finish();
-
-                                let mut sample_effects = Vec::new();
-                                sample_effects.reserve_exact(pool_effects.len());
-                                for effect in pool_effects {
-                                    let sample_effect = cloner.spawn_clone(world, effect);
-                                    sample_effects.push(sample_effect);
-                                }
-
-                                world
-                                    .entity_mut(sample_entity)
-                                    .add_related::<EffectOf>(&sample_effects);
-                            });
-                        }
-                    }
+                if normalize_effects(
+                    sample_entity,
+                    sample_effects,
+                    pool_effects,
+                    player,
+                    pool_shape,
+                    &mut effects,
+                    &mut commands,
+                ) {
+                    continue;
                 }
 
                 commands
@@ -387,100 +412,16 @@ pub(super) fn assign_work(
             params.repeat_mode = player.repeat_mode;
             state.0.clear_finished();
 
-            // normalize sample effects
-            if sample_effects.is_some() && pool_effects.is_none() {
-                match player.sample.path() {
-                    Some(path) => warn!(
-                        "Queued sample \"{}\" with effects in an effect-less pool.",
-                        path
-                    ),
-                    None => warn!("Queued sample with effects in an effect-less pool."),
-                }
-            }
-
-            if let Some(pool_effects) = pool_effects {
-                match sample_effects {
-                    Some(sample_effects) => {
-                        let component_ids = match super::fetch_effect_ids(
-                            sample_effects,
-                            &mut effects.as_query_lens(),
-                        ) {
-                            Ok(ids) => ids,
-                            Err(e) => {
-                                error!("{e}");
-
-                                continue;
-                            }
-                        };
-
-                        if component_ids != pool_shape.0 {
-                            // N will never be large enough for this to be a concern
-                            if component_ids.iter().any(|id| !pool_shape.0.contains(id)) {
-                                match player.sample.path() {
-                                    Some(path) => warn!(
-                                        "Queued sample \"{}\" contains one or more effects that the pool does not.",
-                                        path
-                                    ),
-                                    None => warn!(
-                                        "Queued sample contains one or more effects that the pool does not."
-                                    ),
-                                }
-                            }
-
-                            let mut new_effects = Vec::new();
-                            new_effects.reserve_exact(pool_shape.0.len());
-                            let mut clone_into = Vec::new();
-
-                            for (effect, id) in pool_effects.iter().zip(&pool_shape.0) {
-                                match component_ids.iter().position(|c| c == id) {
-                                    Some(index) => {
-                                        new_effects.push(sample_effects[index]);
-                                    }
-                                    None => {
-                                        let empty = commands.spawn_empty().id();
-
-                                        clone_into.push((empty, effect));
-                                        new_effects.push(empty);
-                                    }
-                                }
-                            }
-
-                            commands
-                                .entity(sample_entity)
-                                .remove_related::<EffectOf>(sample_effects)
-                                .add_related::<EffectOf>(&new_effects);
-
-                            commands.queue(move |world: &mut World| {
-                                let mut cloner = EntityCloner::build_opt_out(world);
-                                cloner.deny::<EffectOf>();
-                                let mut cloner = cloner.finish();
-
-                                for (dest, src) in clone_into {
-                                    cloner.clone_entity(world, src, dest);
-                                }
-                            });
-                        }
-                    }
-                    None => {
-                        let pool_effects: Vec<_> = pool_effects.iter().collect();
-                        commands.queue(move |world: &mut World| {
-                            let mut cloner = EntityCloner::build_opt_out(world);
-                            cloner.deny::<EffectOf>();
-                            let mut cloner = cloner.finish();
-
-                            let mut sample_effects = Vec::new();
-                            sample_effects.reserve_exact(pool_effects.len());
-                            for effect in pool_effects {
-                                let sample_effect = cloner.spawn_clone(world, effect);
-                                sample_effects.push(sample_effect);
-                            }
-
-                            world
-                                .entity_mut(sample_entity)
-                                .add_related::<EffectOf>(&sample_effects);
-                        });
-                    }
-                }
+            if normalize_effects(
+                sample_entity,
+                sample_effects,
+                pool_effects,
+                player,
+                pool_shape,
+                &mut effects,
+                &mut commands,
+            ) {
+                continue;
             }
 
             if let Some(assignment) = current_assignment {

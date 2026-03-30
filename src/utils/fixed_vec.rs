@@ -20,11 +20,10 @@ pub struct FixedVec<T>(Vec<T>);
 // need to derive it manually.
 impl<T: Clone> Clone for FixedVec<T> {
     fn clone(&self) -> Self {
-        let mut inner = self.0.clone();
+        let mut new = Self::new(self.0.capacity());
+        new.0.extend_from_slice(&self.0);
 
-        inner.reserve_exact(self.0.capacity() - self.0.len());
-
-        Self(inner)
+        new
     }
 }
 
