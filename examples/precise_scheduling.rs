@@ -2,7 +2,10 @@
 
 use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::{
-    node::events::{AudioEvents, VolumeFade},
+    node::{
+        DiffTimestamp, ScheduleDiffing,
+        events::{AudioEvents, VolumeFade},
+    },
     prelude::*,
 };
 use bevy_time::common_conditions::once_after_delay;
@@ -16,6 +19,7 @@ fn main() {
             AssetPlugin::default(),
             SeedlingPlugins,
         ))
+        .insert_resource(ScheduleDiffing(true))
         .add_systems(
             PostStartup,
             // Running after stream initialization will give us access to the
@@ -53,6 +57,7 @@ fn startup(server: Res<AssetServer>, time: Res<Time<Audio>>, mut commands: Comma
         events,
         settings,
         SamplePlayer::new(server.load("midir-chip.ogg")).with_volume(Volume::Decibels(-8.0)),
+        DiffTimestamp::new(&time),
         sample_effects![fade_in(2.5, &time)],
     ));
 }

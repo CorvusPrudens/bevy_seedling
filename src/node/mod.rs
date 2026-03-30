@@ -65,15 +65,17 @@ impl AudioBypass {
     fn remove_bypass(
         trigger: On<Remove, AudioBypass>,
         node: Query<&FirewheelNode>,
+        schedule: Res<ScheduleDiffing>,
         time: Res<Time<Audio>>,
         mut context: ResMut<AudioContext>,
     ) -> Result {
         let node = node.get(trigger.entity)?;
+        let time = schedule.0.then(|| EventInstant::AtClockSeconds(time.now()));
 
         context.with(|context| {
             context.queue_event(NodeEvent {
                 node_id: node.0,
-                time: Some(EventInstant::AtClockSeconds(time.now())),
+                time,
                 event: NodeEventType::SetBypassed(false),
             });
         });
@@ -83,15 +85,17 @@ impl AudioBypass {
 
     fn update_bypassed(
         bypassed: Query<&FirewheelNode, Changed<AudioBypass>>,
+        schedule: Res<ScheduleDiffing>,
         time: Res<Time<Audio>>,
         mut context: ResMut<AudioContext>,
     ) {
-        let now = time.now();
+        let time = schedule.0.then(|| EventInstant::AtClockSeconds(time.now()));
+
         context.with(|context| {
             for node in bypassed {
                 context.queue_event(NodeEvent {
                     node_id: node.0,
-                    time: Some(EventInstant::AtClockSeconds(now)),
+                    time,
                     event: NodeEventType::SetBypassed(true),
                 });
             }
@@ -127,16 +131,10 @@ impl DiffTimestamp {
 /// This can also increase the pressure on the audio thread, which may
 /// lead to worse performance.
 ///
-/// This defaults to `true`.
-#[derive(Resource, Debug)]
+/// This defaults to `false`.
+#[derive(Resource, Debug, Default)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct ScheduleDiffing(pub bool);
-
-impl Default for ScheduleDiffing {
-    fn default() -> Self {
-        Self(true)
-    }
-}
 
 /// Provides information about a node's audio processor.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
