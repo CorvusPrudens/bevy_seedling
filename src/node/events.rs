@@ -5,7 +5,6 @@ use bevy_ecs::prelude::*;
 use bevy_math::FloatExt;
 use bevy_time::{Time, TimeSystems};
 use bevy_utils::prelude::DebugName;
-use core::sync::atomic::AtomicU64;
 use firewheel::{
     Volume,
     clock::{DurationSeconds, InstantSeconds},
@@ -13,6 +12,7 @@ use firewheel::{
     event::{NodeEventType, ParamData},
     nodes::volume::VolumeNode,
 };
+use std::sync::Arc;
 
 use crate::{error::SeedlingError, time::Audio};
 
@@ -127,7 +127,7 @@ impl AudioEvents {
     /// Clone any timeline events from `other` that aren't present in `self`.
     pub fn merge_timelines(&mut self, other: &Self) {
         for event in &other.timeline {
-            if !self.timeline.iter().any(|ev| ev.id() == event.id()) {
+            if !self.timeline.iter().any(|ev| ev.ptr_eq(event)) {
                 self.timeline.push(event.clone());
             }
         }
@@ -137,7 +137,7 @@ impl AudioEvents {
     /// have elapsed.
     pub(crate) fn merge_timelines_and_clear(&mut self, other: &mut Self, now: InstantSeconds) {
         other.timeline.retain(|event| {
-            if !self.timeline.iter().any(|ev| ev.id() == event.id()) {
+            if !self.timeline.iter().any(|ev| ev.ptr_eq(event)) {
                 self.timeline.push(event.clone());
             }
 
@@ -331,16 +331,13 @@ impl EventQueue for TimelineQueue<'_> {
     }
 }
 
-static TIMELINE_ID: AtomicU64 = AtomicU64::new(0);
-
 /// A distinct timeline event, composed of
 /// one or more [`TimelineParam`]s.
 #[derive(Clone, Debug)]
 pub(super) struct EventTimeline {
-    tween: Vec<TimelineParam>,
+    tween: Arc<[TimelineParam]>,
     /// The current render progress.
     pub render_progress: RenderProgress,
-    id: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -398,13 +395,11 @@ impl EventTimeline {
     /// Construct a new [`EventTimeline`] from a collection of params.
     fn new(tween: Vec<TimelineParam>) -> Self {
         assert!(!tween.is_empty(), "an event timeline should never be empty");
-
         let render_progress = RenderProgress::new(time_range(&tween));
 
         EventTimeline {
-            tween,
+            tween: tween.into(),
             render_progress,
-            id: TIMELINE_ID.fetch_add(1, core::sync::atomic::Ordering::Relaxed),
         }
     }
 
@@ -413,13 +408,13 @@ impl EventTimeline {
         self.time_range().end < now
     }
 
-    /// Get this event's unique ID.
+    /// Returns `true` if two [`EventTimeline`]s refer to the same tween collection.
     ///
     /// This accelerates event merging for [`FollowerOf`] relationships.
     ///
     /// [`FollowerOf`]: crate::node::follower::FollowerOf
-    pub fn id(&self) -> u64 {
-        self.id
+    fn ptr_eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.tween, &other.tween)
     }
 
     /// Provides the subset of `full_range` that has not yet been rendered.
