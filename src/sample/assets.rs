@@ -101,20 +101,31 @@ pub mod loader {
     /// use bevy::prelude::*;
     /// use bevy_seedling::{prelude::*, sample::AudioLoaderConfig};
     /// use symphonia::core::{
-    ///     codecs::{CodecRegistry, Decoder},
-    ///     probe::{Probe, QueryDescriptor},
+    ///     audio::AudioBufferRef,
+    ///     codecs::{
+    ///         CodecDescriptor, CodecParameters, CodecRegistry, Decoder, DecoderOptions, FinalizeResult,
+    ///     },
+    ///     formats::Packet,
+    ///     probe::{Descriptor, Probe, QueryDescriptor},
     /// };
     ///
     /// struct CustomDecoder;
     ///
     /// impl Decoder for CustomDecoder {
-    /// // ...
+    ///     fn try_new(_: &CodecParameters, _: &DecoderOptions) -> symphonia::core::errors::Result<Self> { todo!() }
+    ///     fn supported_codecs() -> &'static [CodecDescriptor] { todo!() }
+    ///     fn reset(&mut self) { todo!() }
+    ///     fn codec_params(&self) -> &CodecParameters { todo!() }
+    ///     fn decode(&mut self, _: &Packet) -> symphonia::core::errors::Result<AudioBufferRef<'_>> { todo!() }
+    ///     fn finalize(&mut self) -> FinalizeResult { todo!() }
+    ///     fn last_decoded(&self) -> AudioBufferRef<'_> { todo!() }
     /// }
     ///
     /// struct CustomQueryDescriptor;
     ///
     /// impl QueryDescriptor for CustomQueryDescriptor {
-    /// // ...
+    ///     fn query() -> &'static [Descriptor] { todo!() }
+    ///     fn score(_: &[u8]) -> u8 { todo!() }
     /// }
     ///
     /// fn main() {
@@ -154,7 +165,10 @@ pub mod loader {
             f.debug_struct("AudioLoaderConfig")
                 .field(
                     "codec_registry",
-                    &self.codec_registry.as_ref().map(|_| format_args!("CodecRegistry")),
+                    &self
+                        .codec_registry
+                        .as_ref()
+                        .map(|_| format_args!("CodecRegistry")),
                 )
                 .field("probe", &self.probe.as_ref().map(|_| format_args!("Probe")))
                 .field("extensions", &self.extensions)
