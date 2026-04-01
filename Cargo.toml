@@ -106,6 +106,9 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fff0eb1", def
   "wasm-bindgen",
 ] }
 
+[patch.crates-io]
+symphonium = { git = "https://github.com/WataNekko/symphonium", branch = "non-static-registry-and-probe" }
+
 [dev-dependencies]
 bevy_seedling = { path = ".", features = ["hrtf", "loudness", "resample_inputs", "effects"] }
 firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fff0eb1", default-features = false, features = [
