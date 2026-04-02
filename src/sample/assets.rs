@@ -128,7 +128,7 @@ pub mod loader {
     ///
     /// impl Decoder for CustomDecoder {
     ///     fn try_new(_: &CodecParameters, _: &DecoderOptions) -> symphonia::core::errors::Result<Self> { todo!() }
-    ///     fn supported_codecs() -> &'static [CodecDescriptor] { todo!() }
+    ///     fn supported_codecs() -> &'static [CodecDescriptor] { &[] }
     ///     fn reset(&mut self) { todo!() }
     ///     fn codec_params(&self) -> &CodecParameters { todo!() }
     ///     fn decode(&mut self, _: &Packet) -> symphonia::core::errors::Result<AudioBufferRef<'_>> { todo!() }
@@ -139,7 +139,7 @@ pub mod loader {
     /// struct CustomQueryDescriptor;
     ///
     /// impl QueryDescriptor for CustomQueryDescriptor {
-    ///     fn query() -> &'static [Descriptor] { todo!() }
+    ///     fn query() -> &'static [Descriptor] { &[] }
     ///     fn score(_: &[u8]) -> u8 { todo!() }
     /// }
     ///
