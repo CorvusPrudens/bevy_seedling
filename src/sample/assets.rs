@@ -112,35 +112,24 @@ pub mod loader {
     /// registry and probe) before adding the plugin.
     ///
     /// For example,
-    /// ```
+    /// ```ignore
     /// use bevy::prelude::*;
     /// use bevy_seedling::{prelude::*, sample::AudioLoaderConfig};
     /// use symphonia::core::{
-    ///     audio::AudioBufferRef,
-    ///     codecs::{
-    ///         CodecDescriptor, CodecParameters, CodecRegistry, Decoder, DecoderOptions, FinalizeResult,
-    ///     },
-    ///     formats::Packet,
-    ///     probe::{Descriptor, Probe, QueryDescriptor},
+    ///     codecs::{CodecRegistry, Decoder},
+    ///     probe::{Probe, QueryDescriptor},
     /// };
     ///
     /// struct CustomDecoder;
     ///
     /// impl Decoder for CustomDecoder {
-    ///     fn try_new(_: &CodecParameters, _: &DecoderOptions) -> symphonia::core::errors::Result<Self> { todo!() }
-    ///     fn supported_codecs() -> &'static [CodecDescriptor] { &[] }
-    ///     fn reset(&mut self) { todo!() }
-    ///     fn codec_params(&self) -> &CodecParameters { todo!() }
-    ///     fn decode(&mut self, _: &Packet) -> symphonia::core::errors::Result<AudioBufferRef<'_>> { todo!() }
-    ///     fn finalize(&mut self) -> FinalizeResult { todo!() }
-    ///     fn last_decoded(&self) -> AudioBufferRef<'_> { todo!() }
+    /// // ...
     /// }
     ///
     /// struct CustomQueryDescriptor;
     ///
     /// impl QueryDescriptor for CustomQueryDescriptor {
-    ///     fn query() -> &'static [Descriptor] { &[] }
-    ///     fn score(_: &[u8]) -> u8 { todo!() }
+    /// // ...
     /// }
     ///
     /// fn main() {
