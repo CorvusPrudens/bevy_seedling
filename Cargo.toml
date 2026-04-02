@@ -107,7 +107,7 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fff0eb1", def
 ] }
 
 [patch.crates-io]
-symphonium = { git = "https://github.com/WataNekko/symphonium", branch = "non-static-registry-and-probe" }
+symphonium = { git = "https://codeberg.org/WataNekko/symphonium.git", branch = "non-static-registry-and-probe" }
 
 [dev-dependencies]
 bevy_seedling = { path = ".", features = ["hrtf", "loudness", "resample_inputs", "effects"] }
