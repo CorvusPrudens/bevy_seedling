@@ -75,7 +75,7 @@ impl core::fmt::Debug for AudioSample {
 pub mod loader {
     use super::AudioSample;
     use bevy_app::prelude::*;
-    use bevy_asset::{AssetLoader, AssetServer};
+    use bevy_asset::{AssetApp, AssetLoader, AssetServer};
     use bevy_ecs::prelude::*;
     use bevy_reflect::TypePath;
     use symphonia::core::{codecs::CodecRegistry, probe::Probe};
@@ -84,9 +84,24 @@ pub mod loader {
 
     impl Plugin for SymphoniumLoaderPlugin {
         fn build(&self, app: &mut App) {
-            app.init_resource::<AudioLoaderConfig>()
-                .add_systems(PreStartup, init_config)
-                .add_observer(init_loader);
+            let mut config = app.world_mut().get_resource_or_init::<AudioLoaderConfig>();
+
+            let codec_registry = config.codec_registry.get_or_insert_default();
+            symphonia::default::register_enabled_codecs(codec_registry);
+
+            let probe = config.probe.get_or_insert_default();
+            symphonia::default::register_enabled_formats(probe);
+
+            // `take` so as not to keep borrowing `&mut App`
+            let mut extensions = config.extensions.take().unwrap_or_default();
+            extensions.extend_from_slice(enabled_extensions());
+
+            app.preregister_asset_loader::<SampleLoader>(&extensions);
+
+            let mut config = app.world_mut().resource_mut::<AudioLoaderConfig>();
+            config.extensions = Some(extensions);
+
+            app.add_observer(init_loader);
         }
     }
 
@@ -94,7 +109,7 @@ pub mod loader {
     ///
     /// New formats and codecs (outside those enabled through this crate's feature flags) can be
     /// added to the [symphonia]'s codec registry by inserting this resource (with a custom
-    /// registry and probe) before [PreStartup].
+    /// registry and probe) before adding the plugin.
     ///
     /// For example,
     /// ```
@@ -136,18 +151,22 @@ pub mod loader {
     ///     probe.register_all::<CustomQueryDescriptor>();
     ///
     ///     App::new()
-    ///         .add_plugins((DefaultPlugins, SeedlingPlugins))
     ///         .insert_resource(AudioLoaderConfig {
     ///             codec_registry: Some(registry),
     ///             probe: Some(probe),
     ///             extensions: Some(vec!["custom"]),
-    ///         });
+    ///         })
+    ///         .add_plugins((DefaultPlugins, SeedlingPlugins));
     /// }
-    ///
     /// ```
     ///
-    /// After [PreStartup], the feature-enabled codecs and formats will be added to this resource.
-    /// And this resource's fields will be consumed when the loader is registered.
+    /// Adding the plugin will add the feature-enabled codecs and formats to this resource, as well
+    /// as pre-register [SampleLoader] with the extensions.
+    /// If the custom codecs are only available for insertion after adding the plugin (for whatever
+    /// reason), then [AssetApp::preregister_asset_loader] can be called to manually pre-register
+    /// the new extensions if needed.
+    ///
+    /// This resource's fields will be consumed when the loader is registered.
     #[derive(Resource, Default)]
     pub struct AudioLoaderConfig {
         /// The registry with custom codecs to be used (along with the feature-enabled codecs of
@@ -189,19 +208,6 @@ pub mod loader {
             #[cfg(feature = "mkv")]
             "mkv",
         ]
-    }
-
-    fn init_config(mut config: ResMut<AudioLoaderConfig>, server: Res<AssetServer>) {
-        let codec_registry = config.codec_registry.get_or_insert_default();
-        symphonia::default::register_enabled_codecs(codec_registry);
-
-        let probe = config.probe.get_or_insert_default();
-        symphonia::default::register_enabled_formats(probe);
-
-        let extensions = config.extensions.get_or_insert_default();
-        extensions.extend_from_slice(enabled_extensions());
-
-        server.preregister_loader::<SampleLoader>(extensions);
     }
 
     /// A simple loader for audio samples.
