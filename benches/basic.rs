@@ -1,47 +1,91 @@
-// use bevy_seedling::{profiling::ProfilingBackend, VolumeNode};
-use criterion::{Criterion, criterion_group, criterion_main};
-// use firewheel::{channel_config::ChannelCount, FirewheelCtx};
+use std::{hint::black_box, num::NonZeroU32, sync::Arc};
 
-pub fn criterion_benchmark(_c: &mut Criterion) {
-    // // This benchmarks straightforward processing
-    // // with two nodes.
-    // c.bench_function("basic processing", {
-    //     // let input = [0f32; 256 * 2];
-    //     // let mut output = [0f32; 256 * 2];
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
+use firewheel::{collector::ArcGc, sample_resource::SampleResource};
 
-    //     let mut context = FirewheelCtx::<ProfilingBackend>::new(firewheel::FirewheelConfig {
-    //         num_graph_inputs: ChannelCount::ZERO,
-    //         num_graph_outputs: ChannelCount::ZERO,
-    //         ..Default::default()
-    //     });
+pub fn criterion_benchmark(c: &mut Criterion) {
+    let test_path = "assets/sine_440hz_1ms.wav";
+    let caw_ogg: Arc<[u8]> = std::fs::read(test_path).unwrap().into();
 
-    //     let out_node = context.graph_out_node_id();
-    //     let volume = context.add_node(
-    //         VolumeNode {
-    //             normalized_volume: 0.5,
-    //         },
-    //         None,
-    //     );
+    let mut hint = symphonia::core::probe::Hint::new();
+    hint.with_extension(test_path);
 
-    //     context
-    //         .connect(volume, out_node, &[(0, 0), (1, 1)], false)
-    //         .unwrap();
+    let rate_a = NonZeroU32::new(44100).unwrap();
+    let rate_b = NonZeroU32::new(48000).unwrap();
 
-    //     // let saw = context.add_node(SawNode::new(440.).into(), None);
+    let mut group = c.benchmark_group("cache metrics");
+    for rate in [rate_a, rate_b].into_iter() {
+        group.bench_with_input(BenchmarkId::new("without cache", rate), &rate, |b, rate| {
+            b.iter(|| {
+                let mut loader = symphonium::SymphoniumLoader::new();
+                let source = firewheel::load_audio_file_from_source(
+                    &mut loader,
+                    Box::new(std::io::Cursor::new(caw_ogg.clone())),
+                    Some(hint.clone()),
+                    Some(*rate),
+                    Default::default(),
+                );
+                black_box(source);
+            });
+        });
 
-    //     // context
-    //     //     .connect(saw, volume, &[(0, 0), (0, 1)], false)
-    //     //     .unwrap();
+        group.bench_with_input(BenchmarkId::new("with cache", rate), &rate, |b, rate| {
+            let mut loader = symphonium::SymphoniumLoader::new();
+            b.iter(|| {
+                let source = firewheel::load_audio_file_from_source(
+                    &mut loader,
+                    Box::new(std::io::Cursor::new(caw_ogg.clone())),
+                    Some(hint.clone()),
+                    Some(*rate),
+                    Default::default(),
+                );
+                black_box(source);
+            });
+        });
+    }
+    group.finish();
 
-    //     context.update().unwrap();
+    let test_path = "assets/caw.ogg";
+    let caw_ogg: Arc<[u8]> = std::fs::read(test_path).unwrap().into();
 
-    //     move |b| {
-    //         b.iter(|| {
-    //             todo!("direct processing");
-    //             // context.process_interleaved(black_box(&input), black_box(&mut output));
-    //         })
-    //     }
-    // });
+    let mut hint = symphonia::core::probe::Hint::new();
+    hint.with_extension(test_path);
+
+    let rate_a = NonZeroU32::new(44100).unwrap();
+    let rate_b = NonZeroU32::new(48000).unwrap();
+
+    let mut group = c.benchmark_group("vorbis cache metrics");
+    for rate in [rate_a, rate_b].into_iter() {
+        group.bench_with_input(BenchmarkId::new("without cache", rate), &rate, |b, rate| {
+            b.iter(|| {
+                let mut loader = symphonium::SymphoniumLoader::new();
+                let source = firewheel::load_audio_file_from_source(
+                    &mut loader,
+                    Box::new(std::io::Cursor::new(caw_ogg.clone())),
+                    Some(hint.clone()),
+                    Some(*rate),
+                    Default::default(),
+                );
+                black_box(source);
+            });
+        });
+
+        group.bench_with_input(BenchmarkId::new("with cache", rate), &rate, |b, rate| {
+            let mut loader = symphonium::SymphoniumLoader::new();
+            b.iter(|| {
+                let source = firewheel::load_audio_file_from_source(
+                    &mut loader,
+                    Box::new(std::io::Cursor::new(caw_ogg.clone())),
+                    Some(hint.clone()),
+                    Some(*rate),
+                    Default::default(),
+                );
+                black_box(source);
+            });
+        });
+    }
+
+    group.finish();
 }
 
 criterion_group!(benches, criterion_benchmark);
