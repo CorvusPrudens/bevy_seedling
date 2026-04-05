@@ -46,7 +46,7 @@ impl Plugin for SpatialPlugin {
         app.init_resource::<DefaultSpatialScale>().add_systems(
             Last,
             (
-                update_emitters,
+                update_basic,
                 update_itd,
                 #[cfg(feature = "hrtf")]
                 spatial_hrtf::update_hrtf,
@@ -220,7 +220,7 @@ impl SpatialListeners<'_, '_> {
     }
 }
 
-fn update_emitters(
+fn update_basic(
     listeners: SpatialListeners,
     mut emitters: Query<(
         &mut SpatialBasicNode,
