@@ -99,12 +99,12 @@ pub mod loader {
 
     /// A [`Resource`] containing the configuration for [`SampleLoader`].
     ///
-    /// New formats and codecs (outside those enabled through this crate's feature flags) can be
+    /// New formats and codecs (besides those enabled through this crate's feature flags) can be
     /// added to the [symphonia]'s codec registry by inserting this resource (with a custom
     /// registry and probe) before adding the plugin.
     ///
     /// For example:
-    /// ```
+    /// ```no_run
     /// use bevy::prelude::*;
     /// use bevy_seedling::{prelude::*, sample::AudioLoaderConfig};
     /// use symphonia::{
@@ -132,8 +132,10 @@ pub mod loader {
     /// as pre-register [`SampleLoader`] with the extensions.
     ///
     /// If the custom codecs are only available for insertion after adding the plugin,
-    /// then [AssetApp::preregister_asset_loader] can be called to manually pre-register
+    /// then [`AssetApp::preregister_asset_loader`] can be called to manually pre-register
     /// the new extensions.
+    ///
+    /// [`AssetApp::preregister_asset_loader`]: bevy_asset::AssetApp::preregister_asset_loader
     ///
     /// This resource will be remove when the loader is registered
     /// following the [`StreamStartEvent`][crate::context::StreamStartEvent].
@@ -230,7 +232,7 @@ pub mod loader {
     #[derive(TypePath, Debug)]
     pub struct SampleLoader {
         sample_rate: crate::context::SampleRate,
-        config: AudioLoaderConfig,
+        config: &'static AudioLoaderConfig,
     }
 
     impl SampleLoader {
@@ -241,7 +243,9 @@ pub mod loader {
         pub fn new(sample_rate: crate::context::SampleRate, config: AudioLoaderConfig) -> Self {
             Self {
                 sample_rate,
-                config,
+                // we leak the config here to satisfy symphoium's `&'static` requirements
+                // NOTE: remove this when symphonium relaxes its lifetimes
+                config: Box::leak(Box::new(config)),
             }
         }
     }
