@@ -100,8 +100,8 @@ pub mod loader {
     /// A [`Resource`] containing the configuration for [`SampleLoader`].
     ///
     /// New formats and codecs (besides those enabled through this crate's feature flags) can be
-    /// added to the [symphonia]'s codec registry by inserting this resource (with a custom
-    /// registry and probe) before adding the plugin.
+    /// added to the [symphonia]'s codec registry by inserting this resource before adding the
+    /// plugin.
     ///
     /// For example:
     /// ```no_run
@@ -128,26 +128,22 @@ pub mod loader {
     /// }
     /// ```
     ///
-    /// Adding the plugin will add the feature-enabled codecs and formats to this resource, as well
-    /// as pre-register [`SampleLoader`] with the extensions.
-    ///
+    /// Adding the plugin will pre-register [`SampleLoader`] with the extensions in this config.
     /// If the custom codecs are only available for insertion after adding the plugin,
     /// then [`AssetApp::preregister_asset_loader`] can be called to manually pre-register
     /// the new extensions.
     ///
     /// [`AssetApp::preregister_asset_loader`]: bevy_asset::AssetApp::preregister_asset_loader
     ///
-    /// This resource will be remove when the loader is registered
+    /// This resource will be removed when the loader is registered
     /// following the [`StreamStartEvent`][crate::context::StreamStartEvent].
     #[derive(Resource)]
     pub struct AudioLoaderConfig {
-        /// The registry with custom codecs to be used (along with the feature-enabled codecs of
-        /// this crate).
+        /// The registry with codecs to be used for decoding.
         codec_registry: CodecRegistry,
-        /// The custom format probe to be used (along with the feature-enabled formats of this
-        /// crate).
+        /// The format probe to be used for probing.
         probe: Probe,
-        /// The extensions supported by the custom formats.
+        /// The extensions supported by the formats.
         extensions: Vec<&'static str>,
     }
 
@@ -228,7 +224,7 @@ pub mod loader {
     /// samples with low optimization levels.
     ///
     /// The available containers and formats can be configured with
-    /// this crate's feature flags.
+    /// this crate's feature flags (and additionally [AudioLoaderConfig]).
     #[derive(TypePath, Debug)]
     pub struct SampleLoader {
         sample_rate: crate::context::SampleRate,
