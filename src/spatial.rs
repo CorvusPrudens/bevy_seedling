@@ -220,6 +220,20 @@ impl SpatialListeners<'_, '_> {
     }
 }
 
+fn extract_effect_transform(
+    transform_source: (Option<&GlobalTransform>, Option<&EffectOf>),
+    transforms: &Query<&GlobalTransform>,
+) -> Option<Vec3> {
+    match transform_source {
+        (Some(global), _) => Some(global.translation()),
+        (_, Some(parent)) => match transforms.get(parent.0) {
+            Ok(global) => Some(global.translation()),
+            Err(_) => None,
+        },
+        _ => unreachable!(),
+    }
+}
+
 fn update_basic(
     listeners: SpatialListeners,
     mut emitters: Query<(
@@ -231,13 +245,8 @@ fn update_basic(
     default_scale: Res<DefaultSpatialScale>,
 ) {
     for (mut spatial, scale, transform) in emitters.iter_mut() {
-        let emitter_pos = match transform {
-            (Some(global), _) => global.translation(),
-            (_, Some(parent)) => match transforms.get(parent.0) {
-                Ok(global) => global.translation(),
-                Err(_) => continue,
-            },
-            _ => unreachable!(),
+        let Some(emitter_pos) = extract_effect_transform(transform, &transforms) else {
+            continue;
         };
 
         let Some(offset) = listeners.calculate_offset(emitter_pos) else {
@@ -255,13 +264,8 @@ fn update_itd(
     transforms: Query<&GlobalTransform>,
 ) {
     for (mut spatial, transform) in emitters.iter_mut() {
-        let emitter_pos = match transform {
-            (Some(global), _) => global.translation(),
-            (_, Some(parent)) => match transforms.get(parent.0) {
-                Ok(global) => global.translation(),
-                Err(_) => continue,
-            },
-            _ => unreachable!(),
+        let Some(emitter_pos) = extract_effect_transform(transform, &transforms) else {
+            continue;
         };
 
         if let Some(offset) = listeners.calculate_offset(emitter_pos) {
@@ -286,13 +290,8 @@ mod spatial_hrtf {
         default_scale: Res<DefaultSpatialScale>,
     ) {
         for (mut spatial, scale, transform) in emitters.iter_mut() {
-            let emitter_pos = match transform {
-                (Some(global), _) => global.translation(),
-                (_, Some(parent)) => match transforms.get(parent.0) {
-                    Ok(global) => global.translation(),
-                    Err(_) => continue,
-                },
-                _ => unreachable!(),
+            let Some(emitter_pos) = extract_effect_transform(transform, &transforms) else {
+                continue;
             };
 
             let Some(offset) = listeners.calculate_offset(emitter_pos) else {
