@@ -247,16 +247,12 @@ fn update_basic(
     default_scale: Res<DefaultSpatialScale>,
 ) {
     for (mut spatial, scale, transform) in emitters.iter_mut() {
-        let Some(emitter_pos) = extract_effect_transform(transform, &transforms) else {
-            continue;
-        };
-
-        let Some(offset) = listeners.calculate_offset(emitter_pos) else {
-            continue;
-        };
-
-        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
-        spatial.offset = (offset * scale).into();
+        if let Some(emitter_pos) = extract_effect_transform(transform, &transforms)
+            && let Some(offset) = listeners.calculate_offset(emitter_pos)
+        {
+            let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
+            spatial.offset = (offset * scale).into();
+        }
     }
 }
 
@@ -266,11 +262,9 @@ fn update_itd(
     transforms: Query<&GlobalTransform>,
 ) {
     for (mut spatial, transform) in emitters.iter_mut() {
-        let Some(emitter_pos) = extract_effect_transform(transform, &transforms) else {
-            continue;
-        };
-
-        if let Some(offset) = listeners.calculate_offset(emitter_pos) {
+        if let Some(emitter_pos) = extract_effect_transform(transform, &transforms)
+            && let Some(offset) = listeners.calculate_offset(emitter_pos)
+        {
             spatial.direction = offset;
         }
     }
@@ -288,16 +282,12 @@ mod spatial_hrtf {
         default_scale: Res<DefaultSpatialScale>,
     ) {
         for (mut spatial, scale, transform) in emitters.iter_mut() {
-            let Some(emitter_pos) = extract_effect_transform(transform, &transforms) else {
-                continue;
-            };
-
-            let Some(offset) = listeners.calculate_offset(emitter_pos) else {
-                continue;
-            };
-
-            let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
-            spatial.offset = offset * scale;
+            if let Some(emitter_pos) = extract_effect_transform(transform, &transforms)
+                && let Some(offset) = listeners.calculate_offset(emitter_pos)
+            {
+                let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
+                spatial.offset = offset * scale;
+            }
         }
     }
 }
