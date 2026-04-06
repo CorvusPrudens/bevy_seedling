@@ -32,10 +32,10 @@
 //! calculations.
 
 use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
+use bevy_ecs::{prelude::*, query::QueryData, system::SystemParam};
 use bevy_math::prelude::*;
 use bevy_transform::prelude::*;
-use firewheel::{nodes::spatial_basic::SpatialBasicNode, vector};
+use firewheel::nodes::spatial_basic::SpatialBasicNode;
 
 use crate::{SeedlingSystems, nodes::itd::ItdNode, pool::sample_effects::EffectOf};
 
@@ -46,13 +46,10 @@ impl Plugin for SpatialPlugin {
         app.init_resource::<DefaultSpatialScale>().add_systems(
             Last,
             (
-                update_2d_emitters,
-                update_2d_emitters_effects,
-                update_3d_emitters,
-                update_3d_emitters_effects,
-                update_itd_effects,
+                update_basic,
+                update_itd,
                 #[cfg(feature = "hrtf")]
-                spatial_hrtf::update_hrtf_effects,
+                spatial_hrtf::update_hrtf,
             )
                 .after(SeedlingSystems::Pool)
                 .before(SeedlingSystems::Queue),
@@ -149,171 +146,128 @@ pub struct SpatialListener2D;
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SpatialListener3D;
 
-fn update_2d_emitters(
-    listeners: Query<&GlobalTransform, With<SpatialListener2D>>,
-    mut emitters: Query<(
-        &mut SpatialBasicNode,
-        Option<&SpatialScale>,
-        &GlobalTransform,
-    )>,
-    default_scale: Res<DefaultSpatialScale>,
-) {
-    for (mut spatial, scale, transform) in emitters.iter_mut() {
-        let emitter_pos = transform.translation();
-        let closest_listener = find_closest_listener(
-            emitter_pos,
-            listeners.iter().map(GlobalTransform::compute_transform),
-        );
+#[derive(SystemParam)]
+struct SpatialListeners<'w, 's> {
+    listeners: Query<
+        'w,
+        's,
+        (
+            &'static GlobalTransform,
+            AnyOf<(&'static SpatialListener2D, &'static SpatialListener3D)>,
+        ),
+    >,
+}
 
-        let Some(listener) = closest_listener else {
-            continue;
-        };
+enum SpatialKind {
+    Listener2D,
+    Listener3D,
+}
 
-        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
-
-        let mut world_offset = emitter_pos - listener.translation;
-        world_offset.z = 0.0;
-        let local_offset = (listener.rotation.inverse() * world_offset) * scale;
-        spatial.offset = vector::Vec3::new(local_offset.x, 0.0, local_offset.y);
+impl From<(Option<&'_ SpatialListener2D>, Option<&'_ SpatialListener3D>)> for SpatialKind {
+    fn from(value: (Option<&'_ SpatialListener2D>, Option<&'_ SpatialListener3D>)) -> Self {
+        match value {
+            (Some(_), None) => Self::Listener2D,
+            (None, Some(_)) => Self::Listener3D,
+            _ => unreachable!(),
+        }
     }
 }
 
-// TODO: is there a good way to consolidate this?
-fn update_2d_emitters_effects(
-    listeners: Query<&GlobalTransform, With<SpatialListener2D>>,
-    mut emitters: Query<(&mut SpatialBasicNode, Option<&SpatialScale>, &EffectOf)>,
-    effect_parents: Query<&GlobalTransform>,
-    default_scale: Res<DefaultSpatialScale>,
-) {
-    for (mut spatial, scale, effect_of) in emitters.iter_mut() {
-        let Ok(transform) = effect_parents.get(effect_of.0) else {
-            continue;
-        };
+impl SpatialListeners<'_, '_> {
+    /// Fetch the nearest spatial listener, if any exist.
+    ///
+    /// This iterates over both 2D and 3D listeners.
+    fn nearest_listener(&self, emitter: Vec3) -> Option<(Transform, SpatialKind)> {
+        // This is linear over the number of listeners, but we
+        // expect there to be very few of these at any one time.
+        self.listeners
+            .iter()
+            .map(|(transform, kind)| (transform.compute_transform(), SpatialKind::from(kind)))
+            .map(|(transform, kind)| {
+                let distance = match kind {
+                    // in a 2d context, we need to ignore the z component
+                    SpatialKind::Listener2D => {
+                        emitter.xy().distance_squared(transform.translation.xy())
+                    }
+                    SpatialKind::Listener3D => emitter.distance_squared(transform.translation),
+                };
 
-        let emitter_pos = transform.translation();
-        let closest_listener = find_closest_listener(
-            emitter_pos,
-            listeners.iter().map(GlobalTransform::compute_transform),
-        );
-
-        let Some(listener) = closest_listener else {
-            continue;
-        };
-
-        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
-
-        let mut world_offset = emitter_pos - listener.translation;
-        world_offset.z = 0.0;
-        let local_offset = (listener.rotation.inverse() * world_offset) * scale;
-        spatial.offset = vector::Vec3::new(local_offset.x, 0.0, local_offset.y);
+                (transform, kind, distance)
+            })
+            .min_by(|(.., a), (.., b)| a.total_cmp(b))
+            .map(|(transform, kind, ..)| (transform, kind))
     }
-}
 
-fn update_itd_effects(
-    listeners: Query<&GlobalTransform, Or<(With<SpatialListener2D>, With<SpatialListener3D>)>>,
-    mut emitters: Query<(&mut ItdNode, &EffectOf)>,
-    effect_parents: Query<&GlobalTransform>,
-) {
-    for (mut spatial, effect_of) in emitters.iter_mut() {
-        let Ok(transform) = effect_parents.get(effect_of.0) else {
-            continue;
-        };
+    /// Calculate the offset between `emitter` and the nearest listener.
+    ///
+    /// This does not account for spatial scaling.
+    fn calculate_offset(&self, emitter: Vec3) -> Option<Vec3> {
+        let (listener, kind) = self.nearest_listener(emitter)?;
 
-        let emitter_pos = transform.translation();
-        let closest_listener = find_closest_listener(
-            emitter_pos,
-            listeners.iter().map(GlobalTransform::compute_transform),
-        );
+        let mut world_offset = emitter - listener.translation;
 
-        let Some(listener) = closest_listener else {
-            continue;
-        };
-
-        let world_offset = emitter_pos - listener.translation;
-        let local_offset = listener.rotation.inverse() * world_offset;
-        spatial.direction = local_offset;
-    }
-}
-
-fn update_3d_emitters(
-    listeners: Query<&GlobalTransform, With<SpatialListener3D>>,
-    mut emitters: Query<(
-        &mut SpatialBasicNode,
-        Option<&SpatialScale>,
-        &GlobalTransform,
-    )>,
-    default_scale: Res<DefaultSpatialScale>,
-) {
-    for (mut spatial, scale, transform) in emitters.iter_mut() {
-        let emitter_pos = transform.translation();
-        let closest_listener = find_closest_listener(
-            emitter_pos,
-            listeners.iter().map(GlobalTransform::compute_transform),
-        );
-
-        let Some(listener) = closest_listener else {
-            continue;
-        };
-
-        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
-
-        let world_offset = emitter_pos - listener.translation;
-        let local_offset = listener.rotation.inverse() * world_offset;
-        spatial.offset = (local_offset * scale).into();
-    }
-}
-
-fn update_3d_emitters_effects(
-    listeners: Query<&GlobalTransform, With<SpatialListener3D>>,
-    mut emitters: Query<(&mut SpatialBasicNode, Option<&SpatialScale>, &EffectOf)>,
-    effect_parents: Query<&GlobalTransform>,
-    default_scale: Res<DefaultSpatialScale>,
-) {
-    for (mut spatial, scale, effect_of) in emitters.iter_mut() {
-        let Ok(transform) = effect_parents.get(effect_of.0) else {
-            continue;
-        };
-
-        let emitter_pos = transform.translation();
-        let closest_listener = find_closest_listener(
-            emitter_pos,
-            listeners.iter().map(GlobalTransform::compute_transform),
-        );
-
-        let Some(listener) = closest_listener else {
-            continue;
-        };
-
-        let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
-
-        let world_offset = emitter_pos - listener.translation;
-        let local_offset = listener.rotation.inverse() * world_offset;
-        spatial.offset = (local_offset * scale).into();
-    }
-}
-
-fn find_closest_listener(
-    emitter_pos: Vec3,
-    listeners: impl Iterator<Item = Transform>,
-) -> Option<Transform> {
-    let mut closest_listener: Option<(f32, Transform)> = None;
-
-    for listener in listeners {
-        let listener_pos = listener.translation;
-        let distance = emitter_pos.distance_squared(listener_pos);
-
-        match &mut closest_listener {
-            None => closest_listener = Some((distance, listener)),
-            Some((old_distance, old_transform)) => {
-                if distance < *old_distance {
-                    *old_distance = distance;
-                    *old_transform = listener;
-                }
+        match kind {
+            SpatialKind::Listener2D => {
+                world_offset.z = 0.0;
+                let local_offset = listener.rotation.inverse() * world_offset;
+                Some(Vec3::new(local_offset.x, 0.0, local_offset.y))
+            }
+            SpatialKind::Listener3D => {
+                let local_offset = listener.rotation.inverse() * world_offset;
+                Some(local_offset)
             }
         }
     }
+}
 
-    closest_listener.map(|l| l.1)
+type EffectTransform = AnyOf<(&'static GlobalTransform, &'static EffectOf)>;
+
+fn extract_effect_transform(
+    effect_transform: <EffectTransform as QueryData>::Item<'_, '_>,
+    transforms: &Query<&GlobalTransform>,
+) -> Option<Vec3> {
+    match effect_transform {
+        (Some(global), _) => Some(global.translation()),
+        (_, Some(parent)) => match transforms.get(parent.0) {
+            Ok(global) => Some(global.translation()),
+            Err(_) => None,
+        },
+        _ => unreachable!(),
+    }
+}
+
+fn update_basic(
+    listeners: SpatialListeners,
+    mut emitters: Query<(
+        &mut SpatialBasicNode,
+        Option<&SpatialScale>,
+        EffectTransform,
+    )>,
+    transforms: Query<&GlobalTransform>,
+    default_scale: Res<DefaultSpatialScale>,
+) {
+    for (mut spatial, scale, transform) in emitters.iter_mut() {
+        if let Some(emitter_pos) = extract_effect_transform(transform, &transforms)
+            && let Some(offset) = listeners.calculate_offset(emitter_pos)
+        {
+            let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
+            spatial.offset = (offset * scale).into();
+        }
+    }
+}
+
+fn update_itd(
+    listeners: SpatialListeners,
+    mut emitters: Query<(&mut ItdNode, EffectTransform)>,
+    transforms: Query<&GlobalTransform>,
+) {
+    for (mut spatial, transform) in emitters.iter_mut() {
+        if let Some(emitter_pos) = extract_effect_transform(transform, &transforms)
+            && let Some(offset) = listeners.calculate_offset(emitter_pos)
+        {
+            spatial.direction = offset;
+        }
+    }
 }
 
 #[cfg(feature = "hrtf")]
@@ -321,33 +275,19 @@ mod spatial_hrtf {
     use super::*;
     use crate::prelude::hrtf::HrtfNode;
 
-    pub(super) fn update_hrtf_effects(
-        listeners: Query<&GlobalTransform, Or<(With<SpatialListener2D>, With<SpatialListener3D>)>>,
-        mut emitters: Query<(&mut HrtfNode, Option<&SpatialScale>, &EffectOf)>,
-        effect_parents: Query<&GlobalTransform>,
+    pub(super) fn update_hrtf(
+        listeners: SpatialListeners,
+        mut emitters: Query<(&mut HrtfNode, Option<&SpatialScale>, EffectTransform)>,
+        transforms: Query<&GlobalTransform>,
         default_scale: Res<DefaultSpatialScale>,
     ) {
-        for (mut spatial, scale, effect_of) in emitters.iter_mut() {
-            let Ok(transform) = effect_parents.get(effect_of.0) else {
-                continue;
-            };
-
-            let emitter_pos = transform.translation();
-            let closest_listener = find_closest_listener(
-                emitter_pos,
-                listeners.iter().map(GlobalTransform::compute_transform),
-            );
-
-            let Some(listener) = closest_listener else {
-                continue;
-            };
-
-            let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
-
-            let world_offset = emitter_pos - listener.translation;
-            let local_offset = listener.rotation.inverse() * world_offset;
-
-            spatial.offset = local_offset * scale;
+        for (mut spatial, scale, transform) in emitters.iter_mut() {
+            if let Some(emitter_pos) = extract_effect_transform(transform, &transforms)
+                && let Some(offset) = listeners.calculate_offset(emitter_pos)
+            {
+                let scale = scale.map(|s| s.0).unwrap_or(default_scale.0);
+                spatial.offset = offset * scale;
+            }
         }
     }
 }
@@ -370,18 +310,44 @@ mod test {
             .into_iter()
             .map(Transform::from_translation)
             .collect::<Vec<_>>();
-        let emitter = Vec3::splat(0.0);
-        let closest = find_closest_listener(emitter, positions.iter().copied()).unwrap();
 
-        assert_eq!(closest, positions[1]);
+        let mut app = prepare_app({
+            let positions = positions.clone();
+            move |mut commands: Commands| {
+                for position in &positions {
+                    commands.spawn((SpatialListener3D, *position));
+                }
+            }
+        });
+
+        let closest = run(&mut app, |listeners: SpatialListeners| {
+            let emitter = Vec3::splat(0.0);
+            listeners.nearest_listener(emitter).unwrap()
+        });
+
+        assert_eq!(closest.0, positions[1]);
     }
 
     #[test]
     fn test_empty() {
-        let positions = [];
+        let positions = []
+            .into_iter()
+            .map(Transform::from_translation)
+            .collect::<Vec<_>>();
 
-        let emitter = Vec3::splat(0.0);
-        let closest = find_closest_listener(emitter, positions.iter().copied());
+        let mut app = prepare_app({
+            let positions = positions.clone();
+            move |mut commands: Commands| {
+                for position in &positions {
+                    commands.spawn((SpatialListener3D, *position));
+                }
+            }
+        });
+
+        let closest = run(&mut app, |listeners: SpatialListeners| {
+            let emitter = Vec3::splat(0.0);
+            listeners.nearest_listener(emitter)
+        });
 
         assert!(closest.is_none());
     }
