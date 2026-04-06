@@ -32,7 +32,7 @@
 //! calculations.
 
 use bevy_app::prelude::*;
-use bevy_ecs::{prelude::*, system::SystemParam};
+use bevy_ecs::{prelude::*, query::QueryData, system::SystemParam};
 use bevy_math::prelude::*;
 use bevy_transform::prelude::*;
 use firewheel::nodes::spatial_basic::SpatialBasicNode;
@@ -220,11 +220,13 @@ impl SpatialListeners<'_, '_> {
     }
 }
 
+type EffectTransform = AnyOf<(&'static GlobalTransform, &'static EffectOf)>;
+
 fn extract_effect_transform(
-    transform_source: (Option<&GlobalTransform>, Option<&EffectOf>),
+    effect_transform: <EffectTransform as QueryData>::Item<'_, '_>,
     transforms: &Query<&GlobalTransform>,
 ) -> Option<Vec3> {
-    match transform_source {
+    match effect_transform {
         (Some(global), _) => Some(global.translation()),
         (_, Some(parent)) => match transforms.get(parent.0) {
             Ok(global) => Some(global.translation()),
@@ -239,7 +241,7 @@ fn update_basic(
     mut emitters: Query<(
         &mut SpatialBasicNode,
         Option<&SpatialScale>,
-        AnyOf<(&GlobalTransform, &EffectOf)>,
+        EffectTransform,
     )>,
     transforms: Query<&GlobalTransform>,
     default_scale: Res<DefaultSpatialScale>,
@@ -260,7 +262,7 @@ fn update_basic(
 
 fn update_itd(
     listeners: SpatialListeners,
-    mut emitters: Query<(&mut ItdNode, AnyOf<(&GlobalTransform, &EffectOf)>)>,
+    mut emitters: Query<(&mut ItdNode, EffectTransform)>,
     transforms: Query<&GlobalTransform>,
 ) {
     for (mut spatial, transform) in emitters.iter_mut() {
@@ -281,11 +283,7 @@ mod spatial_hrtf {
 
     pub(super) fn update_hrtf(
         listeners: SpatialListeners,
-        mut emitters: Query<(
-            &mut HrtfNode,
-            Option<&SpatialScale>,
-            AnyOf<(&GlobalTransform, &EffectOf)>,
-        )>,
+        mut emitters: Query<(&mut HrtfNode, Option<&SpatialScale>, EffectTransform)>,
         transforms: Query<&GlobalTransform>,
         default_scale: Res<DefaultSpatialScale>,
     ) {
