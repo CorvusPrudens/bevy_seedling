@@ -67,7 +67,9 @@ impl From<firewheel::DecodedAudio> for AudioSample {
 
 impl core::fmt::Debug for AudioSample {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Sample").finish_non_exhaustive()
+        f.debug_tuple("AudioSample")
+            .field(&self.original_sample_rate)
+            .finish_non_exhaustive()
     }
 }
 
@@ -207,13 +209,8 @@ pub mod loader {
     impl std::fmt::Debug for AudioLoaderConfig {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("AudioLoaderConfig")
-                .field(
-                    "codec_registry",
-                    &std::fmt::from_fn(|f| write!(f, "CodegRegistry")),
-                )
-                .field("probe", &std::fmt::from_fn(|f| write!(f, "Probe")))
                 .field("extensions", &self.extensions)
-                .finish()
+                .finish_non_exhaustive()
         }
     }
 
@@ -224,7 +221,7 @@ pub mod loader {
     /// samples with low optimization levels.
     ///
     /// The available containers and formats can be configured with
-    /// this crate's feature flags (and additionally [AudioLoaderConfig]).
+    /// this crate's feature flags and [`AudioLoaderConfig`].
     #[derive(TypePath, Debug)]
     pub struct SampleLoader {
         sample_rate: crate::context::SampleRate,
