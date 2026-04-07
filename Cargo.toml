@@ -2,7 +2,7 @@
 name = "bevy_seedling"
 version = "0.8.0"
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.93.0"
 license = "MIT OR Apache-2.0"
 authors = ["Corvus Prudens <corvusprudens@gmail.com>"]
 description = "A sprouting integration of the Firewheel audio engine"

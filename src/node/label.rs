@@ -150,10 +150,10 @@ impl NodeLabels {
         let labels = labels.get(trigger.event_target())?;
 
         for label in labels.iter() {
-            if let Some(existing) = map.insert(*label, trigger.event_target()) {
-                if existing != trigger.event_target() {
-                    warn!("node label `{label:?}` has been applied to multiple entities");
-                }
+            if let Some(existing) = map.insert(*label, trigger.event_target())
+                && existing != trigger.event_target()
+            {
+                warn!("node label `{label:?}` has been applied to multiple entities");
             }
         }
 

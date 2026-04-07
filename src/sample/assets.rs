@@ -67,7 +67,9 @@ impl From<firewheel::DecodedAudio> for AudioSample {
 
 impl core::fmt::Debug for AudioSample {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Sample").finish_non_exhaustive()
+        f.debug_tuple("AudioSample")
+            .field(&self.original_sample_rate)
+            .finish_non_exhaustive()
     }
 }
 
@@ -75,16 +77,140 @@ impl core::fmt::Debug for AudioSample {
 pub mod loader {
     use super::AudioSample;
     use bevy_app::prelude::*;
-    use bevy_asset::{AssetApp, AssetLoader, AssetServer};
+    use bevy_asset::{AssetLoader, AssetServer};
     use bevy_ecs::prelude::*;
     use bevy_reflect::TypePath;
+    use symphonia::core::{codecs::CodecRegistry, probe::Probe};
 
     pub struct SymphoniumLoaderPlugin;
 
     impl Plugin for SymphoniumLoaderPlugin {
         fn build(&self, app: &mut App) {
-            app.add_observer(init_loader)
-                .preregister_asset_loader::<SampleLoader>(SampleLoader::extensions());
+            let world = app.world_mut();
+
+            world.init_resource::<AudioLoaderConfig>();
+            world.resource_scope::<AudioLoaderConfig, _>(|world, config| {
+                world
+                    .resource_mut::<AssetServer>()
+                    .preregister_loader::<SampleLoader>(config.extensions());
+            });
+
+            app.add_observer(init_loader);
+        }
+    }
+
+    /// A [`Resource`] containing the configuration for [`SampleLoader`].
+    ///
+    /// New formats and codecs (besides those enabled through this crate's feature flags) can be
+    /// added to the [symphonia]'s codec registry by inserting this resource before adding the
+    /// plugin.
+    ///
+    /// For example:
+    /// ```no_run
+    /// use bevy::prelude::*;
+    /// use bevy_seedling::{prelude::*, sample::AudioLoaderConfig};
+    /// use symphonia::{
+    ///     core::{
+    ///         codecs::{CodecRegistry, Decoder},
+    ///         probe::{Probe, QueryDescriptor},
+    ///     },
+    ///     default::{codecs::PcmDecoder, formats::WavReader},
+    /// };
+    ///
+    /// fn main() {
+    ///     let mut config = AudioLoaderConfig::default();
+    ///     config.register_codec(["wav"], |registry, probe| {
+    ///         registry.register_all::<PcmDecoder>();
+    ///         probe.register_all::<WavReader>();
+    ///     });
+    ///
+    ///     App::new()
+    ///         .insert_resource(config)
+    ///         .add_plugins((DefaultPlugins, SeedlingPlugins));
+    /// }
+    /// ```
+    ///
+    /// Adding the plugin will pre-register [`SampleLoader`] with the extensions in this config.
+    /// If the custom codecs are only available for insertion after adding the plugin,
+    /// then [`AssetApp::preregister_asset_loader`] can be called to manually pre-register
+    /// the new extensions.
+    ///
+    /// [`AssetApp::preregister_asset_loader`]: bevy_asset::AssetApp::preregister_asset_loader
+    ///
+    /// This resource will be removed when the loader is registered
+    /// following the [`StreamStartEvent`][crate::context::StreamStartEvent].
+    #[derive(Resource)]
+    pub struct AudioLoaderConfig {
+        /// The registry with codecs to be used for decoding.
+        codec_registry: CodecRegistry,
+        /// The format probe to be used for probing.
+        probe: Probe,
+        /// The extensions supported by the formats.
+        extensions: Vec<&'static str>,
+    }
+
+    impl AudioLoaderConfig {
+        /// Constructs a new, empty config.
+        ///
+        /// This will not include `bevy_seedling`'s feature-gated codecs.
+        pub fn empty() -> Self {
+            Self {
+                codec_registry: CodecRegistry::new(),
+                probe: Probe::default(),
+                extensions: Vec::new(),
+            }
+        }
+
+        /// Register a new codec along with its associated extensions.
+        pub fn register_codec<I, F>(&mut self, extensions: I, f: F)
+        where
+            I: IntoIterator<Item = &'static str>,
+            F: FnOnce(&mut CodecRegistry, &mut Probe),
+        {
+            f(&mut self.codec_registry, &mut self.probe);
+            self.extensions.extend(extensions);
+        }
+
+        /// Returns this config's registered extensions.
+        pub fn extensions(&self) -> &[&'static str] {
+            &self.extensions
+        }
+
+        const fn default_extensions() -> &'static [&'static str] {
+            &[
+                #[cfg(feature = "wav")]
+                "wav",
+                #[cfg(feature = "ogg")]
+                "ogg",
+                #[cfg(feature = "mp3")]
+                "mp3",
+                #[cfg(feature = "flac")]
+                "flac",
+                #[cfg(feature = "mkv")]
+                "mkv",
+            ]
+        }
+    }
+
+    impl Default for AudioLoaderConfig {
+        fn default() -> Self {
+            let mut config = Self::empty();
+
+            symphonia::default::register_enabled_codecs(&mut config.codec_registry);
+            symphonia::default::register_enabled_formats(&mut config.probe);
+            config
+                .extensions
+                .extend_from_slice(Self::default_extensions());
+
+            config
+        }
+    }
+
+    impl std::fmt::Debug for AudioLoaderConfig {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("AudioLoaderConfig")
+                .field("extensions", &self.extensions)
+                .finish_non_exhaustive()
         }
     }
 
@@ -95,11 +221,11 @@ pub mod loader {
     /// samples with low optimization levels.
     ///
     /// The available containers and formats can be configured with
-    /// this crate's feature flags.
-    #[derive(Debug, TypePath)]
+    /// this crate's feature flags and [`AudioLoaderConfig`].
+    #[derive(TypePath, Debug)]
     pub struct SampleLoader {
-        /// The sampling rate of the audio engine.
         sample_rate: crate::context::SampleRate,
+        config: &'static AudioLoaderConfig,
     }
 
     impl SampleLoader {
@@ -107,8 +233,13 @@ pub mod loader {
         ///
         /// `sample_rate` should be cloned directly from the resource
         /// that lives in the same world.
-        pub fn new(sample_rate: crate::context::SampleRate) -> Self {
-            Self { sample_rate }
+        pub fn new(sample_rate: crate::context::SampleRate, config: AudioLoaderConfig) -> Self {
+            Self {
+                sample_rate,
+                // we leak the config here to satisfy symphoium's `&'static` requirements
+                // NOTE: remove this when symphonium relaxes its lifetimes
+                config: Box::leak(Box::new(config)),
+            }
         }
     }
 
@@ -144,23 +275,6 @@ pub mod loader {
         }
     }
 
-    impl SampleLoader {
-        pub(crate) const fn extensions() -> &'static [&'static str] {
-            &[
-                #[cfg(feature = "wav")]
-                "wav",
-                #[cfg(feature = "ogg")]
-                "ogg",
-                #[cfg(feature = "mp3")]
-                "mp3",
-                #[cfg(feature = "flac")]
-                "flac",
-                #[cfg(feature = "mkv")]
-                "mkv",
-            ]
-        }
-    }
-
     impl AssetLoader for SampleLoader {
         type Asset = AudioSample;
         type Settings = ();
@@ -178,7 +292,10 @@ pub mod loader {
             let mut hint = symphonia::core::probe::Hint::new();
             hint.with_extension(&load_context.path().to_string());
 
-            let mut loader = symphonium::SymphoniumLoader::new();
+            let mut loader = symphonium::SymphoniumLoader::with_codec_registry_and_probe(
+                &self.config.codec_registry,
+                &self.config.probe,
+            );
             let source = firewheel::load_audio_file_from_source(
                 &mut loader,
                 Box::new(std::io::Cursor::new(bytes)),
@@ -191,15 +308,24 @@ pub mod loader {
         }
 
         fn extensions(&self) -> &[&str] {
-            Self::extensions()
+            self.config.extensions()
         }
     }
 
-    fn init_loader(
-        _: On<crate::context::StreamStartEvent>,
-        sample_rate: Res<crate::context::SampleRate>,
-        server: Res<AssetServer>,
-    ) {
-        server.register_loader(SampleLoader::new(sample_rate.clone()));
+    fn init_loader(_: On<crate::context::StreamStartEvent>, mut commands: Commands) {
+        commands.queue(|world: &mut World| -> Result {
+            let sample_rate = world
+                .get_resource::<crate::context::SampleRate>()
+                .ok_or("expected `SampleRate` resource")?
+                .clone();
+            let config = world
+                .remove_resource::<AudioLoaderConfig>()
+                .ok_or("expected `AudioLoaderConfig` resource")?;
+            world
+                .resource::<AssetServer>()
+                .register_loader(SampleLoader::new(sample_rate.clone(), config));
+
+            Ok(())
+        });
     }
 }

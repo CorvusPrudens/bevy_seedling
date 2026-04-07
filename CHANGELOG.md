@@ -19,6 +19,7 @@ A handful of nodes, including the one pole filters, have moved to Firewheel.
 ### Miscellaneous
 
 - Placed `symphonia` and associated crates behind the `symphonia` feature
+- Bumped MSRV from 1.85 to 1.93
 
 # 0.7.2
 

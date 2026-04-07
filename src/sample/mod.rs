@@ -21,7 +21,7 @@ pub use assets::AudioSample;
 #[cfg(feature = "symphonia")]
 pub(crate) use assets::loader::SymphoniumLoaderPlugin;
 #[cfg(feature = "symphonia")]
-pub use assets::loader::{SampleLoader, SampleLoaderError};
+pub use assets::loader::{AudioLoaderConfig, SampleLoader, SampleLoaderError};
 
 /// A component that queues sample playback.
 ///
