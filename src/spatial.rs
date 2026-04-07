@@ -182,8 +182,9 @@ impl SpatialListeners<'_, '_> {
         // expect there to be very few of these at any one time.
         self.listeners
             .iter()
-            .map(|(transform, kind)| (transform.compute_transform(), SpatialKind::from(kind)))
             .map(|(transform, kind)| {
+                let transform = transform.compute_transform();
+                let kind = SpatialKind::from(kind);
                 let distance = match kind {
                     // in a 2d context, we need to ignore the z component
                     SpatialKind::Listener2D => {
