@@ -81,6 +81,7 @@ pub mod loader {
     use bevy_ecs::prelude::*;
     use bevy_reflect::TypePath;
     use symphonia::core::{codecs::CodecRegistry, probe::Probe};
+    use symphonium::{DecodeConfig, cache::SymphoniumCache};
 
     pub struct SymphoniumLoaderPlugin;
 
@@ -286,25 +287,32 @@ pub mod loader {
             _settings: &Self::Settings,
             load_context: &mut bevy_asset::LoadContext<'_>,
         ) -> Result<Self::Asset, Self::Error> {
+            thread_local! {
+                static CACHE: SymphoniumCache = SymphoniumCache::new();
+            }
+
             let mut bytes = Vec::new();
             reader.read_to_end(&mut bytes).await?;
 
             let mut hint = symphonia::core::probe::Hint::new();
             hint.with_extension(&load_context.path().to_string());
 
-            let mut loader = symphonium::SymphoniumLoader::with_codec_registry_and_probe(
-                &self.config.codec_registry,
-                &self.config.probe,
-            );
-            let source = firewheel::load_audio_file_from_source(
-                &mut loader,
+            let probed = symphonium::probe_from_source(
                 Box::new(std::io::Cursor::new(bytes)),
                 Some(hint),
-                Some(self.sample_rate.get()),
-                Default::default(),
+                Some(&self.config.probe),
             )?;
+            let source = CACHE.with(|cache| {
+                symphonium::decode_f32(
+                    probed,
+                    &DecodeConfig::default(),
+                    Some(self.sample_rate.get()),
+                    Some(cache),
+                    Some(&self.config.codec_registry),
+                )
+            })?;
 
-            Ok(source.into())
+            Ok(firewheel::DecodedAudioF32(source).into())
         }
 
         fn extensions(&self) -> &[&str] {
