@@ -94,6 +94,7 @@ should help you get up to speed on common usage patterns.
 | `reflect`         | Enable `bevy_reflect` derive macros.       | Yes     |
 | `rand`            | Enable the `RandomPitch` component.        | Yes     |
 | `symphonia`       | Enable symphonia and default asset loader. | Yes     |
+| `diagnostics`     | Enable audio thread diagnostics.           | Yes     |
 | `wav`             | Enable WAV format and PCM encoding.        | Yes     |
 | `ogg`             | Enable Ogg format and Vorbis encoding.     | Yes     |
 | `mp3`             | Enable mp3 format and encoding.            | No      |

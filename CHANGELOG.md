@@ -12,13 +12,32 @@ Firewheel's backend API changes.
 Seedling's top-level plugin has been reduced to a ZST. Its fields have been turned
 into resources that can be overwritten or mutated.
 
+### Audio Diagnostics
+
+Diagnostics are now available for the audio processing thread behind the
+new, default `diagnostics` feature.
+These provide CPU usage estimates for the entire processing
+callback and, optionally, each individual node.
+
 ### Node reshuffling
 
 A handful of nodes, including the one pole filters, have moved to Firewheel.
+In addition, all of Firewheel's first-party nodes are now automatically
+registered when their features are enabled.
+
+Most nodes are now gated behind the `effects` features.
+
+### Configurable asset loading
+
+Previously, `symphonia` was always enabled and could not be customized.
+In 0.8, `bevy_seedling`'s default asset loader `SampleLoader` 
+can be provided with as fully customized `CodecRegistry` and `Probe`
+via the `AudioLoaderConfig` resource. It can also be completely
+disabled along with all `symphonia` crates by disabling the
+`symphonia` feature.
 
 ### Miscellaneous
 
-- Placed `symphonia` and associated crates behind the `symphonia` feature
 - Bumped MSRV from 1.85 to 1.93
 
 # 0.7.2
