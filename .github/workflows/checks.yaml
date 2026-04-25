@@ -3,6 +3,7 @@ name: CI Checks
 on:
   pull_request:
     branches: [master]
+    paths-ignore: ["crates/firewheel-ircam-hrtf/**"]
 
 env:
   CARGO_TERM_COLOR: always

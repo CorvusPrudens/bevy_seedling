@@ -1,0 +1,120 @@
+name: ircam CI Checks
+
+on:
+  pull_request:
+    branches: [master]
+    paths: ["crates/firewheel-ircam-hrtf/**"]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: --deny warnings
+  RUSTDOCFLAGS: --deny warnings
+  MANIFEST_PATH: crates/firewheel-ircam-hrtf/Cargo.toml
+
+jobs:
+  # Run clippy lints.
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Install dependencies
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+
+      - name: Populate target directory from cache
+        uses: Leafwing-Studios/cargo-cache@v2
+        with:
+          manifest-path: ${{ env.MANIFEST_PATH }}
+          sweep-cache: true
+
+      - name: Run clippy lints
+        run: cargo clippy --locked --workspace --all-targets --all-features --manifest-path ${{ env.MANIFEST_PATH }} -- --deny warnings
+
+  # Check formatting.
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Run cargo fmt
+        run: cargo fmt --all --manifest-path ${{ env.MANIFEST_PATH }} -- --check
+
+  # Check documentation.
+  doc:
+    name: Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+
+      - name: Populate target directory from cache
+        uses: Leafwing-Studios/cargo-cache@v2
+        with:
+          manifest-path: ${{ env.MANIFEST_PATH }}
+          sweep-cache: true
+
+      - name: Check documentation
+        run: cargo doc --locked --workspace --all-features --document-private-items --no-deps --manifest-path ${{ env.MANIFEST_PATH }}
+
+  # Test Wasm builds
+  wasm:
+    name: Wasm build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install dependencies
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+
+      - name: Populate target directory from cache
+        uses: Leafwing-Studios/cargo-cache@v2
+        with:
+          manifest-path: ${{ env.MANIFEST_PATH }}
+          sweep-cache: true
+
+      - name: Build examples
+        run: |
+          cargo build --target="wasm32-unknown-unknown" --features=firewheel/wasm-bindgen --manifest-path ${{ env.MANIFEST_PATH }}
+
+  # Verify semver compliance
+  semver:
+    runs-on: ubuntu-latest
+    name: SemVer checks
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+
+      - name: Populate target directory from cache
+        uses: Leafwing-Studios/cargo-cache@v2
+        with:
+          manifest-path: ${{ env.MANIFEST_PATH }}
+          sweep-cache: true
+
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          manifest-path: ${{ env.MANIFEST_PATH }}

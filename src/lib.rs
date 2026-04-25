@@ -129,6 +129,7 @@
 //! | `reflect`         | Enable [`bevy_reflect`] derive macros.     | Yes     |
 //! | `rand`            | Enable the [`RandomPitch`] component.      | Yes     |
 //! | `symphonia`       | Enable symphonia and default asset loader. | Yes     |
+//! | `diagnostics`     | Enable audio thread diagnostics.           | Yes     |
 //! | `wav`             | Enable WAV format and PCM encoding.        | Yes     |
 //! | `ogg`             | Enable Ogg format and Vorbis encoding.     | Yes     |
 //! | `mp3`             | Enable mp3 format and encoding.            | No      |
@@ -360,6 +361,9 @@ pub mod spatial;
 pub mod time;
 pub mod utils;
 
+#[cfg(feature = "diagnostics")]
+pub mod diagnostics;
+
 pub mod prelude {
     //! All `bevy_seedlings`'s important types and traits.
 
@@ -462,7 +466,9 @@ plugin_group! {
     pub struct SeedlingPlugins {
         :SeedlingCorePlugin,
         #[cfg(feature = "cpal")]
-        platform::cpal:::CpalPlatformPlugin
+        platform::cpal:::CpalPlatformPlugin,
+        #[cfg(feature = "diagnostics")]
+        diagnostics:::AudioDiagnosticsPlugin,
     }
 }
 

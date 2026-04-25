@@ -389,7 +389,7 @@ pub(super) fn assign_work(
         });
 
         for ((sampler_entity, current_assignment, sampler_score), queued) in
-            sampler_scores.into_iter().zip(queued_samples.into_iter())
+            sampler_scores.into_iter().zip(queued_samples)
         {
             let (sample_entity, player, asset, sample_effects, priority) = queued;
 

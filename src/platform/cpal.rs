@@ -96,7 +96,7 @@ fn start_stream(
 
 fn poll_stream(mut stream: ResMut<CpalStream>, mut commands: Commands) -> Result {
     let stream = stream.get();
-    if let Err(e) = stream.poll_status() {
+    for e in stream.poll_status() {
         match e {
             StreamError::StreamInvalidated | StreamError::DeviceNotAvailable => {
                 warn!("Audio stream stopped: {e:?}");
