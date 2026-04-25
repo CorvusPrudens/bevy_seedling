@@ -1,0 +1,83 @@
+[package]
+name = "firewheel-ircam-hrtf"
+version = "0.5.0"
+edition = "2024"
+rust-version = "1.85.0"
+license = "MIT OR Apache-2.0"
+authors = ["Corvus Prudens <corvusprudens@gmail.com>"]
+description = "Head-related transfer function (HRTF) node for Firewheel"
+readme = "README.md"
+repository = "https://github.com/corvusprudens/bevy_seedling"
+documentation = "https://docs.rs/firewheel-ircam-hrtf"
+keywords = ["gamedev", "audio", "bevy", "firewheel"]
+categories = ["game-development", "multimedia::audio"]
+include = [
+  "README.md",
+  "LICENSE-APACHE",
+  "LICENSE-MIT",
+  "Cargo.toml",
+  "src/*",
+  "assets/irc_1005_c.bin",
+  "assets/irc_1012_c.bin",
+  "assets/irc_1015_c.bin",
+  "assets/irc_1018_c.bin",
+  "assets/irc_1028_c.bin",
+  "assets/irc_1029_c.bin",
+  "assets/irc_1034_c.bin",
+  "assets/irc_1040_c.bin",
+  "assets/irc_1042_c.bin",
+  "assets/irc_1052_c.bin",
+  "assets/irc_1053_c.bin",
+]
+
+[package.metadata.docs.rs]
+all-features = true
+
+[dependencies]
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "260d909", default-features = false, features = [
+  "glam-30",
+  "std",
+] }
+glam = { version = "0.30", default-features = false, features = ["std"] }
+hrtf = "0.8.1"
+
+# Bevy dependencies
+bevy_ecs = { version = "0.18.0", default-features = false, features = [
+  "std",
+], optional = true }
+bevy_reflect = { version = "0.18.0", default-features = false, features = [
+  "glam",
+  "std",
+], optional = true }
+
+[features]
+# Enable `Component` derives for the node and configuration
+bevy = ["dep:bevy_ecs", "firewheel/bevy"]
+# Enable `Reflect` derives for the node and configuration
+bevy_reflect = ["dep:bevy_reflect", "firewheel/bevy_reflect"]
+
+# Enable all embedded subjects
+all_subjects = [
+  "irc1005",
+  "irc1012",
+  "irc1015",
+  "irc1018",
+  "irc1028",
+  "irc1029",
+  "irc1034",
+  "irc1042",
+  "irc1052",
+  "irc1053",
+]
+
+# Enable individual subjects for inclusion in the binary
+irc1005 = []
+irc1012 = []
+irc1015 = []
+irc1018 = []
+irc1028 = []
+irc1029 = []
+irc1034 = []
+irc1042 = []
+irc1052 = []
+irc1053 = []

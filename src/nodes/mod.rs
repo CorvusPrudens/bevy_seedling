@@ -63,9 +63,8 @@ impl Plugin for SeedlingNodesPlugin {
         app.register_node::<loudness::LoudnessNode>()
             .register_node_state::<loudness::LoudnessNode, loudness::LoudnessState>();
 
-        // // third party
-        // #[cfg(feature = "hrtf")]
-        // app.register_node::<firewheel_ircam_hrtf::HrtfNode>();
+        #[cfg(feature = "hrtf")]
+        app.register_node::<firewheel_ircam_hrtf::HrtfNode>();
 
         // core Firewheel nodes
         app.register_node::<VolumeNode>()

@@ -97,7 +97,7 @@ rand = { version = "0.9", default-features = false, features = [
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
-firewheel-ircam-hrtf = { git = "https://github.com/CorvusPrudens/firewheel-ircam-hrtf", rev = "fa5e6d1", optional = true, features = [
+firewheel-ircam-hrtf = { version = "0.5.0", path = "crates/firewheel-ircam-hrtf", optional = true, features = [
   "bevy",
 ] }
 cpal = { version = "0.17", default-features = false, optional = true }
