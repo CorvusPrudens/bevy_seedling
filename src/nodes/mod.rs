@@ -15,7 +15,6 @@ pub mod loudness;
 pub mod core {
     pub use firewheel::nodes::{
         StereoToMonoNode,
-        freeverb::FreeverbNode,
         sampler::{PlayFrom, PlaybackSpeedQuality, RepeatMode, SamplerConfig, SamplerNode},
         spatial_basic::SpatialBasicNode,
         volume::{VolumeNode, VolumeNodeConfig},
@@ -33,6 +32,7 @@ pub mod effects {
             bandpass::FastBandpassNode, highpass::FastHighpassNode, lowpass::FastLowpassNode,
         },
         fast_rms::{FastRmsNode, FastRmsState},
+        freeverb::FreeverbNode,
         mix::{MixNode, MixNodeConfig},
         noise_generator::{
             pink::{PinkNoiseGenConfig, PinkNoiseGenNode},
@@ -71,7 +71,6 @@ impl Plugin for SeedlingNodesPlugin {
         app.register_node::<VolumeNode>()
             .register_node::<VolumePanNode>()
             .register_node::<SpatialBasicNode>()
-            .register_node::<FreeverbNode>()
             .register_simple_node::<StereoToMonoNode>();
 
         #[cfg(feature = "effects")]
@@ -81,6 +80,7 @@ impl Plugin for SeedlingNodesPlugin {
             app.register_simple_node::<DelayCompensationNode>()
                 .register_node_state::<FastRmsNode, FastRmsState>()
                 .register_node_state::<PeakMeterNode, PeakMeterState>()
+                .register_node::<FreeverbNode>()
                 .register_node::<SvfNode>()
                 .register_node::<FastBandpassNode>()
                 .register_node::<FastHighpassNode>()
