@@ -46,8 +46,8 @@ impl AudioSample {
 }
 
 #[cfg(feature = "symphonia")]
-impl From<firewheel::DecodedAudioF32> for AudioSample {
-    fn from(source: firewheel::DecodedAudioF32) -> Self {
+impl From<firewheel::SymphoniumAudioF32> for AudioSample {
+    fn from(source: firewheel::SymphoniumAudioF32) -> Self {
         Self {
             original_sample_rate: source.original_sample_rate(),
             sample: ArcGc::new_unsized(|| Arc::new(source) as _),
@@ -56,8 +56,8 @@ impl From<firewheel::DecodedAudioF32> for AudioSample {
 }
 
 #[cfg(feature = "symphonia")]
-impl From<firewheel::DecodedAudio> for AudioSample {
-    fn from(source: firewheel::DecodedAudio) -> Self {
+impl From<firewheel::SymphoniumAudio> for AudioSample {
+    fn from(source: firewheel::SymphoniumAudio) -> Self {
         Self {
             original_sample_rate: source.original_sample_rate(),
             sample: ArcGc::new_unsized(|| Arc::new(source) as _),
@@ -312,7 +312,7 @@ pub mod loader {
                 )
             })?;
 
-            Ok(firewheel::DecodedAudioF32(source).into())
+            Ok(firewheel::SymphoniumAudioF32(source).into())
         }
 
         fn extensions(&self) -> &[&str] {
