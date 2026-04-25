@@ -20,8 +20,9 @@ rand = ["dep:rand"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
 cpal = ["firewheel/cpal", "dep:cpal"]
 web_audio = ["cpal/audioworklet"]
-dev = ["entity_names"]
+dev = ["entity_names", "track_location"]
 entity_names = []
+track_location = []
 symphonia = [
   "dep:symphonia",
   "dep:symphonium",

@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy_ecs::prelude::*;
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "track_location")]
 use core::panic::Location;
 
 /// The set of all pending disconnections for an entity.
@@ -86,24 +86,24 @@ pub trait Disconnect: Sized {
     ///
     /// The disconnection is deferred, finalizing in the
     /// [`SeedlingSystems::Connect`][crate::SeedlingSystems::Connect] set.
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn disconnect(self, target: impl Into<EdgeTarget>) -> Self;
 
     /// Queue a disconnection from this entity to the target with the provided port mappings.
     ///
     /// The disconnection is deferred, finalizing in the
     /// [`SeedlingSystems::Connect`][crate::SeedlingSystems::Connect] set.
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn disconnect_with(self, target: impl Into<EdgeTarget>, ports: &[(u32, u32)]) -> Self;
 }
 
-#[cfg_attr(debug_assertions, track_caller)]
+#[cfg_attr(feature = "track_location", track_caller)]
 fn disconnect_with_commands(
     target: EdgeTarget,
     ports: Option<Vec<(u32, u32)>>,
     commands: &mut EntityCommands,
 ) {
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "track_location")]
     let location = Location::caller();
 
     commands
@@ -113,7 +113,7 @@ fn disconnect_with_commands(
             pending.push(PendingEdge::new_with_location(
                 target,
                 ports,
-                #[cfg(debug_assertions)]
+                #[cfg(feature = "track_location")]
                 location,
             ));
         });

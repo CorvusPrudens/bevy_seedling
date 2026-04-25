@@ -584,7 +584,7 @@ pub trait RegisterNode {
 }
 
 impl RegisterNode for App {
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn register_node<T>(&mut self) -> &mut Self
     where
         T: AudioNode<Configuration: Component + Clone + PartialEq>
@@ -602,7 +602,7 @@ impl RegisterNode for App {
         } else {
             // TODO: we'll need to be more careful about getting type names
             // for upstreaming.
-            #[cfg(debug_assertions)]
+            #[cfg(feature = "track_location")]
             {
                 bevy_log::warn!(
                     "Audio node `{}` was registered more than once at {}",
@@ -611,7 +611,7 @@ impl RegisterNode for App {
                 );
             }
 
-            #[cfg(not(debug_assertions))]
+            #[cfg(not(feature = "track_location"))]
             bevy_log::warn!(
                 "Audio node `{}` was registered more than once",
                 core::any::type_name::<T>(),
@@ -640,7 +640,7 @@ impl RegisterNode for App {
         )
     }
 
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn register_simple_node<T>(&mut self) -> &mut Self
     where
         T: AudioNode<Configuration: Component + Clone + PartialEq> + Component + Clone,
@@ -652,7 +652,7 @@ impl RegisterNode for App {
             world.add_observer(observe_simple_node_insertion::<T>);
             world.register_required_components::<T, T::Configuration>();
         } else {
-            #[cfg(debug_assertions)]
+            #[cfg(feature = "track_location")]
             {
                 bevy_log::warn!(
                     "Audio node `{}` was registered more than once at {}",
@@ -661,7 +661,7 @@ impl RegisterNode for App {
                 );
             }
 
-            #[cfg(not(debug_assertions))]
+            #[cfg(not(feature = "track_location"))]
             bevy_log::warn!(
                 "Audio node `{}` was registered more than once",
                 core::any::type_name::<T>(),
@@ -685,7 +685,7 @@ impl RegisterNode for App {
         )
     }
 
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn register_node_state<T, S>(&mut self) -> &mut Self
     where
         T: AudioNode + Component,
@@ -695,7 +695,7 @@ impl RegisterNode for App {
         let mut nodes = world.get_resource_or_init::<RegisteredState>();
 
         if !nodes.insert::<T, S>() {
-            #[cfg(debug_assertions)]
+            #[cfg(feature = "track_location")]
             {
                 bevy_log::warn!(
                     "State `{}` was registered for node `{}` at {}",
@@ -705,7 +705,7 @@ impl RegisterNode for App {
                 );
             }
 
-            #[cfg(not(debug_assertions))]
+            #[cfg(not(feature = "track_location"))]
             bevy_log::warn!(
                 "State `{}` registered more than once for node `{}`",
                 core::any::type_name::<S>(),

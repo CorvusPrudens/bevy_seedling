@@ -12,7 +12,7 @@ use bevy_platform::collections::HashMap;
 use firewheel::FirewheelContext;
 use firewheel::node::NodeID;
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "track_location")]
 use core::panic::Location;
 
 #[allow(clippy::module_inception)]
@@ -195,18 +195,18 @@ pub struct PendingEdge {
     /// `[(0, 0), (1, 1)]` is used.
     pub ports: Option<Vec<(u32, u32)>>,
 
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "track_location")]
     pub(crate) origin: &'static Location<'static>,
 }
 
 impl PendingEdge {
     /// Construct a new [`PendingEdge`].
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     pub fn new(target: impl Into<EdgeTarget>, ports: Option<Vec<(u32, u32)>>) -> Self {
         Self {
             target: target.into(),
             ports,
-            #[cfg(debug_assertions)]
+            #[cfg(feature = "track_location")]
             origin: Location::caller(),
         }
     }
@@ -215,12 +215,12 @@ impl PendingEdge {
     fn new_with_location(
         target: impl Into<EdgeTarget>,
         ports: Option<Vec<(u32, u32)>>,
-        #[cfg(debug_assertions)] location: &'static Location<'static>,
+        #[cfg(feature = "track_location")] location: &'static Location<'static>,
     ) -> Self {
         Self {
             target: target.into(),
             ports,
-            #[cfg(debug_assertions)]
+            #[cfg(feature = "track_location")]
             origin: location,
         }
     }
@@ -307,14 +307,14 @@ fn lookup_node<'a>(
     match targets.get(target_entity) {
         Ok(t) => Some(t),
         Err(_) => {
-            #[cfg(debug_assertions)]
+            #[cfg(feature = "track_location")]
             {
                 let location = connection.origin;
                 error_once!(
                     "failed to connect to entity `{target_entity:?}` at {location}: no Firewheel node found"
                 );
             }
-            #[cfg(not(debug_assertions))]
+            #[cfg(not(feature = "track_location"))]
             {
                 let _ = connection;
                 error_once!(
@@ -339,14 +339,14 @@ fn fetch_target(
         }
         EdgeTarget::Label(label) => {
             let Some(entity) = node_map.get(&label) else {
-                #[cfg(debug_assertions)]
+                #[cfg(feature = "track_location")]
                 {
                     let location = connection.origin;
                     error_once!(
                         "failed to connect to node label `{label:?}` at {location}: no associated Firewheel node found"
                     );
                 }
-                #[cfg(not(debug_assertions))]
+                #[cfg(not(feature = "track_location"))]
                 error_once!(
                     "failed to connect to node label `{label:?}`: no associated Firewheel node found"
                 );
