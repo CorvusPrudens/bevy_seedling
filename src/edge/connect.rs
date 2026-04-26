@@ -7,7 +7,7 @@ use crate::{
 use bevy_ecs::prelude::*;
 use bevy_log::prelude::*;
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "track_location")]
 use core::panic::Location;
 
 /// The set of all pending connections for an entity.
@@ -198,14 +198,14 @@ pub trait Connect<'a>: Sized {
     ///
     /// The connection is deferred, finalizing in the
     /// [`SeedlingSystems::Connect`][crate::SeedlingSystems::Connect] set.
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn connect(self, target: impl Into<EdgeTarget>) -> ConnectCommands<'a>;
 
     /// Queue a connection from this entity to the target with the provided port mappings.
     ///
     /// The connection is deferred, finalizing in the
     /// [`SeedlingSystems::Connect`][crate::SeedlingSystems::Connect] set.
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn connect_with(
         self,
         target: impl Into<EdgeTarget>,
@@ -226,14 +226,14 @@ pub trait Connect<'a>: Sized {
     ///     .chain_node(VolumeNode::default());
     /// # }
     /// ```
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn chain_node<B: Bundle>(self, node: B) -> ConnectCommands<'a>;
 
     /// Chain a node with a manually-specified connection.
     ///
     /// This connection will be made between the previous node's output
     /// and this node's input.
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn chain_node_with<B: Bundle>(self, node: B, ports: &[(u32, u32)]) -> ConnectCommands<'a>;
 
     /// Get the head of this chain.
@@ -268,13 +268,13 @@ pub trait Connect<'a>: Sized {
     fn tail(&self) -> Entity;
 }
 
-#[cfg_attr(debug_assertions, track_caller)]
+#[cfg_attr(feature = "track_location", track_caller)]
 fn connect_with_commands(
     target: EdgeTarget,
     connections: Option<Vec<(u32, u32)>>,
     commands: &mut EntityCommands,
 ) {
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "track_location")]
     let location = Location::caller();
 
     commands
@@ -284,7 +284,7 @@ fn connect_with_commands(
             pending.push(PendingEdge::new_with_location(
                 target,
                 connections,
-                #[cfg(debug_assertions)]
+                #[cfg(feature = "track_location")]
                 location,
             ));
         });
@@ -340,7 +340,7 @@ impl<'a> Connect<'a> for EntityCommands<'a> {
 }
 
 impl<'a> Connect<'a> for ConnectCommands<'a> {
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn connect(mut self, target: impl Into<EdgeTarget>) -> ConnectCommands<'a> {
         let tail = self.tail();
 
@@ -354,7 +354,7 @@ impl<'a> Connect<'a> for ConnectCommands<'a> {
         self
     }
 
-    #[cfg_attr(debug_assertions, track_caller)]
+    #[cfg_attr(feature = "track_location", track_caller)]
     fn connect_with(
         mut self,
         target: impl Into<EdgeTarget>,

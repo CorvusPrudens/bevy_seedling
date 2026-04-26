@@ -144,6 +144,7 @@
 //! | `resample_inputs` | Enable audio input resampling.             | No      |
 //! | `dev`             | Enable helpful features for development.   | No      |
 //! | `entity_names`    | Add [`Name`]s to node and sample entities. | No      |
+//! | `track_location`  | Track caller locations in diagnostics.     | No      |
 //!
 //! [`RandomPitch`]: crate::prelude::RandomPitch
 //! [`Name`]: bevy_ecs::prelude::Name
