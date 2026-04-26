@@ -79,7 +79,6 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", def
   "scheduled_events",
   "musical_transport",
   "glam-30",
-  "freeverb_node",
   "sampler_node",
   "std",
   "tracing",
