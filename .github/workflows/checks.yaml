@@ -9,6 +9,7 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: --deny warnings
   RUSTDOCFLAGS: --deny warnings
+  AUDIO_LIBS: libasound2-dev libpulse-dev libudev-dev libwayland-dev libxkbcommon-dev cmake
 
 jobs:
   # Run tests.
@@ -21,7 +22,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
-        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends ${{ env.AUDIO_LIBS }}
 
       - name: Populate target directory from cache
         uses: Leafwing-Studios/cargo-cache@v2
@@ -44,7 +45,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
-        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends ${{ env.AUDIO_LIBS }}
 
       - name: Populate target directory from cache
         uses: Leafwing-Studios/cargo-cache@v2
@@ -68,7 +69,7 @@ jobs:
           components: clippy
 
       - name: Install dependencies
-        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends ${{ env.AUDIO_LIBS }}
 
       - name: Populate target directory from cache
         uses: Leafwing-Studios/cargo-cache@v2
@@ -108,7 +109,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
-        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends ${{ env.AUDIO_LIBS }}
 
       - name: Populate target directory from cache
         uses: Leafwing-Studios/cargo-cache@v2
@@ -132,7 +133,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install dependencies
-        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends ${{ env.AUDIO_LIBS }}
 
       - name: Populate target directory from cache
         uses: Leafwing-Studios/cargo-cache@v2
@@ -153,7 +154,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
-        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends ${{ env.AUDIO_LIBS }}
 
       - name: Populate target directory from cache
         uses: Leafwing-Studios/cargo-cache@v2
