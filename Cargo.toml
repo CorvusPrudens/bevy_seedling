@@ -137,6 +137,9 @@ audioadapter-buffers = { version = "3.0", default-features = false }
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.3", default-features = false, features = ["wasm_js"] }
 
+[profile.dev]
+debug = "line-tables-only"
+
 [[bench]]
 name = "basic"
 harness = false
