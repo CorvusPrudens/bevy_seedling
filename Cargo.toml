@@ -19,6 +19,7 @@ resample_inputs = ["firewheel/cpal_resample_inputs"]
 rand = ["dep:rand"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
 cpal = ["firewheel/cpal", "dep:cpal"]
+rtaudio = ["firewheel/rtaudio", "dep:rtaudio"]
 web_audio = ["cpal/audioworklet"]
 dev = ["entity_names", "track_location"]
 entity_names = []
@@ -101,6 +102,7 @@ firewheel-ircam-hrtf = { version = "0.5.0", path = "crates/firewheel-ircam-hrtf"
   "bevy",
 ] }
 cpal = { version = "0.17", default-features = false, optional = true }
+rtaudio = { version = "0.8", optional = true }
 audioadapter-buffers = { version = "3.0", default-features = false, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

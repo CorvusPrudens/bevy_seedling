@@ -102,6 +102,7 @@ should help you get up to speed on common usage patterns.
 | `adpcm`           | Enable adpcm encoding.                     | No      |
 | `flac`            | Enable FLAC format and encoding.           | No      |
 | `web_audio`       | Enable the multi-threading web backend.    | No      |
+| `rtaudio`         | Enable the native RtAudio backend.         | No      |
 | `hrtf`            | Enable HRTF Spatialization.                | No      |
 | `hrtf_subjects`   | Enable all HRTF embedded data.             | No      |
 | `loudness`        | Enable LUFS analyzer node.                 | No      |
