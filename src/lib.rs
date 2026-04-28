@@ -409,6 +409,9 @@ pub mod prelude {
     pub use crate::utils::perceptual_volume::PerceptualVolume;
     pub use crate::{SeedlingPlugins, SeedlingSystems};
 
+    #[cfg(feature = "cpal")]
+    pub use crate::platform::cpal::CpalStream;
+
     pub use firewheel::{
         FirewheelConfig, Volume,
         channel_config::{ChannelCount, NonZeroChannelCount},
@@ -470,7 +473,7 @@ plugin_group! {
         #[cfg(feature = "cpal")]
         platform::cpal:::CpalPlatformPlugin,
         #[cfg(feature = "rtaudio")]
-        platform::rtaudio:::DefaultRtAudioPlatformPlugin,
+        platform::rtaudio:::RtAudioPlatformPlugin,
         #[cfg(feature = "diagnostics")]
         diagnostics:::AudioDiagnosticsPlugin,
     }
