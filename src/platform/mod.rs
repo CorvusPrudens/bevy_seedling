@@ -7,6 +7,9 @@ use crate::context::{SampleRate, StreamStartEvent};
 #[cfg(feature = "cpal")]
 pub mod cpal;
 
+#[cfg(feature = "rtaudio")]
+pub mod rtaudio;
+
 #[cfg(any(feature = "profiling", test))]
 pub mod mock;
 
@@ -24,32 +27,22 @@ pub struct AudioStreamConfig<C>(pub C);
 /// If the current devices are no longer available, this will
 /// attempt to select the default input and output.
 ///
-/// This only works with the default `cpal` backend.
 #[derive(Event, Debug)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct RestartAudioStream;
 
 /// Bookkeeping that should be called following stream initialization.
 ///
-/// For example, here's how the `cpal` stream is initialized.
+/// For example, once a backend has initialized a stream and knows
+/// the active sample rate, it can finish startup bookkeeping.
 /// ```
 /// # use bevy::prelude::*;
-/// # use bevy_seedling::{prelude::*, platform::cpal::CpalConfig, context::SampleRate};
+/// # use bevy_seedling::context::SampleRate;
 /// # use bevy_seedling::platform::initialize_stream;
-/// fn start_stream(
-///     mut context: ResMut<AudioContext>,
-///     stream_config: Res<AudioStreamConfig<CpalConfig>>,
-///     mut commands: Commands,
-/// ) -> Result {
-///     let stream = context
-///         .with(|context| firewheel::cpal::CpalStream::new(context, stream_config.0.clone()))?;
-///
-///     let sample_rate = SampleRate::new(stream.info().sample_rate);
-///
-///     commands.insert_resource(CpalStream::new(stream));
+/// # use std::num::NonZeroU32;
+/// fn start_stream(commands: Commands) {
+///     let sample_rate = SampleRate::new(NonZeroU32::new(48000).unwrap());
 ///     initialize_stream(sample_rate, commands);
-///
-///     Ok(())
 /// }
 /// ```
 pub fn initialize_stream(sample_rate: SampleRate, mut commands: Commands) {

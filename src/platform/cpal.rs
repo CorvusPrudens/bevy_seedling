@@ -3,7 +3,6 @@
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_log::{error, warn};
-use bevy_platform::cell::SyncCell;
 use firewheel::cpal::{self};
 
 use crate::{
@@ -40,63 +39,35 @@ impl Plugin for CpalPlatformPlugin {
     }
 }
 
-/// A wrapper around [`CpalStream`][cpal::CpalStream], safely
-/// implementing `Sync`.
-#[derive(Resource)]
-pub struct CpalStream(Option<SyncCell<cpal::CpalStream>>);
-
-impl CpalStream {
-    /// Construct a new, inhabited [`CpalStream`].
-    pub fn new(stream: cpal::CpalStream) -> Self {
-        Self(Some(SyncCell::new(stream)))
-    }
-
-    /// Returns a mutable reference to [`CpalStream`][cpal::CpalStream].
-    ///
-    /// This is the only way to access the stream.
-    pub fn get(&mut self) -> &mut cpal::CpalStream {
-        self.0
-            .as_mut()
-            .expect("`CpalStream` should never be `None`")
-            .get()
-    }
-
-    fn take(&mut self) -> Option<cpal::CpalStream> {
-        self.0.take().map(SyncCell::to_inner)
-    }
-
-    fn replace(&mut self, stream: cpal::CpalStream) -> Option<cpal::CpalStream> {
-        let old = self.0.take().map(SyncCell::to_inner);
-        self.0 = Some(SyncCell::new(stream));
-        old
-    }
-}
-
-impl core::fmt::Debug for CpalStream {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CpalStream").finish_non_exhaustive()
-    }
-}
-
 fn start_stream(
     mut context: ResMut<AudioContext>,
     stream_config: Res<AudioStreamConfig<CpalConfig>>,
-    mut commands: Commands,
+    commands: Commands,
 ) -> Result {
     // TODO: it's not possible for the user to recover if this fails
-    let stream = context.with(|context| cpal::CpalStream::new(context, stream_config.0.clone()))?;
+    let sample_rate = context.with_store(|context, store| {
+        let stream = cpal::CpalStream::new(context, stream_config.0.clone())?;
+        let sample_rate = stream.info().sample_rate;
 
-    let sample_rate = SampleRate::new(stream.info().sample_rate);
-    commands.insert_resource(CpalStream::new(stream));
+        let previous = store.insert(stream);
+        debug_assert!(previous.is_none());
 
-    super::initialize_stream(sample_rate, commands);
+        Ok::<_, StartStreamError>(sample_rate)
+    })?;
+
+    super::initialize_stream(SampleRate::new(sample_rate), commands);
 
     Ok(())
 }
 
-fn poll_stream(mut stream: ResMut<CpalStream>, mut commands: Commands) -> Result {
-    let stream = stream.get();
-    for e in stream.poll_status() {
+fn poll_stream(mut context: ResMut<AudioContext>, mut commands: Commands) -> Result {
+    let errors = context.with_store(|_, store| {
+        store
+            .get_mut::<cpal::CpalStream>()
+            .map(|stream| stream.poll_status().collect::<Vec<_>>())
+    });
+
+    for e in errors.into_iter().flatten() {
         match e {
             StreamError::StreamInvalidated | StreamError::DeviceNotAvailable => {
                 warn!("Audio stream stopped: {e:?}");
@@ -120,22 +91,24 @@ fn observe_restart(_: On<RestartAudioStream>, mut config: ResMut<AudioStreamConf
 
 fn restart_stream(
     stream_config: Res<AudioStreamConfig<CpalConfig>>,
-    mut stream: ResMut<CpalStream>,
     mut graph: ResMut<AudioContext>,
     sample_rate: Res<SampleRate>,
     mut commands: Commands,
 ) -> Result {
     // drop it like it's hot
-    let _ = stream.take();
+    let current_rate = graph.with_store(|context, store| {
+        let _ = store.remove::<cpal::CpalStream>();
 
-    let new_stream =
-        graph.with(|context| cpal::CpalStream::new(context, stream_config.0.clone()))?;
+        let stream = cpal::CpalStream::new(context, stream_config.0.clone())?;
+        let sample_rate = stream.info().sample_rate;
+        store.insert(stream);
+
+        Ok::<_, StartStreamError>(sample_rate)
+    })?;
 
     let previous_rate = sample_rate.get();
-    let current_rate = new_stream.info().sample_rate;
     sample_rate.set(current_rate);
 
-    stream.replace(new_stream);
     commands.trigger(StreamRestartEvent {
         previous_rate,
         current_rate,
