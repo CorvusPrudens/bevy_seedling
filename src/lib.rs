@@ -137,6 +137,7 @@
 //! | `adpcm`           | Enable adpcm encoding.                     | No      |
 //! | `flac`            | Enable FLAC format and encoding.           | No      |
 //! | `web_audio`       | Enable the multi-threading web backend.    | No      |
+//! | `rtaudio`         | Enable the native RtAudio backend.         | No      |
 //! | `hrtf`            | Enable HRTF Spatialization.                | No      |
 //! | `hrtf_subjects`   | Enable all HRTF embedded data.             | No      |
 //! | `loudness`        | Enable LUFS analyzer node.                 | No      |
@@ -418,8 +419,8 @@ pub mod prelude {
         diff::{Memo, Notify},
     };
 
-    #[cfg(feature = "cpal")]
-    pub use crate::platform::cpal::CpalStream;
+    #[cfg(all(feature = "rtaudio", not(target_arch = "wasm32")))]
+    pub use crate::platform::rtaudio::{RtAudioConfig, RtAudioPlatformPlugin};
 
     #[cfg(feature = "hrtf")]
     pub use firewheel_ircam_hrtf::{self as hrtf, HrtfConfig, HrtfNode};
@@ -468,6 +469,8 @@ plugin_group! {
         :SeedlingCorePlugin,
         #[cfg(feature = "cpal")]
         platform::cpal:::CpalPlatformPlugin,
+        #[cfg(feature = "rtaudio")]
+        platform::rtaudio:::DefaultRtAudioPlatformPlugin,
         #[cfg(feature = "diagnostics")]
         diagnostics:::AudioDiagnosticsPlugin,
     }
