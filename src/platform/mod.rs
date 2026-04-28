@@ -27,7 +27,6 @@ pub struct AudioStreamConfig<C>(pub C);
 /// If the current devices are no longer available, this will
 /// attempt to select the default input and output.
 ///
-/// This works with the built-in `cpal` and `rtaudio` backends.
 #[derive(Event, Debug)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct RestartAudioStream;

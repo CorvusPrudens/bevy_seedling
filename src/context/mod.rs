@@ -126,13 +126,6 @@ impl AudioThreadState {
     }
 }
 
-#[cfg_attr(
-    not(any(
-        feature = "cpal",
-        all(feature = "rtaudio", not(target_arch = "wasm32"))
-    )),
-    allow(dead_code)
-)]
 #[derive(Default)]
 pub(crate) struct LocalStore(HashMap<TypeId, Box<dyn Any>>);
 
@@ -141,7 +134,7 @@ pub(crate) struct LocalStore(HashMap<TypeId, Box<dyn Any>>);
         feature = "cpal",
         all(feature = "rtaudio", not(target_arch = "wasm32"))
     )),
-    allow(dead_code)
+    expect(dead_code)
 )]
 impl LocalStore {
     pub(crate) fn insert<T: 'static>(&mut self, value: T) -> Option<T> {
@@ -150,7 +143,7 @@ impl LocalStore {
             .map(|value| {
                 *value
                     .downcast()
-                    .expect("stored type should match its TypeId")
+                    .expect("stored type should match its `TypeId`")
             })
     }
 
@@ -158,7 +151,7 @@ impl LocalStore {
         self.0.get_mut(&TypeId::of::<T>()).map(|value| {
             value
                 .downcast_mut()
-                .expect("stored type should match its TypeId")
+                .expect("stored type should match its `TypeId`")
         })
     }
 
@@ -166,7 +159,7 @@ impl LocalStore {
         self.0.remove(&TypeId::of::<T>()).map(|value| {
             *value
                 .downcast()
-                .expect("stored type should match its TypeId")
+                .expect("stored type should match its `TypeId`")
         })
     }
 }

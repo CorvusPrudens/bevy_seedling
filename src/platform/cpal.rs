@@ -39,8 +39,6 @@ impl Plugin for CpalPlatformPlugin {
     }
 }
 
-struct StoredCpalStream(cpal::CpalStream);
-
 fn start_stream(
     mut context: ResMut<AudioContext>,
     stream_config: Res<AudioStreamConfig<CpalConfig>>,
@@ -51,7 +49,7 @@ fn start_stream(
         let stream = cpal::CpalStream::new(context, stream_config.0.clone())?;
         let sample_rate = stream.info().sample_rate;
 
-        let previous = store.insert(StoredCpalStream(stream));
+        let previous = store.insert(stream);
         debug_assert!(previous.is_none());
 
         Ok::<_, StartStreamError>(sample_rate)
@@ -65,8 +63,8 @@ fn start_stream(
 fn poll_stream(mut context: ResMut<AudioContext>, mut commands: Commands) -> Result {
     let errors = context.with_store(|_, store| {
         store
-            .get_mut::<StoredCpalStream>()
-            .map(|stream| stream.0.poll_status().collect::<Vec<_>>())
+            .get_mut::<cpal::CpalStream>()
+            .map(|stream| stream.poll_status().collect::<Vec<_>>())
     });
 
     for e in errors.into_iter().flatten() {
@@ -99,11 +97,11 @@ fn restart_stream(
 ) -> Result {
     // drop it like it's hot
     let current_rate = graph.with_store(|context, store| {
-        let _ = store.remove::<StoredCpalStream>();
+        let _ = store.remove::<cpal::CpalStream>();
 
         let stream = cpal::CpalStream::new(context, stream_config.0.clone())?;
         let sample_rate = stream.info().sample_rate;
-        store.insert(StoredCpalStream(stream));
+        store.insert(stream);
 
         Ok::<_, StartStreamError>(sample_rate)
     })?;
