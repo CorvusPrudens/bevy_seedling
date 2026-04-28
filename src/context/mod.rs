@@ -4,7 +4,11 @@ use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_platform::sync;
 use firewheel::{FirewheelConfig, FirewheelContext, clock::AudioClock};
-use std::num::NonZeroU32;
+use std::{
+    any::{Any, TypeId},
+    collections::HashMap,
+    num::NonZeroU32,
+};
 
 pub mod graph;
 
@@ -96,7 +100,74 @@ impl AudioContext {
         F: FnOnce(&mut FirewheelContext) -> O + Send,
         O: Send + 'static,
     {
-        self.0.with(f)
+        self.with_store(|context, _| f(context))
+    }
+
+    pub(crate) fn with_store<F, O>(&mut self, f: F) -> O
+    where
+        F: FnOnce(&mut FirewheelContext, &mut LocalStore) -> O + Send,
+        O: Send + 'static,
+    {
+        self.0.with_store(f)
+    }
+}
+
+pub(crate) struct AudioThreadState {
+    context: FirewheelContext,
+    store: LocalStore,
+}
+
+impl AudioThreadState {
+    fn new(settings: FirewheelConfig) -> Self {
+        Self {
+            context: FirewheelContext::new(settings),
+            store: LocalStore::default(),
+        }
+    }
+}
+
+#[cfg_attr(
+    not(any(
+        feature = "cpal",
+        all(feature = "rtaudio", not(target_arch = "wasm32"))
+    )),
+    allow(dead_code)
+)]
+#[derive(Default)]
+pub(crate) struct LocalStore(HashMap<TypeId, Box<dyn Any>>);
+
+#[cfg_attr(
+    not(any(
+        feature = "cpal",
+        all(feature = "rtaudio", not(target_arch = "wasm32"))
+    )),
+    allow(dead_code)
+)]
+impl LocalStore {
+    pub(crate) fn insert<T: 'static>(&mut self, value: T) -> Option<T> {
+        self.0
+            .insert(TypeId::of::<T>(), Box::new(value))
+            .map(|value| {
+                *value
+                    .downcast()
+                    .expect("stored type should match its TypeId")
+            })
+    }
+
+    pub(crate) fn get_mut<T: 'static>(&mut self) -> Option<&mut T> {
+        self.0.get_mut(&TypeId::of::<T>()).map(|value| {
+            value
+                .downcast_mut()
+                .expect("stored type should match its TypeId")
+        })
+    }
+
+    pub(crate) fn remove<T: 'static>(&mut self) -> Option<T> {
+        self.0.remove(&TypeId::of::<T>()).map(|value| {
+            *value
+                .downcast()
+                .expect("stored type should match its TypeId")
+        })
     }
 }
 

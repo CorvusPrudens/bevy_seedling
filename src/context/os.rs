@@ -1,11 +1,13 @@
 use firewheel::{FirewheelConfig, FirewheelContext};
 use std::sync::mpsc;
 
+use super::{AudioThreadState, LocalStore};
+
 /// A thread-safe wrapper around the underlying Firewheel audio context.
 #[derive(Debug)]
 pub struct InnerContext(mpsc::Sender<ThreadLocalCall>);
 
-type ThreadLocalCall = Box<dyn FnOnce(&mut FirewheelContext) + Send + 'static>;
+type ThreadLocalCall = Box<dyn FnOnce(&mut AudioThreadState) + Send + 'static>;
 
 impl InnerContext {
     // Spawn the audio process and control thread.
@@ -14,9 +16,9 @@ impl InnerContext {
         let (bev_to_audio_tx, bev_to_audio_rx) = mpsc::channel::<ThreadLocalCall>();
 
         std::thread::spawn(move || {
-            let mut context = FirewheelContext::new(settings);
+            let mut state = AudioThreadState::new(settings);
             while let Ok(func) = bev_to_audio_rx.recv() {
-                (func)(&mut context);
+                (func)(&mut state);
             }
         });
 
@@ -33,14 +35,15 @@ impl InnerContext {
     //
     // This API is based on [this PR](https://github.com/bevyengine/bevy/pull/9122).
     #[inline(always)]
-    pub fn with<F, O>(&mut self, f: F) -> O
+    pub fn with_store<F, O>(&mut self, f: F) -> O
     where
-        F: FnOnce(&mut FirewheelContext) -> O + Send,
+        F: FnOnce(&mut FirewheelContext, &mut LocalStore) -> O + Send,
         O: Send + 'static,
     {
         let (send, receive) = mpsc::sync_channel(1);
-        let func: Box<dyn FnOnce(&mut FirewheelContext) + Send> = Box::new(move |ctx| {
-            let result = f(ctx);
+        let func: Box<dyn FnOnce(&mut AudioThreadState) + Send> = Box::new(move |state| {
+            let AudioThreadState { context, store } = state;
+            let result = f(context, store);
             send.send(result).unwrap();
         });
 
@@ -50,8 +53,8 @@ impl InnerContext {
         // so we can pretend it has a static lifetime.
         let func = unsafe {
             core::mem::transmute::<
-                Box<dyn FnOnce(&mut FirewheelContext) + Send>,
-                Box<dyn FnOnce(&mut FirewheelContext) + Send + 'static>,
+                Box<dyn FnOnce(&mut AudioThreadState) + Send>,
+                Box<dyn FnOnce(&mut AudioThreadState) + Send + 'static>,
             >(func)
         };
 
