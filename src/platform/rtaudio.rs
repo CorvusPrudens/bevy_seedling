@@ -8,10 +8,20 @@ use bevy_app::prelude::*;
 #[derive(Debug, Default)]
 pub struct RtAudioPlatformPlugin;
 
+impl Plugin for RtAudioPlatformPlugin {
+    fn build(&self, app: &mut App) {
+        #[cfg(not(target_arch = "wasm32"))]
+        inner::build_plugin(app);
+
+        #[cfg(target_arch = "wasm32")]
+        let _ = app;
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub use firewheel::rtaudio::*;
 
-#[cfg(all(not(feature = "cpal"), not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 mod inner {
     use super::*;
     use bevy_ecs::prelude::*;
@@ -130,22 +140,5 @@ mod inner {
     fn stream_sample_rate(stream: &RtAudioStream) -> NonZeroU32 {
         NonZeroU32::new(stream.stream_info().sample_rate)
             .expect("RtAudio streams should always report a non-zero sample rate")
-    }
-}
-
-impl RtAudioPlatformPlugin {
-    #[cfg(all(not(feature = "cpal"), not(target_arch = "wasm32")))]
-    fn build_plugin(&self, app: &mut App) {
-        inner::build_plugin(app);
-    }
-}
-
-impl Plugin for RtAudioPlatformPlugin {
-    fn build(&self, app: &mut App) {
-        #[cfg(all(not(feature = "cpal"), not(target_arch = "wasm32")))]
-        self.build_plugin(app);
-
-        #[cfg(any(feature = "cpal", target_arch = "wasm32"))]
-        let _ = app;
     }
 }

@@ -470,7 +470,10 @@ plugin_group! {
     #[derive(Debug)]
     pub struct SeedlingPlugins {
         :SeedlingCorePlugin,
-        #[cfg(feature = "cpal")]
+        // We remove this if `rtaudio` is enabled because `cpal` is
+        // a default feature. We don't want the common (if unoptimal) path of adding
+        // `rtaudio` without disabling `cpal` to be confusing.
+        #[custom(cfg(all(feature = "cpal", not(feature = "rtaudio"))))]
         platform::cpal:::CpalPlatformPlugin,
         #[cfg(feature = "rtaudio")]
         platform::rtaudio:::RtAudioPlatformPlugin,

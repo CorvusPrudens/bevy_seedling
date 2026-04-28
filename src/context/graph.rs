@@ -32,7 +32,7 @@ impl Plugin for GraphPlugin {
         app.init_resource::<AudioGraphTemplate>()
             .add_systems(
                 PreStartup,
-                (crate::context::initialize_context, insert_io, set_up_graph)
+                (super::initialize_context, insert_io, set_up_graph)
                     .chain()
                     .in_set(SeedlingStartupSystems::GraphSetup),
             )

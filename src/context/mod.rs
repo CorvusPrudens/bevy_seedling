@@ -17,8 +17,7 @@ pub(crate) struct ContextPlugin;
 impl Plugin for ContextPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AudioContextConfig>()
-            .add_plugins(graph::GraphPlugin)
-            .add_systems(PreStartup, initialize_context);
+            .add_plugins(graph::GraphPlugin);
     }
 }
 
