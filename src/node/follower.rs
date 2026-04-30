@@ -68,7 +68,7 @@ pub(crate) fn param_follower<T: Diff + Patch + Component<Mutability = Mutable> +
 ) -> Result {
     let render_range = time.render_range();
 
-    let mut event_queue = Vec::new();
+    let mut event_queue = alloc::vec::Vec::new();
     for (entity, follower, mut params, mut events) in followers.iter_mut() {
         let Ok((mut source, mut source_events, timestamp)) = sources.get_mut(follower.0) else {
             continue;

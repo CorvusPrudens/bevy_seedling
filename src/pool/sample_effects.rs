@@ -154,7 +154,7 @@ pub enum EffectsQueryError {
 }
 
 impl core::fmt::Display for EffectsQueryError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::MatchedMultiple => write!(f, "audio effects query matched multiple entities"),
             Self::MatchedNone => write!(f, "audio effects query matched no entities"),

@@ -16,8 +16,8 @@ mod inner {
     use super::*;
     use bevy_ecs::prelude::*;
     use bevy_log::{error, warn};
+    use core::num::NonZeroU32;
     use firewheel::rtaudio::rtaudio::RtAudioErrorType;
-    use std::num::NonZeroU32;
 
     use crate::{
         SeedlingSystems,

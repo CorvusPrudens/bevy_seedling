@@ -55,6 +55,7 @@ use crate::{
     pool::{label::PoolLabelContainer, sample_effects::SampleEffects},
     sample::{QueuedSample, SamplePlayer},
 };
+use alloc::vec::Vec;
 use bevy_app::prelude::*;
 use bevy_ecs::{component::ComponentId, entity::EntityCloner, prelude::*};
 use bevy_log::prelude::*;

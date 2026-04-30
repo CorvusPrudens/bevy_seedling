@@ -204,12 +204,12 @@ impl From<SubjectBytes> for HrirSource {
     }
 }
 
-/// A wrapper for [`hrtf::HrtfError`] that implements [`std::error::Error`].
+/// A wrapper for [`hrtf::HrtfError`] that implements [`core::error::Error`].
 #[derive(Debug)]
 pub struct HrtfError(pub hrtf::HrtfError);
 
 impl core::fmt::Display for HrtfError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match &self.0 {
             hrtf::HrtfError::InvalidFileFormat => write!(f, "Failed to parse file as HRIR sphere"),
             hrtf::HrtfError::InvalidLength(len) => write!(f, "Invalid HRIR length `{len}`"),
@@ -354,7 +354,7 @@ impl AudioNodeProcessor for FyroxHrtfProcessor {
 
                 let output_start = self.fft_output.len();
                 self.fft_output
-                    .extend(std::iter::repeat_n((0.0, 0.0), fft_len));
+                    .extend(core::iter::repeat_n((0.0, 0.0), fft_len));
 
                 // let (left, right) = outputs.split_at_mut(1);
                 let context = HrtfContext {

@@ -1,14 +1,14 @@
 //! Glue code for interfacing with the underlying audio context.
 
+use alloc::boxed::Box;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
-use bevy_platform::sync;
-use firewheel::{FirewheelConfig, FirewheelContext, clock::AudioClock};
-use std::{
+use bevy_platform::{collections::HashMap, sync};
+use core::{
     any::{Any, TypeId},
-    collections::HashMap,
     num::NonZeroU32,
 };
+use firewheel::{FirewheelConfig, FirewheelContext, clock::AudioClock};
 
 pub mod graph;
 
@@ -27,9 +27,9 @@ mod web;
 #[cfg(target_arch = "wasm32")]
 use web::InnerContext;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "std", not(target_arch = "wasm32")))]
 mod os;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "std", not(target_arch = "wasm32")))]
 use os::InnerContext;
 
 /// A thread-safe wrapper around the underlying Firewheel audio context.

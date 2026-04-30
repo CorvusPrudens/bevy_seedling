@@ -34,7 +34,7 @@ include = [
 all-features = true
 
 [dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", default-features = false, features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "d0255aa", default-features = false, features = [
   "glam-30",
   "std",
 ] }

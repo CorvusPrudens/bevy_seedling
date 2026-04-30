@@ -11,6 +11,7 @@ use crate::{
     sample::{OnComplete, PlaybackSettings, QueuedSample, SamplePlayer},
     time::{Audio, AudioTime},
 };
+use alloc::vec::Vec;
 use bevy_app::prelude::*;
 use bevy_asset::prelude::*;
 use bevy_ecs::{
@@ -389,7 +390,7 @@ impl Sampler {
 }
 
 impl core::fmt::Debug for Sampler {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("SamplerAssignment")
             .field("sampler", &self.sampler)
             .finish_non_exhaustive()
@@ -870,8 +871,6 @@ impl PoolCommands for Commands<'_, '_> {
 
 #[cfg(test)]
 mod test {
-    use std::time::Instant;
-
     use super::*;
     use crate::{
         prelude::*,
@@ -880,6 +879,7 @@ mod test {
     };
     use bevy_seedling_macros::PoolLabel;
     use firewheel::nodes::fast_filters::lowpass::FastLowpassNode;
+    use std::time::Instant;
 
     #[derive(PoolLabel, Clone, Debug, PartialEq, Eq, Hash)]
     struct TestPool;

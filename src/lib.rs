@@ -335,13 +335,18 @@
 //! [`SampleResource`]: firewheel::core::sample_resource::SampleResource
 //! [`AudioSample`]: prelude::AudioSample
 
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(clippy::type_complexity)]
 #![expect(clippy::needless_doctest_main)]
 #![warn(missing_debug_implementations)]
 #![warn(missing_docs)]
 
+#[cfg(any(feature = "std", test))]
+extern crate std;
+
 // Naming trick to facilitate straightforward internal macro usage.
+extern crate alloc;
 extern crate self as bevy_seedling;
 
 use bevy_app::{plugin_group, prelude::*};

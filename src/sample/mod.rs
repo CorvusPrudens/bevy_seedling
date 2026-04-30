@@ -7,12 +7,12 @@ use crate::{
 use bevy_asset::Handle;
 use bevy_ecs::prelude::*;
 use bevy_math::FloatExt;
+use core::time::Duration;
 use firewheel::{
     clock::{DurationSeconds, InstantSeconds},
     diff::Notify,
     nodes::sampler::{PlayFrom, RepeatMode},
 };
-use std::time::Duration;
 
 mod assets;
 
@@ -162,7 +162,7 @@ pub use assets::loader::{AudioLoaderConfig, SampleLoader, SampleLoaderError};
 ///         on_complete: OnComplete::Despawn,
 ///     },
 ///     SamplePriority(0),
-///     SampleQueueLifetime(std::time::Duration::from_millis(100)),
+///     SampleQueueLifetime(core::time::Duration::from_millis(100)),
 ///     sample_effects![SpatialBasicNode::default()],
 /// ));
 /// # }
@@ -651,10 +651,10 @@ impl firewheel::diff::Diff for PlaybackSettings {
         path: firewheel::diff::PathBuilder,
         event_queue: &mut E,
     ) {
-        self.play.diff(&baseline.play, path.with(2), event_queue);
+        self.play.diff(&baseline.play, path.with(1), event_queue);
         self.play_from
-            .diff(&baseline.play_from, path.with(3), event_queue);
-        self.speed.diff(&baseline.speed, path.with(5), event_queue);
+            .diff(&baseline.play_from, path.with(2), event_queue);
+        self.speed.diff(&baseline.speed, path.with(4), event_queue);
     }
 }
 
@@ -664,7 +664,7 @@ impl firewheel::diff::Patch for PlaybackSettings {
     fn patch(
         data: &firewheel::event::ParamData,
         path: &[u32],
-    ) -> std::result::Result<Self::Patch, firewheel::diff::PatchError> {
+    ) -> core::result::Result<Self::Patch, firewheel::diff::PatchError> {
         firewheel::nodes::sampler::SamplerNode::patch(data, path)
     }
 
@@ -695,6 +695,7 @@ mod random {
     use crate::SeedlingSystems;
 
     use super::PlaybackSettings;
+    use alloc::boxed::Box;
     use bevy_app::prelude::*;
     use bevy_ecs::prelude::*;
     use rand::{SeedableRng, rngs::SmallRng};
@@ -709,13 +710,13 @@ mod random {
     }
 
     trait PitchRng {
-        fn gen_pitch(&mut self, range: std::ops::Range<f64>) -> f64;
+        fn gen_pitch(&mut self, range: core::ops::Range<f64>) -> f64;
     }
 
     struct RandRng<T>(T);
 
     impl<T: rand::Rng> PitchRng for RandRng<T> {
-        fn gen_pitch(&mut self, range: std::ops::Range<f64>) -> f64 {
+        fn gen_pitch(&mut self, range: core::ops::Range<f64>) -> f64 {
             self.0.random_range(range)
         }
     }
@@ -729,7 +730,7 @@ mod random {
     pub struct PitchRngSource(Box<dyn PitchRng + Send + Sync>);
 
     impl core::fmt::Debug for PitchRngSource {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             f.debug_tuple("PitchRngSource").finish_non_exhaustive()
         }
     }

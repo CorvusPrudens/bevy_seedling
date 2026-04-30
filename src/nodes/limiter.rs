@@ -1,7 +1,9 @@
 //! Limiter with configurable lookahead, attack and release.
 
+use alloc::boxed::Box;
+use alloc::vec;
 use core::f32;
-use std::num::NonZeroU32;
+use core::num::NonZeroU32;
 
 use bevy_ecs::component::Component;
 use firewheel::{

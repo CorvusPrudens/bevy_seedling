@@ -295,6 +295,7 @@ mod spatial_hrtf {
 
 #[cfg(test)]
 mod test {
+    use alloc::vec::Vec;
     use bevy_asset::AssetServer;
 
     use super::*;

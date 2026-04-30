@@ -5,6 +5,8 @@ use crate::context::AudioContext;
 use crate::node::FirewheelNodeInfo;
 use crate::node::label::InternedNodeLabel;
 use crate::prelude::{FirewheelNode, MainBus, NodeLabel};
+use alloc::borrow::Cow;
+use alloc::vec::Vec;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_log::error_once;
@@ -108,7 +110,7 @@ pub enum ChannelMapping {
 impl ChannelMapping {
     /// Maps the input channels to the output channels according
     /// to the variant.
-    pub fn map_channels(&self, outputs: u32, inputs: u32) -> Vec<(u32, u32)> {
+    pub fn map_channels(&self, outputs: u32, inputs: u32) -> Cow<'static, [(u32, u32)]> {
         let map_min = || (0..outputs.min(inputs)).map(|i| (i, i)).collect();
 
         match self {
@@ -116,45 +118,25 @@ impl ChannelMapping {
             ChannelMapping::Speakers => {
                 match (outputs, inputs) {
                     // Mono -> Stereo / Mono -> Quad
-                    (1, 2) | (1, 4) => {
-                        vec![(0, 0), (0, 1)]
-                    }
+                    (1, 2) | (1, 4) => Cow::Borrowed(&[(0, 0), (0, 1)]),
                     // Mono -> 5.1
-                    (1, 6) => {
-                        vec![(0, 2)]
-                    }
+                    (1, 6) => Cow::Borrowed(&[(0, 2)]),
                     // Stereo -> Mono
-                    (2, 1) => {
-                        vec![(0, 0), (1, 0)]
-                    }
+                    (2, 1) => Cow::Borrowed(&[(0, 0), (1, 0)]),
                     // Stereo -> Quad / Stereo -> 5.1
-                    (2, 4) | (2, 6) => {
-                        vec![(0, 0), (1, 1)]
-                    }
+                    (2, 4) | (2, 6) => Cow::Borrowed(&[(0, 0), (1, 1)]),
                     // Quad -> Mono
-                    (4, 1) => {
-                        vec![(0, 0), (1, 0), (2, 0), (3, 0)]
-                    }
+                    (4, 1) => Cow::Borrowed(&[(0, 0), (1, 0), (2, 0), (3, 0)]),
                     // Quad -> Stereo
-                    (4, 2) => {
-                        vec![(0, 0), (1, 1), (2, 0), (3, 1)]
-                    }
+                    (4, 2) => Cow::Borrowed(&[(0, 0), (1, 1), (2, 0), (3, 1)]),
                     // Quad -> 5.1
-                    (4, 6) => {
-                        vec![(0, 0), (1, 1), (2, 4), (3, 5)]
-                    }
+                    (4, 6) => Cow::Borrowed(&[(0, 0), (1, 1), (2, 4), (3, 5)]),
                     // 5.1 -> Mono
-                    (6, 1) => {
-                        vec![(0, 0), (1, 0), (2, 0), (4, 0), (5, 0)]
-                    }
+                    (6, 1) => Cow::Borrowed(&[(0, 0), (1, 0), (2, 0), (4, 0), (5, 0)]),
                     // 5.1 -> Stereo
-                    (6, 2) => {
-                        vec![(0, 0), (2, 0), (4, 0), (1, 1), (2, 1), (5, 1)]
-                    }
+                    (6, 2) => Cow::Borrowed(&[(0, 0), (2, 0), (4, 0), (1, 1), (2, 1), (5, 1)]),
                     // 5.1 -> Quad
-                    (6, 4) => {
-                        vec![(0, 0), (2, 0), (1, 1), (2, 1), (4, 2), (5, 3)]
-                    }
+                    (6, 4) => Cow::Borrowed(&[(0, 0), (2, 0), (1, 1), (2, 1), (4, 2), (5, 3)]),
                     _ => map_min(),
                 }
             }
@@ -376,6 +358,7 @@ mod test {
         prelude::*,
         test::{prepare_app, run},
     };
+    use alloc::vec::Vec;
     use bevy_ecs::prelude::*;
 
     #[derive(Component)]

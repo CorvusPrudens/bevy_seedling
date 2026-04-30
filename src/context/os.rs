@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use firewheel::{FirewheelConfig, FirewheelContext};
 use std::sync::mpsc;
 

@@ -1,11 +1,12 @@
-use std::iter::Copied;
+use alloc::{boxed::Box, vec::Vec};
+use core::iter::Copied;
 
 use bevy_ecs::{
     entity::{Entity, EntityMapper, EntitySetIterator, MapEntities},
     relationship::RelationshipSourceCollection,
 };
 
-/// A thin wrapper around `std::vec::Vec<Entity>`.
+/// A thin wrapper around `core::vec::Vec<Entity>`.
 ///
 /// This type guarantees that all elements are unique while
 /// maintaining insertion ordering.

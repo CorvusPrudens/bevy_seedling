@@ -30,8 +30,8 @@
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_time::{Time, TimeSystems};
+use core::time::Duration;
 use firewheel::clock::{DurationSeconds, InstantSeconds};
-use std::time::Duration;
 
 use crate::context::AudioContext;
 

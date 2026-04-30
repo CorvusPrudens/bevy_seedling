@@ -3,6 +3,7 @@ use crate::{
     context::AudioContext,
     node::{FirewheelNode, FirewheelNodeInfo},
 };
+use alloc::vec::Vec;
 use bevy_ecs::prelude::*;
 
 #[cfg(feature = "track_location")]

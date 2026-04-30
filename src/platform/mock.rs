@@ -3,8 +3,8 @@
 use audioadapter_buffers::direct::InterleavedSlice;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
+use core::num::{NonZero, NonZeroU32};
 use firewheel::{ActivateInfo, FirewheelContext, node::StreamStatus};
-use std::num::{NonZero, NonZeroU32};
 
 use crate::{
     context::{AudioContext, SampleRate},
@@ -75,7 +75,7 @@ fn initialize_mock(context: &mut FirewheelContext) {
                 },
             );
 
-            std::thread::sleep(std::time::Duration::from_secs_f64(block_duration));
+            std::thread::sleep(core::time::Duration::from_secs_f64(block_duration));
         }
     });
 }

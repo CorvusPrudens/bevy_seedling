@@ -8,6 +8,8 @@ use crate::{
     edge::{ChannelMapping, NodeMap},
     prelude::AudioContext,
 };
+use alloc::string::ToString;
+use alloc::vec::Vec;
 use bevy_app::prelude::*;
 use bevy_ecs::component::Components;
 use bevy_ecs::lifecycle::HookContext;
@@ -607,7 +609,7 @@ impl RegisterNode for App {
                 bevy_log::warn!(
                     "Audio node `{}` was registered more than once at {}",
                     core::any::type_name::<T>(),
-                    std::panic::Location::caller(),
+                    core::panic::Location::caller(),
                 );
             }
 
@@ -657,7 +659,7 @@ impl RegisterNode for App {
                 bevy_log::warn!(
                     "Audio node `{}` was registered more than once at {}",
                     core::any::type_name::<T>(),
-                    std::panic::Location::caller(),
+                    core::panic::Location::caller(),
                 );
             }
 
@@ -701,7 +703,7 @@ impl RegisterNode for App {
                     "State `{}` was registered for node `{}` at {}",
                     core::any::type_name::<S>(),
                     core::any::type_name::<T>(),
-                    std::panic::Location::caller(),
+                    core::panic::Location::caller(),
                 );
             }
 

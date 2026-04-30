@@ -4,6 +4,7 @@ use crate::{
     edge::ChannelMapping,
     node::{FirewheelNode, FirewheelNodeInfo},
 };
+use alloc::vec::Vec;
 use bevy_ecs::prelude::*;
 use bevy_log::prelude::*;
 
@@ -135,7 +136,9 @@ impl PendingConnections {
 ///     .chain_node(SpatialBasicNode::default())
 ///     .head();
 ///
-/// commands.spawn(FastBandpassNode::<2>::default()).connect(chain_head);
+/// commands
+///     .spawn(FastBandpassNode::<2>::default())
+///     .connect(chain_head);
 /// # }
 /// ```
 ///
@@ -434,7 +437,7 @@ impl<'a> ConnectCommands<'a> {
 }
 
 impl core::fmt::Debug for ConnectCommands<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ConnectCommands")
             .field("entity", &self.head)
             .finish_non_exhaustive()
@@ -476,10 +479,8 @@ pub(crate) fn process_connections(
                     None => {
                         let outputs = source_info.channel_config.num_outputs.get();
                         let inputs = target_info.channel_config.num_inputs.get();
-
                         inferred_ports = source_mapping.map_channels(outputs, inputs);
-
-                        inferred_ports.as_slice()
+                        &inferred_ports
                     }
                 };
 

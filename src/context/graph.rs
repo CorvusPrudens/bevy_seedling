@@ -23,7 +23,7 @@ use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_seedling_macros::{NodeLabel, PoolLabel};
 use bevy_transform::prelude::Transform;
-use std::fmt::Debug;
+use core::fmt::Debug;
 
 pub(super) struct GraphPlugin;
 

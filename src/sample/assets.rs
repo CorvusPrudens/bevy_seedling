@@ -1,7 +1,8 @@
+use alloc::sync::Arc;
 use bevy_asset::Asset;
 use bevy_reflect::TypePath;
+use core::num::NonZeroU32;
 use firewheel::{collector::ArcGc, sample_resource::SampleResource};
-use std::{num::NonZeroU32, sync::Arc};
 
 /// A type-erased audio sample.
 ///
@@ -13,7 +14,7 @@ use std::{num::NonZeroU32, sync::Arc};
 /// asset loader.
 #[derive(Asset, TypePath, Clone)]
 pub struct AudioSample {
-    sample: ArcGc<dyn SampleResource>,
+    sample: ArcGc<dyn SampleResource + Send + Sync>,
     original_sample_rate: NonZeroU32,
 }
 
@@ -22,7 +23,10 @@ impl AudioSample {
     ///
     /// If the sample resource has been resampled, `original_sample_rate` should represent
     /// the sample rate prior to resampling.
-    pub fn new<S: SampleResource>(sample: S, original_sample_rate: NonZeroU32) -> Self {
+    pub fn new<S: SampleResource + Send + Sync + 'static>(
+        sample: S,
+        original_sample_rate: NonZeroU32,
+    ) -> Self {
         Self {
             sample: ArcGc::new_unsized(|| Arc::new(sample) as _),
             original_sample_rate,
@@ -30,7 +34,7 @@ impl AudioSample {
     }
 
     /// Share the inner value.
-    pub fn get(&self) -> ArcGc<dyn SampleResource> {
+    pub fn get(&self) -> ArcGc<dyn SampleResource + Send + Sync> {
         self.sample.clone()
     }
 
@@ -66,16 +70,21 @@ impl From<firewheel::SymphoniumAudio> for AudioSample {
 }
 
 impl core::fmt::Debug for AudioSample {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("AudioSample")
             .field(&self.original_sample_rate)
             .finish_non_exhaustive()
     }
 }
 
-#[cfg(feature = "symphonia")]
+#[cfg(all(feature = "std", feature = "symphonia"))]
 pub mod loader {
     use super::AudioSample;
+    use alloc::{
+        boxed::Box,
+        string::{String, ToString},
+        vec::Vec,
+    };
     use bevy_app::prelude::*;
     use bevy_asset::{AssetLoader, AssetServer};
     use bevy_ecs::prelude::*;
@@ -207,8 +216,8 @@ pub mod loader {
         }
     }
 
-    impl std::fmt::Debug for AudioLoaderConfig {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    impl core::fmt::Debug for AudioLoaderConfig {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             f.debug_struct("AudioLoaderConfig")
                 .field("extensions", &self.extensions)
                 .finish_non_exhaustive()
@@ -265,10 +274,10 @@ pub mod loader {
         }
     }
 
-    impl std::error::Error for SampleLoaderError {}
+    impl core::error::Error for SampleLoaderError {}
 
-    impl std::fmt::Display for SampleLoaderError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    impl core::fmt::Display for SampleLoaderError {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             match self {
                 Self::StdIo(stdio) => stdio.fmt(f),
                 Self::Symphonium(sy) => f.write_str(sy),
@@ -287,7 +296,7 @@ pub mod loader {
             _settings: &Self::Settings,
             load_context: &mut bevy_asset::LoadContext<'_>,
         ) -> Result<Self::Asset, Self::Error> {
-            thread_local! {
+            std::thread_local! {
                 static CACHE: SymphoniumCache = SymphoniumCache::new();
             }
 

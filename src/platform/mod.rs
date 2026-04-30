@@ -26,7 +26,6 @@ pub struct AudioStreamConfig<C>(pub C);
 ///
 /// If the current devices are no longer available, this will
 /// attempt to select the default input and output.
-///
 #[derive(Event, Debug)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct RestartAudioStream;
@@ -39,7 +38,7 @@ pub struct RestartAudioStream;
 /// # use bevy::prelude::*;
 /// # use bevy_seedling::context::SampleRate;
 /// # use bevy_seedling::platform::initialize_stream;
-/// # use std::num::NonZeroU32;
+/// # use core::num::NonZeroU32;
 /// fn start_stream(commands: Commands) {
 ///     let sample_rate = SampleRate::new(NonZeroU32::new(48000).unwrap());
 ///     initialize_stream(sample_rate, commands);

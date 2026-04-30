@@ -1,5 +1,6 @@
 //! Events that synchronize the ECS and audio thread.
 
+use alloc::{sync::Arc, vec::Vec};
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_math::FloatExt;
@@ -12,7 +13,6 @@ use firewheel::{
     event::{NodeEventType, ParamData},
     nodes::volume::VolumeNode,
 };
-use std::sync::Arc;
 
 use crate::{error::SeedlingError, time::Audio};
 
@@ -27,7 +27,7 @@ impl Plugin for EventsPlugin {
 /// The audio event queue.
 ///
 /// When inserted into an entity that contains a [`FirewheelNode`],
-/// these events will automatically be drained and sent
+//
 /// to the audio context in the [`SeedlingSystems::Flush`] set.
 ///
 /// [`FirewheelNode`]: crate::prelude::FirewheelNode
@@ -289,7 +289,7 @@ impl EventQueue for AudioEvents {
 }
 
 impl core::fmt::Debug for AudioEvents {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("AudioEvents")
             .field("queue", &())
             .field("timeline", &self.timeline)
@@ -306,7 +306,7 @@ struct TimelineQueue<'a> {
 }
 
 impl core::fmt::Debug for TimelineQueue<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("TimelineQueue")
             .field("instant", &self.instant)
             .finish_non_exhaustive()

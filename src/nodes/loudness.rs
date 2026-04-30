@@ -1,5 +1,6 @@
 //! EBU R128 loudness measurement.
 
+use alloc::{boxed::Box, vec::Vec};
 use bevy_ecs::component::Component;
 use core::sync::atomic::Ordering;
 use ebur128::{Channel, EbuR128, Mode};

@@ -1,5 +1,6 @@
 //! `bevy_seedling`'s error types.
 
+use alloc::string::{String, ToString};
 use bevy_ecs::prelude::*;
 use bevy_utils::prelude::DebugName;
 use core::fmt::Display;
@@ -48,7 +49,7 @@ pub enum SeedlingError {
 }
 
 impl core::fmt::Display for SeedlingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Patch { ty, error } => {
                 write!(f, "Failed to apply audio patch to `{ty}`: {error:?}")
@@ -100,6 +101,6 @@ pub(crate) fn render_errors<
             writeln!(&mut string, "{error}").unwrap();
         }
 
-        Err(format!("{message}: {string}").into())
+        Err(alloc::format!("{message}: {string}").into())
     }
 }

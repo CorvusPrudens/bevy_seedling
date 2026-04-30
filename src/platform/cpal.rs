@@ -1,5 +1,6 @@
 //! Stream management for `cpal`.
 
+use alloc::vec::Vec;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_log::{error, warn};
@@ -46,7 +47,25 @@ fn start_stream(
 ) -> Result {
     // TODO: it's not possible for the user to recover if this fails
     let sample_rate = context.with_store(|context, store| {
-        let stream = cpal::CpalStream::new(context, stream_config.0.clone())?;
+        #[allow(unused_mut)]
+        let mut stream_config = stream_config.0.clone();
+
+        #[cfg(all(feature = "web_audio", target_arch = "wasm32"))]
+        {
+            // if no host has been specified, we'll choose the worklet host
+            if stream_config.output.host.is_none() {
+                match cpal::cpal::host_from_id(HostId::AudioWorklet) {
+                    Ok(host) => {
+                        stream_config.output.host = Some(host.id());
+                    }
+                    Err(e) => {
+                        bevy_log::warn!("Failed to acquire audioworklet host: {e}");
+                    }
+                }
+            }
+        }
+
+        let stream = cpal::CpalStream::new(context, stream_config)?;
         let sample_rate = stream.info().sample_rate;
 
         let previous = store.insert(stream);
