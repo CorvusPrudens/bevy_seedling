@@ -4,10 +4,12 @@ use crate::{SeedlingSystems, prelude::RegisterNode};
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 
-pub mod itd;
-pub mod limiter;
 pub mod send;
 
+#[cfg(feature = "itd")]
+pub mod itd;
+#[cfg(feature = "limiter")]
+pub mod limiter;
 #[cfg(feature = "loudness")]
 pub mod loudness;
 
@@ -15,10 +17,16 @@ pub mod loudness;
 pub mod core {
     pub use firewheel::nodes::{
         StereoToMonoNode,
-        sampler::{PlayFrom, PlaybackSpeedQuality, RepeatMode, SamplerConfig, SamplerNode},
-        spatial_basic::SpatialBasicNode,
         volume::{VolumeNode, VolumeNodeConfig},
         volume_pan::VolumePanNode,
+    };
+
+    #[cfg(feature = "spatial")]
+    pub use firewheel::nodes::spatial_basic::SpatialBasicNode;
+
+    #[cfg(feature = "sampler")]
+    pub use firewheel::nodes::sampler::{
+        PlayFrom, PlaybackSpeedQuality, RepeatMode, SamplerConfig, SamplerNode,
     };
 }
 
@@ -51,13 +59,16 @@ impl Plugin for SeedlingNodesPlugin {
         use core::*;
 
         // seedling nodes
-        app.register_node::<send::SendNode>()
-            .register_node::<limiter::LimiterNode>()
-            .register_node::<itd::ItdNode>()
-            .add_systems(
-                Last,
-                (send::connect_sends, send::update_remote_sends).before(SeedlingSystems::Acquire),
-            );
+        app.register_node::<send::SendNode>().add_systems(
+            Last,
+            (send::connect_sends, send::update_remote_sends).before(SeedlingSystems::Acquire),
+        );
+
+        #[cfg(feature = "limiter")]
+        app.register_node::<limiter::LimiterNode>();
+
+        #[cfg(feature = "itd")]
+        app.register_node::<itd::ItdNode>();
 
         #[cfg(feature = "loudness")]
         app.register_node::<loudness::LoudnessNode>()
@@ -69,8 +80,10 @@ impl Plugin for SeedlingNodesPlugin {
         // core Firewheel nodes
         app.register_node::<VolumeNode>()
             .register_node::<VolumePanNode>()
-            .register_node::<SpatialBasicNode>()
             .register_simple_node::<StereoToMonoNode>();
+
+        #[cfg(feature = "spatial")]
+        app.register_node::<SpatialBasicNode>();
 
         #[cfg(feature = "effects")]
         {

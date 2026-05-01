@@ -362,14 +362,19 @@ pub mod error;
 pub mod node;
 pub mod nodes;
 pub mod platform;
-pub mod pool;
-pub mod sample;
-pub mod spatial;
 pub mod time;
 pub mod utils;
 
+#[cfg(feature = "sampler")]
+pub mod pool;
+#[cfg(feature = "sampler")]
+pub mod sample;
+
 #[cfg(feature = "diagnostics")]
 pub mod diagnostics;
+
+#[cfg(feature = "spatial")]
+pub mod spatial;
 
 pub mod prelude {
     //! All `bevy_seedlings`'s important types and traits.
@@ -386,30 +391,43 @@ pub mod prelude {
         events::{AudioEvents, VolumeFade},
         label::{MainBus, NodeLabel},
     };
+
     #[cfg(feature = "effects")]
     pub use crate::nodes::effects::*;
+    #[cfg(feature = "itd")]
+    pub use crate::nodes::itd::{ItdConfig, ItdNode};
+    #[cfg(feature = "limiter")]
+    pub use crate::nodes::limiter::{LimiterConfig, LimiterNode};
     #[cfg(feature = "loudness")]
     pub use crate::nodes::loudness::{LoudnessConfig, LoudnessNode, LoudnessState};
     pub use crate::nodes::{
         core::*,
-        itd::{ItdConfig, ItdNode},
-        limiter::{LimiterConfig, LimiterNode},
         send::{SendConfig, SendNode},
     };
+
     pub use crate::platform::AudioStreamConfig;
+
+    #[cfg(feature = "sampler")]
     pub use crate::pool::{
         DefaultPoolSize, PlaybackCompletion, PoolCommands, PoolDespawn, PoolSize, SamplerPool,
         dynamic::DynamicBus,
         label::{DefaultPool, PoolLabel},
         sample_effects::{EffectOf, EffectsQuery, SampleEffects},
     };
+
+    #[cfg(feature = "sampler")]
     pub use crate::sample::{
         AudioSample, OnComplete, PlaybackSettings, SamplePlayer, SamplePriority,
     };
+
+    #[cfg(feature = "sampler")]
     pub use crate::sample_effects;
+
+    #[cfg(feature = "spatial")]
     pub use crate::spatial::{
         DefaultSpatialScale, SpatialListener2D, SpatialListener3D, SpatialScale,
     };
+
     pub use crate::time::{Audio, AudioTime};
     pub use crate::utils::perceptual_volume::PerceptualVolume;
     pub use crate::{SeedlingPlugins, SeedlingSystems};

@@ -286,10 +286,21 @@ fn set_up_graph(mut commands: Commands, config: Res<AudioGraphTemplate>) {
     match *config {
         AudioGraphTemplate::Game => {
             // Buses
-            commands
-                .spawn((MainBus, VolumeNode::default(), Name::new("Main Bus")))
-                .chain_node(LimiterNode::new(0.003, 0.15))
-                .connect(AudioGraphOutput);
+
+            #[allow(unused_mut)]
+            let mut main_bus =
+                commands.spawn((MainBus, VolumeNode::default(), Name::new("Main Bus")));
+
+            #[cfg(feature = "limiter")]
+            {
+                main_bus
+                    .chain_node(LimiterNode::new(0.003, 0.15))
+                    .connect(AudioGraphOutput);
+            }
+            #[cfg(not(feature = "limiter"))]
+            {
+                main_bus.connect(AudioGraphOutput);
+            }
 
             commands.spawn((
                 SoundEffectsBus,

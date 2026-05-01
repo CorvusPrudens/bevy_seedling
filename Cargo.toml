@@ -14,8 +14,12 @@ categories = ["game-development", "multimedia::audio"]
 exclude = ["/assets"]
 
 [features]
-default = ["wav", "ogg", "rand", "reflect", "cpal", "diagnostics", "std"]
+default = ["wav", "ogg", "rand", "reflect", "cpal", "diagnostics", "std", "sampler", "limiter", "spatial"]
 std = ["bevy_math/std", "firewheel/std"]
+sampler = ["firewheel/sampler_node"]
+spatial = ["firewheel/spatial_basic_node", "firewheel/glam-30"]
+limiter = []
+itd = []
 resample_inputs = ["firewheel/cpal_resample_inputs"]
 rand = ["dep:rand"]
 reflect = ["firewheel/bevy_reflect", "firewheel-ircam-hrtf?/bevy_reflect"]
@@ -33,14 +37,14 @@ symphonia = [
 diagnostics = ["dep:bevy_diagnostic", "firewheel/node_profiling"]
 
 # formats
-wav = ["symphonia", "symphonium/wav", "symphonium/pcm"]
-ogg = ["symphonia", "symphonium/ogg", "symphonium/vorbis"]
-flac = ["symphonia", "symphonium/flac"]
-mkv = ["symphonia", "symphonium/mkv"]
+wav = ["sampler", "symphonia", "symphonium/wav", "symphonium/pcm"]
+ogg = ["sampler", "symphonia", "symphonium/ogg", "symphonium/vorbis"]
+flac = ["sampler", "symphonia", "symphonium/flac"]
+mkv = ["sampler", "symphonia", "symphonium/mkv"]
 
 # codecs
-mp3 = ["symphonia", "symphonium/mp3"]
-adpcm = ["symphonia", "symphonium/adpcm"]
+mp3 = ["sampler", "symphonia", "symphonium/mp3"]
+adpcm = ["sampler", "symphonia", "symphonium/adpcm"]
 
 # nodes
 hrtf = ["dep:firewheel-ircam-hrtf"]
@@ -76,11 +80,8 @@ bevy_diagnostic = { version = "0.18.0", default-features = false, optional = tru
 
 firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "d0255aa", default-features = false, features = [
   "bevy",
-  "spatial_basic_node",
   "scheduled_events",
   "musical_transport",
-  "glam-30",
-  "sampler_node",
   "tracing",
 ] }
 symphonium = { version = "0.9", default-features = false, features = [
@@ -110,7 +111,7 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "d0255aa", def
 ] }
 
 [dev-dependencies]
-bevy_seedling = { path = ".", features = ["hrtf", "loudness", "resample_inputs", "effects"] }
+bevy_seedling = { path = ".", features = ["hrtf", "loudness", "resample_inputs", "effects", "itd"] }
 firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "d0255aa", default-features = false, features = [
   "fast_filter_nodes",
 ] }

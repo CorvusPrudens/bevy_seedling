@@ -37,7 +37,7 @@ use bevy_math::prelude::*;
 use bevy_transform::prelude::*;
 use firewheel::nodes::spatial_basic::SpatialBasicNode;
 
-use crate::{SeedlingSystems, nodes::itd::ItdNode, pool::sample_effects::EffectOf};
+use crate::{SeedlingSystems, pool::sample_effects::EffectOf};
 
 pub(crate) struct SpatialPlugin;
 
@@ -47,6 +47,7 @@ impl Plugin for SpatialPlugin {
             Last,
             (
                 update_basic,
+                #[cfg(feature = "itd")]
                 update_itd,
                 #[cfg(feature = "hrtf")]
                 spatial_hrtf::update_hrtf,
@@ -257,9 +258,10 @@ fn update_basic(
     }
 }
 
+#[cfg(feature = "itd")]
 fn update_itd(
     listeners: SpatialListeners,
-    mut emitters: Query<(&mut ItdNode, EffectTransform)>,
+    mut emitters: Query<(&mut crate::nodes::itd::ItdNode, EffectTransform)>,
     transforms: Query<&GlobalTransform>,
 ) {
     for (mut spatial, transform) in emitters.iter_mut() {
