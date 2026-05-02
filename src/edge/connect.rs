@@ -453,7 +453,7 @@ pub(crate) fn process_connections(
     )>,
     targets: Query<(&FirewheelNode, &FirewheelNodeInfo)>,
     node_map: Res<NodeMap>,
-    mut context: ResMut<AudioContext>,
+    mut context: AudioContext,
 ) {
     let connections = connections
         .iter_mut()
@@ -531,7 +531,7 @@ mod test {
 
         app.world_mut()
             .run_system_once(
-                |mut context: ResMut<AudioContext>,
+                |mut context: AudioContext,
                  one: Single<&FirewheelNode, With<One>>,
                  two: Single<&FirewheelNode, With<Two>>,
                  main: Single<&FirewheelNode, With<MainBus>>| {
@@ -577,7 +577,7 @@ mod test {
 
         app.world_mut()
             .run_system_once(
-                |mut context: ResMut<AudioContext>,
+                |mut context: AudioContext,
                  one: Single<&FirewheelNode, With<One>>,
                  two: Single<&FirewheelNode, With<Two>>,
                  three: Single<&FirewheelNode, With<Three>>| {
@@ -637,7 +637,7 @@ mod test {
             &mut app,
             |one: Single<&FirewheelNode, With<One>>,
              two: Single<&FirewheelNode, With<Two>>,
-             mut context: ResMut<AudioContext>| {
+             mut context: AudioContext| {
                 context.with(|context| {
                     let edges = context.edges();
 
@@ -680,7 +680,7 @@ mod test {
             &mut app,
             |one: Single<&FirewheelNode, With<One>>,
              two: Single<&FirewheelNode, With<Two>>,
-             mut context: ResMut<AudioContext>| {
+             mut context: AudioContext| {
                 context.with(|context| {
                     let edges = context.edges();
 

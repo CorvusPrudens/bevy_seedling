@@ -21,7 +21,10 @@ use crate::{
 };
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
-use bevy_seedling_macros::{NodeLabel, PoolLabel};
+use bevy_seedling_macros::NodeLabel;
+#[cfg(feature = "sampler")]
+use bevy_seedling_macros::PoolLabel;
+#[cfg(all(feature = "sampler", feature = "spatial"))]
 use bevy_transform::prelude::Transform;
 use core::fmt::Debug;
 
@@ -36,12 +39,14 @@ impl Plugin for GraphPlugin {
                     .chain()
                     .in_set(SeedlingStartupSystems::GraphSetup),
             )
-            .add_systems(
-                Last,
-                add_default_transforms.before(crate::SeedlingSystems::Acquire),
-            )
             .add_observer(connect_io::<StreamStartEvent>)
             .add_observer(connect_io::<StreamRestartEvent>);
+
+        #[cfg(all(feature = "sampler", feature = "spatial"))]
+        app.add_systems(
+            Last,
+            add_default_transforms.before(crate::SeedlingSystems::Acquire),
+        );
     }
 }
 
@@ -64,12 +69,14 @@ pub enum SeedlingStartupSystems {
 ///
 /// This pool is unused in all other configurations,
 /// so you can freely reuse it.
+#[cfg(all(feature = "sampler", feature = "spatial"))]
 #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct SpatialPool;
 
 /// For convenience, we automatically insert `Transform` components
 /// on sample players with `SpatialPool`.
+#[cfg(all(feature = "sampler", feature = "spatial"))]
 fn add_default_transforms(
     q: Query<
         Entity,
@@ -91,6 +98,7 @@ fn add_default_transforms(
 /// In [`AudioGraphTemplate::Game`], a sampler pool specifically
 /// for music is spawned. This pool is unused in all other configurations,
 /// so you can freely reuse it.
+#[cfg(feature = "sampler")]
 #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct MusicPool;
@@ -258,7 +266,7 @@ fn connect_io<E: Event>(
     input: Query<Entity, With<AudioGraphInput>>,
     output: Query<Entity, With<AudioGraphOutput>>,
     mut commands: Commands,
-    mut context: ResMut<AudioContext>,
+    mut context: AudioContext,
 ) -> Result {
     context.with(|ctx| {
         let node_id = ctx.graph_in_node_id();
@@ -308,23 +316,33 @@ fn set_up_graph(mut commands: Commands, config: Res<AudioGraphTemplate>) {
                 Name::new("Sound Effects Bus"),
             ));
 
-            commands
-                .spawn((
-                    crate::pool::dynamic::DynamicBus,
-                    VolumeNode::default(),
-                    Name::new("Dynamic Bus"),
-                ))
-                .connect(SoundEffectsBus);
+            #[cfg(feature = "sampler")]
+            {
+                commands
+                    .spawn((
+                        crate::pool::dynamic::DynamicBus,
+                        VolumeNode::default(),
+                        Name::new("Dynamic Bus"),
+                    ))
+                    .connect(SoundEffectsBus);
 
-            // Pools
-            commands
-                .spawn((
-                    SamplerPool(DefaultPool),
-                    Name::new("Default Sampler Pool"),
+                // Pools
+                commands
+                    .spawn((
+                        SamplerPool(DefaultPool),
+                        Name::new("Default Sampler Pool"),
+                        sample_effects![VolumeNode::default()],
+                    ))
+                    .connect(SoundEffectsBus);
+
+                commands.spawn((
+                    SamplerPool(MusicPool),
+                    Name::new("Music Sampler Pool"),
                     sample_effects![VolumeNode::default()],
-                ))
-                .connect(SoundEffectsBus);
+                ));
+            }
 
+            #[cfg(all(feature = "sampler", feature = "spatial"))]
             commands
                 .spawn((
                     SamplerPool(SpatialPool),
@@ -332,12 +350,6 @@ fn set_up_graph(mut commands: Commands, config: Res<AudioGraphTemplate>) {
                     sample_effects![VolumeNode::default(), SpatialBasicNode::default()],
                 ))
                 .connect(SoundEffectsBus);
-
-            commands.spawn((
-                SamplerPool(MusicPool),
-                Name::new("Music Sampler Pool"),
-                sample_effects![VolumeNode::default()],
-            ));
         }
         AudioGraphTemplate::Minimal => {
             // Buses
@@ -345,18 +357,21 @@ fn set_up_graph(mut commands: Commands, config: Res<AudioGraphTemplate>) {
                 .spawn((MainBus, VolumeNode::default(), Name::new("Main Bus")))
                 .connect(AudioGraphOutput);
 
-            commands.spawn((
-                crate::pool::dynamic::DynamicBus,
-                VolumeNode::default(),
-                Name::new("Dynamic Bus"),
-            ));
+            #[cfg(feature = "sampler")]
+            {
+                commands.spawn((
+                    crate::pool::dynamic::DynamicBus,
+                    VolumeNode::default(),
+                    Name::new("Dynamic Bus"),
+                ));
 
-            // Pools
-            commands.spawn((
-                SamplerPool(DefaultPool),
-                Name::new("Default Sampler Pool"),
-                sample_effects![VolumeNode::default()],
-            ));
+                // Pools
+                commands.spawn((
+                    SamplerPool(DefaultPool),
+                    Name::new("Default Sampler Pool"),
+                    sample_effects![VolumeNode::default()],
+                ));
+            }
         }
         AudioGraphTemplate::Empty => {}
     }

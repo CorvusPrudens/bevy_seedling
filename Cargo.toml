@@ -15,8 +15,8 @@ exclude = ["/assets"]
 
 [features]
 default = ["wav", "ogg", "rand", "reflect", "cpal", "diagnostics", "std", "sampler", "limiter", "spatial"]
-std = ["bevy_math/std", "firewheel/std"]
-sampler = ["firewheel/sampler_node"]
+std = ["bevy_math/std", "firewheel/std", "portable-atomic/std"]
+sampler = ["firewheel/sampler_node", "dep:bevy_asset"]
 spatial = ["firewheel/spatial_basic_node", "firewheel/glam-30"]
 limiter = []
 itd = []
@@ -63,7 +63,7 @@ bevy_app = { version = "0.18.0", default-features = false }
 bevy_math = { version = "0.18.0", default-features = false, features = [
   "curve",
 ] }
-bevy_asset = { version = "0.18.0", default-features = false }
+bevy_asset = { version = "0.18.0", default-features = false, optional = true }
 bevy_transform = { version = "0.18.0", default-features = false, features = [
   "bevy-support",
 ] }
@@ -97,7 +97,7 @@ rand = { version = "0.9", default-features = false, features = [
   "os_rng",
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
-portable-atomic = { version = "1.11", optional = true, features = ["float"] }
+portable-atomic = { version = "1.11", default-features = false, optional = true, features = ["float"] }
 firewheel-ircam-hrtf = { version = "0.5.0", path = "crates/firewheel-ircam-hrtf", optional = true, features = [
   "bevy",
 ] }

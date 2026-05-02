@@ -61,7 +61,7 @@ impl Audio {
     }
 }
 
-fn update_time(mut time: ResMut<Time<Audio>>, context: Option<ResMut<AudioContext>>) {
+fn update_time(mut time: ResMut<Time<Audio>>, context: Option<AudioContext>) {
     let Some(mut context) = context else {
         return;
     };

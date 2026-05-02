@@ -1,19 +1,26 @@
 use alloc::boxed::Box;
+use bevy_ecs::{
+    resource::Resource,
+    system::{Commands, ResMut, SystemParam},
+};
 use firewheel::{FirewheelConfig, FirewheelContext};
 use std::sync::mpsc;
 
 use super::{AudioThreadState, LocalStore};
 
 /// A thread-safe wrapper around the underlying Firewheel audio context.
-#[derive(Debug)]
-pub struct InnerContext(mpsc::Sender<ThreadLocalCall>);
+#[derive(Debug, SystemParam)]
+pub struct InnerContext<'w>(ResMut<'w, ThreadedContext>);
+
+#[derive(Debug, Resource)]
+struct ThreadedContext(mpsc::Sender<ThreadLocalCall>);
 
 type ThreadLocalCall = Box<dyn FnOnce(&mut AudioThreadState) + Send + 'static>;
 
-impl InnerContext {
+impl InnerContext<'_> {
     // Spawn the audio process and control thread.
     #[inline(always)]
-    pub fn new(settings: FirewheelConfig) -> Self {
+    pub fn insert(settings: FirewheelConfig, mut commands: Commands) {
         let (bev_to_audio_tx, bev_to_audio_rx) = mpsc::channel::<ThreadLocalCall>();
 
         std::thread::spawn(move || {
@@ -23,7 +30,7 @@ impl InnerContext {
             }
         });
 
-        InnerContext(bev_to_audio_tx)
+        commands.insert_resource(ThreadedContext(bev_to_audio_tx));
     }
 
     // Send `f` to the underlying control thread to operate on the audio context.
@@ -62,7 +69,7 @@ impl InnerContext {
         // If the audio communication thread fails to send or receive
         // messages, like in the event of a panic, a panic will be
         // propagated to the calling thread .
-        self.0.send(func).unwrap();
+        self.0.0.send(func).unwrap();
         receive.recv().unwrap()
     }
 }

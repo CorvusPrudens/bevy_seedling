@@ -258,7 +258,7 @@ impl core::ops::DerefMut for NodeMap {
 /// outputs.
 pub(crate) fn auto_connect(
     nodes: Query<(Entity, &FirewheelNode), Without<PendingConnections>>,
-    mut context: ResMut<AudioContext>,
+    mut context: AudioContext,
     mut commands: Commands,
 ) {
     if nodes.iter().len() == 0 {
@@ -379,7 +379,7 @@ mod test {
         // first assert they're connected
         run(
             &mut app,
-            |mut context: ResMut<AudioContext>,
+            |mut context: AudioContext,
              one: Single<&FirewheelNode, With<One>>,
              main: Single<&FirewheelNode, With<MainBus>>| {
                 let one = one.into_inner();
@@ -415,7 +415,7 @@ mod test {
         // assert only one edge is connected
         run(
             &mut app,
-            |mut context: ResMut<AudioContext>,
+            |mut context: AudioContext,
              one: Single<&FirewheelNode, With<One>>,
              main: Single<&FirewheelNode, With<MainBus>>| {
                 let one = one.into_inner();

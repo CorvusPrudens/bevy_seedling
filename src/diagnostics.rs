@@ -34,7 +34,7 @@ pub struct AudioProfilingData(pub ProfilingData);
 fn diagnostic_system(
     mut diagnostics: Diagnostics,
     mut data: ResMut<AudioProfilingData>,
-    mut context: ResMut<AudioContext>,
+    mut context: AudioContext,
 ) {
     context.with(|context| {
         let new_data = context.profiling_data();

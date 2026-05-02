@@ -380,9 +380,11 @@ pub mod prelude {
     //! All `bevy_seedlings`'s important types and traits.
 
     pub use crate::context::AudioContext;
-    pub use crate::context::graph::{
-        AudioGraphTemplate, MusicPool, SeedlingStartupSystems, SoundEffectsBus, SpatialPool,
-    };
+    pub use crate::context::graph::{AudioGraphTemplate, SeedlingStartupSystems, SoundEffectsBus};
+    #[cfg(feature = "sampler")]
+    pub use crate::context::graph::MusicPool;
+    #[cfg(all(feature = "sampler", feature = "spatial"))]
+    pub use crate::context::graph::SpatialPool;
     pub use crate::edge::{
         AudioGraphInput, AudioGraphOutput, ChannelMapping, Connect, Disconnect, EdgeTarget,
     };
@@ -515,6 +517,7 @@ impl Plugin for SeedlingCorePlugin {
     fn build(&self, app: &mut App) {
         use prelude::*;
 
+        #[cfg(feature = "sampler")]
         app.init_resource::<pool::DefaultPoolSize>()
             .init_asset::<sample::AudioSample>();
 
@@ -527,16 +530,16 @@ impl Plugin for SeedlingCorePlugin {
                 SeedlingSystems::Flush.after(SeedlingSystems::Queue),
                 SeedlingSystems::PollStream.after(SeedlingSystems::Flush),
             ),
-        )
-        .add_observer(sample::observe_player_insert);
+        );
+
+        #[cfg(feature = "sampler")]
+        app.add_observer(sample::observe_player_insert);
 
         app.add_plugins((
             context::ContextPlugin,
             node::NodePlugin,
             edge::EdgePlugin,
-            pool::SamplePoolPlugin,
             nodes::SeedlingNodesPlugin,
-            spatial::SpatialPlugin,
             time::TimePlugin,
             #[cfg(feature = "rand")]
             sample::RandomPlugin,
@@ -544,10 +547,16 @@ impl Plugin for SeedlingCorePlugin {
             sample::SymphoniumLoaderPlugin,
         ));
 
-        #[cfg(feature = "reflect")]
+        #[cfg(feature = "sampler")]
+        app.add_plugins(pool::SamplePoolPlugin);
+        #[cfg(feature = "spatial")]
+        app.add_plugins(spatial::SpatialPlugin);
+
+        #[cfg(all(feature = "reflect", feature = "sampler"))]
         app.register_type::<SamplerPool<MusicPool>>()
-            .register_type::<SamplerPool<DefaultPool>>()
-            .register_type::<SamplerPool<SpatialPool>>();
+            .register_type::<SamplerPool<DefaultPool>>();
+        #[cfg(all(feature = "reflect", feature = "sampler", feature = "spatial"))]
+        app.register_type::<SamplerPool<SpatialPool>>();
     }
 }
 

@@ -1,6 +1,7 @@
 //! Audio node registration and management.
 
 use crate::error::{SeedlingError, render_errors};
+#[cfg(feature = "sampler")]
 use crate::pool::sample_effects::EffectOf;
 use crate::time::{Audio, AudioTime};
 use crate::{
@@ -68,7 +69,7 @@ impl AudioBypass {
         trigger: On<Remove, AudioBypass>,
         node: Query<&FirewheelNode>,
         time: Res<Time<Audio>>,
-        mut context: ResMut<AudioContext>,
+        mut context: AudioContext,
     ) -> Result {
         let node = node.get(trigger.entity)?;
 
@@ -86,7 +87,7 @@ impl AudioBypass {
     fn update_bypassed(
         bypassed: Query<&FirewheelNode, Changed<AudioBypass>>,
         time: Res<Time<Audio>>,
-        mut context: ResMut<AudioContext>,
+        mut context: AudioContext,
     ) {
         let now = time.now();
         context.with(|context| {
@@ -211,12 +212,29 @@ fn apply_patch<T: Patch>(value: &mut T, event: &NodeEventType) -> Result {
 }
 
 fn generate_param_events<T: Diff + Patch + Component<Mutability = Mutable> + Clone>(
-    mut nodes: Query<(Mut<T>, &mut Baseline<T>, &mut AudioEvents, Has<EffectOf>)>,
+    #[cfg(feature = "sampler")] mut nodes: Query<(
+        Mut<T>,
+        &mut Baseline<T>,
+        &mut AudioEvents,
+        Has<EffectOf>,
+    )>,
+    #[cfg(not(feature = "sampler"))] mut nodes: Query<(
+        Mut<T>,
+        &mut Baseline<T>,
+        &mut AudioEvents,
+    )>,
     time: Res<bevy_time::Time<Audio>>,
 ) -> Result {
     let render_range = time.render_range();
 
-    for (mut params, mut baseline, mut events, effect) in nodes.iter_mut() {
+    for tuple in nodes.iter_mut() {
+        #[cfg(feature = "sampler")]
+        let (mut params, mut baseline, mut events, effect) = tuple;
+        #[cfg(not(feature = "sampler"))]
+        let (mut params, mut baseline, mut events) = tuple;
+        #[cfg(not(feature = "sampler"))]
+        let effect = false;
+
         if params.is_changed() && !effect {
             // This ensures we only apply patches that were generated here.
             // I'm not sure this is correct in all cases, though.
@@ -258,7 +276,7 @@ fn handle_configuration_changes<
         ),
         Changed<T::Configuration>,
     >,
-    mut context: ResMut<AudioContext>,
+    mut context: AudioContext,
     mut commands: Commands,
 ) -> Result {
     let changes: Vec<_> = configs.iter_mut().filter(|(.., c, b)| *c != &b.0).collect();
@@ -341,11 +359,15 @@ fn handle_configuration_changes<
 }
 
 fn acquire_id<T>(
-    q: Query<
+    #[cfg(feature = "sampler")] q: Query<
         (Entity, &T, Option<&T::Configuration>, Option<&NodeLabels>),
         (Without<FirewheelNode>, Without<EffectOf>),
     >,
-    mut context: ResMut<AudioContext>,
+    #[cfg(not(feature = "sampler"))] q: Query<
+        (Entity, &T, Option<&T::Configuration>, Option<&NodeLabels>),
+        Without<FirewheelNode>,
+    >,
+    mut context: AudioContext,
     mut node_map: ResMut<NodeMap>,
     mut commands: Commands,
 ) -> Result
@@ -403,7 +425,7 @@ pub struct AudioState<T>(pub T);
 
 fn fetch_state<T, S>(
     q: Query<(Entity, &FirewheelNode), (Changed<FirewheelNode>, With<T>)>,
-    mut context: ResMut<AudioContext>,
+    mut context: AudioContext,
     mut commands: Commands,
 ) -> Result
 where
@@ -820,7 +842,7 @@ fn flush_events(
         Option<&DiffTimestamp>,
     )>,
     mut removals: ResMut<PendingRemovals>,
-    mut context: ResMut<AudioContext>,
+    mut context: AudioContext,
     time: Res<bevy_time::Time<Audio>>,
     should_schedule: Res<ScheduleDiffing>,
     lookahead: Res<AudioScheduleLookahead>,
@@ -902,7 +924,7 @@ mod test {
 
         let initial_id = run(
             &mut app,
-            |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioContext>| {
+            |q: Query<&FirewheelNode, With<TestMarker>>, mut context: AudioContext| {
                 let node = q.single().unwrap().0;
 
                 let total_nodes = context.with(|context| {
@@ -936,7 +958,7 @@ mod test {
         // splicing has succeeded
         run(
             &mut app,
-            move |q: Query<&FirewheelNode, With<TestMarker>>, mut context: ResMut<AudioContext>| {
+            move |q: Query<&FirewheelNode, With<TestMarker>>, mut context: AudioContext| {
                 let node = q.single().unwrap().0;
 
                 assert_ne!(initial_id, node);

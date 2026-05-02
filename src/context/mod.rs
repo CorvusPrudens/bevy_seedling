@@ -2,7 +2,7 @@
 
 use alloc::boxed::Box;
 use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
+use bevy_ecs::{prelude::*, system::SystemParam};
 use bevy_platform::{collections::HashMap, sync};
 use core::{
     any::{Any, TypeId},
@@ -22,15 +22,15 @@ impl Plugin for ContextPlugin {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-mod web;
-#[cfg(target_arch = "wasm32")]
-use web::InnerContext;
+#[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
+mod storage_local;
+#[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
+use storage_local::InnerContext;
 
 #[cfg(all(feature = "std", not(target_arch = "wasm32")))]
-mod os;
+mod storage_thread;
 #[cfg(all(feature = "std", not(target_arch = "wasm32")))]
-use os::InnerContext;
+use storage_thread::InnerContext;
 
 /// A thread-safe wrapper around the underlying Firewheel audio context.
 ///
@@ -45,15 +45,15 @@ use os::InnerContext;
 ///     });
 /// }
 /// ```
-#[derive(Debug, Resource, Component)]
-pub struct AudioContext(InnerContext);
+#[derive(Debug, SystemParam, Component)]
+pub struct AudioContext<'w>(InnerContext<'w>);
 
-impl AudioContext {
+impl AudioContext<'_> {
     /// Create the audio context.
     ///
     /// This will not start a stream.
-    pub fn new(settings: FirewheelConfig) -> Self {
-        AudioContext(InnerContext::new(settings))
+    pub fn insert(settings: FirewheelConfig, commands: Commands) {
+        InnerContext::insert(settings, commands);
     }
 
     /// Get an absolute timestamp from the audio thread of the current time.
@@ -200,11 +200,8 @@ impl SampleRate {
     }
 }
 
-fn initialize_context(firewheel_config: Res<AudioContextConfig>, mut commands: Commands) -> Result {
-    let context = AudioContext::new(firewheel_config.0);
-    commands.insert_resource(context);
-
-    Ok(())
+fn initialize_context(firewheel_config: Res<AudioContextConfig>, commands: Commands) {
+    AudioContext::insert(firewheel_config.0, commands);
 }
 
 /// An event triggered when the audio stream first initializes.

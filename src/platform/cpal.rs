@@ -41,7 +41,7 @@ impl Plugin for CpalPlatformPlugin {
 }
 
 fn start_stream(
-    mut context: ResMut<AudioContext>,
+    mut context: AudioContext,
     stream_config: Res<AudioStreamConfig<CpalConfig>>,
     commands: Commands,
 ) -> Result {
@@ -79,7 +79,7 @@ fn start_stream(
     Ok(())
 }
 
-fn poll_stream(mut context: ResMut<AudioContext>, mut commands: Commands) -> Result {
+fn poll_stream(mut context: AudioContext, mut commands: Commands) -> Result {
     let errors = context.with_store(|_, store| {
         store
             .get_mut::<cpal::CpalStream>()
@@ -110,7 +110,7 @@ fn observe_restart(_: On<RestartAudioStream>, mut config: ResMut<AudioStreamConf
 
 fn restart_stream(
     stream_config: Res<AudioStreamConfig<CpalConfig>>,
-    mut graph: ResMut<AudioContext>,
+    mut graph: AudioContext,
     sample_rate: Res<SampleRate>,
     mut commands: Commands,
 ) -> Result {

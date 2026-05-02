@@ -37,7 +37,9 @@ use bevy_math::prelude::*;
 use bevy_transform::prelude::*;
 use firewheel::nodes::spatial_basic::SpatialBasicNode;
 
-use crate::{SeedlingSystems, pool::sample_effects::EffectOf};
+use crate::SeedlingSystems;
+#[cfg(feature = "sampler")]
+use crate::pool::sample_effects::EffectOf;
 
 pub(crate) struct SpatialPlugin;
 
@@ -222,8 +224,12 @@ impl SpatialListeners<'_, '_> {
     }
 }
 
+#[cfg(feature = "sampler")]
 type EffectTransform = AnyOf<(&'static GlobalTransform, &'static EffectOf)>;
+#[cfg(not(feature = "sampler"))]
+type EffectTransform = &'static GlobalTransform;
 
+#[cfg(feature = "sampler")]
 fn extract_effect_transform(
     effect_transform: <EffectTransform as QueryData>::Item<'_, '_>,
     transforms: &Query<&GlobalTransform>,
@@ -236,6 +242,14 @@ fn extract_effect_transform(
         },
         _ => unreachable!(),
     }
+}
+
+#[cfg(not(feature = "sampler"))]
+fn extract_effect_transform(
+    effect_transform: <EffectTransform as QueryData>::Item<'_, '_>,
+    _transforms: &Query<&GlobalTransform>,
+) -> Option<Vec3> {
+    Some(effect_transform.translation())
 }
 
 fn update_basic(
