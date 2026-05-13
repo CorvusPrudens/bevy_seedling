@@ -1,9 +1,4 @@
-//! This example demonstrates how to process input from a microphone or
-//! other input device. This example grabs the system default, panicking
-//! if no device is available.
-//!
-//! Note that this may result in positive feedback on some setups.
-//! I recommend starting with low volume!
+//! This example demonstrates how to bypass effects.
 
 use bevy::prelude::*;
 use bevy_seedling::prelude::*;
@@ -18,14 +13,14 @@ fn main() {
 
 /// Here we route the input node, `AudioGraphInput`, to the `MainBus`.
 fn route_input(
-    input: Single<Entity, With<SamplerPool<MusicPool>>>,
+    input: Single<Entity, With<SamplerPool<DefaultPool>>>,
     server: Res<AssetServer>,
     mut commands: Commands,
 ) {
     commands
         .entity(*input)
         .disconnect(MainBus)
-        // route the music through a ton of reverb
+        // route the sound through a ton of reverb
         .chain_node(FreeverbNode {
             room_size: 0.9,
             damping: 0.8,
@@ -34,10 +29,7 @@ fn route_input(
         })
         .connect(MainBus);
 
-    commands.spawn((
-        MusicPool,
-        SamplePlayer::new(server.load("divine_comedy.ogg")),
-    ));
+    commands.spawn(SamplePlayer::new(server.load("divine_comedy.ogg")));
 }
 
 fn bypass(

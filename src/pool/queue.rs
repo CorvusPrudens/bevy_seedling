@@ -3,7 +3,7 @@ use super::{
     sample_effects::{EffectOf, SampleEffects},
 };
 use crate::{
-    node::{AudioState, EffectId, follower::FollowerOf},
+    node::{AudioState, EffectId, IgnoreDiffTimer, follower::FollowerOf},
     pool::label::PoolLabelContainer,
     prelude::{AudioEvents, DefaultPool},
     sample::{AudioSample, QueuedSample, SamplePlayer, SamplePriority, SampleQueueLifetime},
@@ -449,17 +449,21 @@ pub(super) fn assign_work(
 }
 
 pub(super) fn update_followers(
-    samplers: Query<(&Children, &SamplerOf), Changed<SamplerOf>>,
+    samplers: Query<(Entity, &Children, &SamplerOf), Changed<SamplerOf>>,
     samples: Query<&SampleEffects>,
     mut commands: Commands,
 ) {
-    for (children, assignment) in &samplers {
+    for (sampler_entity, children, assignment) in &samplers {
+        commands.entity(sampler_entity).insert(IgnoreDiffTimer);
+
         let Ok(effects) = samples.get(assignment.get()) else {
             continue;
         };
 
         for (effect, follower) in effects.iter().zip(children.iter()) {
-            commands.entity(follower).insert(FollowerOf(effect));
+            commands
+                .entity(follower)
+                .insert((FollowerOf(effect), IgnoreDiffTimer));
         }
     }
 }
