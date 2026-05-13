@@ -13,7 +13,7 @@ use std::{num::NonZeroU32, sync::Arc};
 /// asset loader.
 #[derive(Asset, TypePath, Clone)]
 pub struct AudioSample {
-    sample: ArcGc<dyn SampleResource>,
+    sample: ArcGc<dyn SampleResource + Send + Sync>,
     original_sample_rate: NonZeroU32,
 }
 
@@ -22,7 +22,10 @@ impl AudioSample {
     ///
     /// If the sample resource has been resampled, `original_sample_rate` should represent
     /// the sample rate prior to resampling.
-    pub fn new<S: SampleResource>(sample: S, original_sample_rate: NonZeroU32) -> Self {
+    pub fn new<S: SampleResource + Send + Sync + 'static>(
+        sample: S,
+        original_sample_rate: NonZeroU32,
+    ) -> Self {
         Self {
             sample: ArcGc::new_unsized(|| Arc::new(sample) as _),
             original_sample_rate,
@@ -30,7 +33,7 @@ impl AudioSample {
     }
 
     /// Share the inner value.
-    pub fn get(&self) -> ArcGc<dyn SampleResource> {
+    pub fn get(&self) -> ArcGc<dyn SampleResource + Send + Sync> {
         self.sample.clone()
     }
 

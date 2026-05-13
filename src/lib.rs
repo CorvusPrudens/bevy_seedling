@@ -470,7 +470,7 @@ plugin_group! {
     #[derive(Debug)]
     pub struct SeedlingPlugins {
         :SeedlingCorePlugin,
-        #[cfg(feature = "cpal")]
+        #[custom(cfg(all(feature = "cpal", not(feature = "rtaudio"))))]
         platform::cpal:::CpalPlatformPlugin,
         #[cfg(feature = "rtaudio")]
         platform::rtaudio:::RtAudioPlatformPlugin,

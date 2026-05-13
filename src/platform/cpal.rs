@@ -23,6 +23,28 @@ pub struct CpalPlatformPlugin;
 
 impl Plugin for CpalPlatformPlugin {
     fn build(&self, app: &mut App) {
+        let world = app.world_mut();
+
+        #[cfg(not(all(feature = "web_audio", target_arch = "wasm32")))]
+        world.init_resource::<AudioStreamConfig<CpalConfig>>();
+
+        #[cfg(all(feature = "web_audio", target_arch = "wasm32"))]
+        {
+            world.get_resource_or_insert_with(|| {
+                let mut config = CpalConfig::default();
+
+                config.output.host = match cpal::cpal::host_from_id(HostId::AudioWorklet) {
+                    Ok(host) => Some(host.id()),
+                    Err(e) => {
+                        bevy_log::warn!("Failed to acquire audioworklet host: {e}");
+                        None
+                    }
+                };
+
+                AudioStreamConfig(config)
+            });
+        }
+
         app.init_resource::<AudioStreamConfig<CpalConfig>>()
             .add_systems(
                 PostStartup,
@@ -67,18 +89,31 @@ fn poll_stream(mut context: ResMut<AudioContext>, mut commands: Commands) -> Res
             .map(|stream| stream.poll_status().collect::<Vec<_>>())
     });
 
-    for e in errors.into_iter().flatten() {
-        match e {
-            StreamError::StreamInvalidated | StreamError::DeviceNotAvailable => {
-                warn!("Audio stream stopped: {e:?}");
-                commands.trigger(RestartAudioStream);
-            }
-            StreamError::BufferUnderrun => {
-                warn!("audio stream encountered underrun");
-            }
-            StreamError::BackendSpecific { err } => {
-                error!("unexpected audio backend error: {err}");
-            }
+    for error in errors.into_iter().flatten() {
+        match error {
+            IoStreamError::Input(error) => match error {
+                StreamError::StreamInvalidated | StreamError::DeviceNotAvailable => {
+                    warn!("audio input stream stopped: {error:?}");
+                }
+                StreamError::BufferUnderrun => {
+                    warn!("audio input stream encountered underrun");
+                }
+                StreamError::BackendSpecific { err } => {
+                    error!("unexpected audio input error: {err}");
+                }
+            },
+            IoStreamError::Output(error) => match error {
+                StreamError::StreamInvalidated | StreamError::DeviceNotAvailable => {
+                    warn!("audio stream stopped: {error:?}");
+                    commands.trigger(RestartAudioStream);
+                }
+                StreamError::BufferUnderrun => {
+                    warn!("audio stream encountered underrun");
+                }
+                StreamError::BackendSpecific { err } => {
+                    error!("unexpected audio backend error: {err}");
+                }
+            },
         }
     }
 

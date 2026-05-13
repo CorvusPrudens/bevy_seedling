@@ -5,7 +5,7 @@ use super::{
 use crate::{
     node::{AudioState, EffectId, follower::FollowerOf},
     pool::label::PoolLabelContainer,
-    prelude::DefaultPool,
+    prelude::{AudioEvents, DefaultPool},
     sample::{AudioSample, QueuedSample, SamplePlayer, SamplePriority, SampleQueueLifetime},
 };
 use bevy_asset::prelude::*;
@@ -13,7 +13,10 @@ use bevy_ecs::{entity::EntityCloner, prelude::*, relationship::Relationship};
 use bevy_log::prelude::*;
 use bevy_platform::collections::HashMap;
 use bevy_time::{Stopwatch, Time};
-use firewheel::nodes::sampler::{RepeatMode, SamplerConfig, SamplerNode, SamplerState};
+use firewheel::{
+    diff::EventQueue,
+    nodes::sampler::{RepeatMode, SamplerConfig, SamplerNode, SamplerState},
+};
 use std::ops::Deref;
 
 #[derive(PartialEq, Debug, Eq, PartialOrd, Ord, Copy, Clone)]
@@ -250,6 +253,7 @@ pub(super) fn assign_work(
         (
             Entity,
             &mut SamplerNode,
+            &mut AudioEvents,
             &AudioState<SamplerState>,
             Option<&SamplerOf>,
         ),
@@ -290,7 +294,7 @@ pub(super) fn assign_work(
 
         let inactive_samplers: Vec<_> = samplers
             .iter()
-            .filter(|s| nodes.get(*s).is_ok_and(|n| n.3.is_none()))
+            .filter(|s| nodes.get(*s).is_ok_and(|n| n.4.is_none()))
             .collect();
 
         #[cfg(debug_assertions)]
@@ -319,10 +323,10 @@ pub(super) fn assign_work(
             let mut inactive = inactive_samplers.iter();
 
             for (sample_entity, player, asset, sample_effects, _priority) in queued_samples {
-                let (sampler_entity, mut params, state, _) =
+                let (sampler_entity, mut params, mut events, state, _) =
                     nodes.get_mut(*inactive.next().unwrap())?;
 
-                params.sample = Some(asset.get());
+                events.push(SamplerNode::set_dyn_sample_event(asset.get()));
                 params.volume = player.volume;
                 params.repeat_mode = player.repeat_mode;
                 state.0.clear_finished();
@@ -350,7 +354,7 @@ pub(super) fn assign_work(
 
         // otherwise, sort the available samplers
         let mut sampler_scores = Vec::new();
-        for (sampler_entity, params, state, assignment) in nodes.iter_many(samplers.iter()) {
+        for (sampler_entity, params, _ev, state, assignment) in nodes.iter_many(samplers.iter()) {
             let raw_score = state.0.worker_score(params);
             let has_assignment = assignment.is_some();
 
@@ -405,9 +409,10 @@ pub(super) fn assign_work(
                 continue;
             }
 
-            let (sampler_entity, mut params, state, _) = nodes.get_mut(sampler_entity)?;
+            let (sampler_entity, mut params, mut events, state, _) =
+                nodes.get_mut(sampler_entity)?;
 
-            params.sample = Some(asset.get());
+            events.push(SamplerNode::set_dyn_sample_event(asset.get()));
             params.volume = player.volume;
             params.repeat_mode = player.repeat_mode;
             state.0.clear_finished();
