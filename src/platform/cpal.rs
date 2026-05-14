@@ -25,26 +25,6 @@ impl Plugin for CpalPlatformPlugin {
     fn build(&self, app: &mut App) {
         let world = app.world_mut();
 
-        #[cfg(not(all(feature = "web_audio", target_arch = "wasm32")))]
-        world.init_resource::<AudioStreamConfig<CpalConfig>>();
-
-        #[cfg(all(feature = "web_audio", target_arch = "wasm32"))]
-        {
-            world.get_resource_or_insert_with(|| {
-                let mut config = CpalConfig::default();
-
-                config.output.host = match cpal::cpal::host_from_id(HostId::AudioWorklet) {
-                    Ok(host) => Some(host.id()),
-                    Err(e) => {
-                        bevy_log::warn!("Failed to acquire audioworklet host: {e}");
-                        None
-                    }
-                };
-
-                AudioStreamConfig(config)
-            });
-        }
-
         app.init_resource::<AudioStreamConfig<CpalConfig>>()
             .add_systems(
                 PostStartup,

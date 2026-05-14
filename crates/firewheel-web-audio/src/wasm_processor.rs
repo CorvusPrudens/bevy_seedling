@@ -1,3 +1,5 @@
+use crate::instant::Instant;
+use audioadapter::{Adapter, AdapterMut};
 use firewheel::{
     backend::BackendProcessInfo, collector::ArcGc, node::StreamStatus,
     processor::FirewheelProcessor,
@@ -6,17 +8,12 @@ use js_sys::{Array, Float32Array};
 use std::sync::atomic::AtomicBool;
 use wasm_bindgen::{JsCast, prelude::wasm_bindgen};
 
-use crate::{WebAudioBackend, instant::Instant};
-
 #[wasm_bindgen]
 pub(crate) struct ProcessorHost {
-    pub(crate) processor: Option<FirewheelProcessor<WebAudioBackend>>,
-    pub(crate) receiver: std::sync::mpsc::Receiver<FirewheelProcessor<WebAudioBackend>>,
+    pub(crate) processor: FirewheelProcessor,
     pub(crate) alive: ArcGc<AtomicBool>,
     pub(crate) inputs: usize,
     pub(crate) outputs: usize,
-    pub(crate) input_buffers: &'static mut [f32],
-    pub(crate) output_buffers: &'static mut [f32],
 }
 
 impl ProcessorHost {
@@ -30,68 +27,169 @@ impl ProcessorHost {
             return Ok(false);
         }
 
-        if let Ok(processor) = self.receiver.try_recv() {
-            self.processor = Some(processor);
+        struct WorkletBuffer {
+            channels: usize,
+            array: js_sys::Array,
         }
 
-        // interleave
-        let mut temp_buffer = [0f32; crate::BLOCK_FRAMES];
-        for i in 0..self.inputs {
-            let Ok(inputs) = inputs.get(0).dyn_into::<Array>() else {
-                continue;
-            };
-            let Ok(channel_array) = inputs.get(i as u32).dyn_into::<Float32Array>() else {
-                continue;
-            };
-
-            if channel_array.is_undefined() {
-                return Err(wasm_bindgen::JsValue::undefined());
+        unsafe impl Adapter<'_, f32> for WorkletBuffer {
+            // # Safety
+            //
+            // We don't actually dance with unsafe here.
+            // I figure it's not worth it -- `copy_from_channel_to_slice`
+            // should be preferred anyway.
+            unsafe fn read_sample_unchecked(&self, channel: usize, frame: usize) -> f32 {
+                self.array
+                    .get(0)
+                    .unchecked_into::<Array>()
+                    .get(channel as u32)
+                    .unchecked_into::<Float32Array>()
+                    .at(frame as i32)
+                    .unwrap()
             }
 
-            channel_array.copy_to(&mut temp_buffer);
-            for (j, input) in temp_buffer.iter().enumerate() {
-                let buffer_index = i + j * self.inputs;
-                self.input_buffers[buffer_index] = *input;
+            fn channels(&self) -> usize {
+                self.channels
+            }
+
+            fn frames(&self) -> usize {
+                crate::BLOCK_FRAMES
+            }
+
+            fn read_sample(&self, channel: usize, frame: usize) -> Option<f32> {
+                self.array
+                    .get(0)
+                    .dyn_into::<Array>()
+                    .ok()?
+                    .get(channel as u32)
+                    .dyn_into::<Float32Array>()
+                    .ok()?
+                    .at(frame as i32)
+            }
+
+            fn copy_from_channel_to_slice(
+                &self,
+                channel: usize,
+                skip: usize,
+                slice: &mut [f32],
+            ) -> usize {
+                let bytes_to_copy = crate::BLOCK_FRAMES.saturating_sub(skip);
+                if bytes_to_copy == 0 {
+                    return 0;
+                }
+
+                let Ok(array) = self.array.get(0).dyn_into::<Array>() else {
+                    return 0;
+                };
+                let Ok(channel_array) = array.get(channel as u32).dyn_into::<Float32Array>() else {
+                    return 0;
+                };
+                if channel_array.is_undefined() {
+                    return 0;
+                }
+
+                if bytes_to_copy != crate::BLOCK_FRAMES {
+                    let channel_array =
+                        channel_array.subarray(skip as u32, crate::BLOCK_FRAMES as u32);
+                    channel_array.copy_to(slice);
+                } else {
+                    channel_array.copy_to(slice);
+                }
+
+                bytes_to_copy
             }
         }
 
-        if let Some(processor) = &mut self.processor {
-            processor.process_interleaved(
-                self.input_buffers,
-                self.output_buffers,
-                BackendProcessInfo {
-                    num_in_channels: self.inputs,
-                    num_out_channels: self.outputs,
-                    frames: crate::BLOCK_FRAMES,
-                    process_timestamp: Instant(current_time),
-                    duration_since_stream_start: std::time::Duration::from_secs_f64(current_time),
-                    input_stream_status: StreamStatus::empty(),
-                    output_stream_status: StreamStatus::empty(),
-                    dropped_frames: 0,
-                },
-            );
-        }
+        unsafe impl AdapterMut<'_, f32> for WorkletBuffer {
+            unsafe fn write_sample_unchecked(
+                &mut self,
+                channel: usize,
+                frame: usize,
+                value: &f32,
+            ) -> bool {
+                self.array
+                    .get(0)
+                    .unchecked_into::<Array>()
+                    .get(channel as u32)
+                    .unchecked_into::<Float32Array>()
+                    .set_index(frame as u32, *value);
 
-        // deinterleave
-        for i in 0..self.outputs {
-            let Ok(outputs) = outputs.get(0).dyn_into::<Array>() else {
-                continue;
-            };
-            let Ok(channel_array) = outputs.get(i as u32).dyn_into::<Float32Array>() else {
-                continue;
-            };
-
-            if channel_array.is_undefined() {
-                return Err(wasm_bindgen::JsValue::undefined());
+                false
             }
 
-            for (j, output) in temp_buffer.iter_mut().enumerate() {
-                let buffer_index = i + j * self.outputs;
-                *output = self.output_buffers[buffer_index];
+            fn copy_from_slice_to_channel(
+                &mut self,
+                channel: usize,
+                skip: usize,
+                slice: &[f32],
+            ) -> (usize, usize) {
+                let bytes_to_copy = crate::BLOCK_FRAMES.saturating_sub(skip);
+                if bytes_to_copy == 0 {
+                    return (0, 0);
+                }
+
+                let Ok(array) = self.array.get(0).dyn_into::<Array>() else {
+                    return (0, 0);
+                };
+                let Ok(channel_array) = array.get(channel as u32).dyn_into::<Float32Array>() else {
+                    return (0, 0);
+                };
+                if channel_array.is_undefined() {
+                    return (0, 0);
+                }
+
+                if bytes_to_copy != crate::BLOCK_FRAMES {
+                    let channel_array =
+                        channel_array.subarray(skip as u32, crate::BLOCK_FRAMES as u32);
+
+                    channel_array.copy_from(slice);
+                } else {
+                    channel_array.copy_from(slice);
+                }
+
+                (bytes_to_copy, 0)
             }
 
-            channel_array.copy_from(&temp_buffer);
+            fn fill_channel_with(&mut self, channel: usize, value: &f32) -> Option<()> {
+                if channel >= self.channels {
+                    return None;
+                }
+
+                let Ok(array) = self.array.get(0).dyn_into::<Array>() else {
+                    return Some(());
+                };
+                let Ok(channel_array) = array.get(channel as u32).dyn_into::<Float32Array>() else {
+                    return Some(());
+                };
+                if channel_array.is_undefined() {
+                    return Some(());
+                }
+
+                channel_array.fill(*value, 0, crate::BLOCK_FRAMES as u32);
+
+                Some(())
+            }
         }
+
+        self.processor.process(
+            &WorkletBuffer {
+                array: inputs,
+                channels: self.inputs,
+            },
+            &mut WorkletBuffer {
+                array: outputs,
+                channels: self.outputs,
+            },
+            BackendProcessInfo {
+                process_to_playback_delay: None,
+                frames: crate::BLOCK_FRAMES,
+                process_timestamp: None,
+                duration_since_stream_start: std::time::Duration::from_secs_f64(current_time),
+                input_stream_status: StreamStatus::empty(),
+                output_stream_status: StreamStatus::empty(),
+                dropped_frames: 0,
+            },
+        );
 
         Ok(true)
     }
