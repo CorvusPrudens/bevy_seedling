@@ -36,6 +36,14 @@ via the `AudioLoaderConfig` resource. It can also be completely
 disabled along with all `symphonia` crates by disabling the
 `symphonia` feature.
 
+### Default to immediate events
+
+Audio events (messages sent to the audio thread) are now unscheduled
+by default. That means they'll be applied as soon as the audio thread receives
+them. Scheduling-by-default has advantages for total ordering and some users
+may still find it useful, but most should benefit from the improved performance
+and simplified coordination of unscheduled events.
+
 ### Miscellaneous
 
 - Bumped MSRV from 1.85 to 1.93

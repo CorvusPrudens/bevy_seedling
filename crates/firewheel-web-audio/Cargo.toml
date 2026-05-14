@@ -1,0 +1,54 @@
+[package]
+name = "firewheel-web-audio"
+version = "0.4.0"
+edition = "2024"
+rust-version = "1.85.0"
+license = "MIT OR Apache-2.0"
+authors = ["Corvus Prudens <corvusprudens@gmail.com>"]
+description = "A multi-threaded Web Audio backend for Firewheel"
+readme = "README.md"
+repository = "https://github.com/corvusprudens/firewheel-web-audio"
+documentation = "https://docs.rs/firewheel-web-audio"
+keywords = ["gamedev", "audio", "firewheel"]
+categories = ["game-development", "multimedia::audio"]
+
+[dependencies]
+log = "0.4"
+firewheel = { version = "0.10.0", default-features = false, features = [
+  "std",
+] }
+js-sys = { version = "0.3.77", default-features = false }
+wasm-bindgen = { version = "0.2.100", default-features = false }
+wasm-bindgen-futures = { version = "0.4.50", default-features = false }
+
+[dependencies.web-sys]
+version = "0.3.77"
+features = [
+  "Blob",
+  "BlobPropertyBag",
+  "Url",
+  "AudioContext",
+  "AudioContextOptions",
+  "Performance",
+  "AudioParam",
+  "AudioContext",
+  "AudioContextState",
+  "AudioNode",
+  "AudioWorklet",
+  "AudioWorkletNode",
+  "AudioWorkletNodeOptions",
+  "AudioDestinationNode",
+  "AudioWorkletGlobalScope",
+  "Worker",
+  "MediaStream",
+  "MediaStreamAudioSourceOptions",
+  "MediaStreamConstraints",
+  "MediaStreamAudioSourceNode",
+  "Window",
+  "Document",
+  "Event",
+  "Navigator",
+  "MediaDevices",
+  "MessagePort",
+  "ErrorEvent",
+]
