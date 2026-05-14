@@ -23,7 +23,21 @@ pub struct CpalPlatformPlugin;
 
 impl Plugin for CpalPlatformPlugin {
     fn build(&self, app: &mut App) {
-        let world = app.world_mut();
+        #[cfg(all(feature = "web_audio", target_arch = "wasm32"))]
+        if app
+            .world()
+            .contains_resource::<AudioStreamConfig<crate::platform::web_audio::WebAudioConfig>>()
+        {
+            return;
+        }
+
+        #[cfg(feature = "rtaudio")]
+        if app
+            .world()
+            .contains_resource::<AudioStreamConfig<crate::platform::rtaudio::RtAudioConfig>>()
+        {
+            return;
+        }
 
         app.init_resource::<AudioStreamConfig<CpalConfig>>()
             .add_systems(

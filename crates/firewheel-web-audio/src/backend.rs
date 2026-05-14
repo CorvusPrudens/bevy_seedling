@@ -1,13 +1,22 @@
 use crate::{
-    auto_resume::setup_autoresume, error::JsContext, instant::Instant,
-    wasm_processor::ProcessorHost,
+    auto_resume::setup_autoresume,
+    error::JsContext,
+    wasm_processor::{ProcessorHost, Timestamp},
 };
 use firewheel::{
-    ActivateInfo, FirewheelContext, StreamInfo, collector::ArcGc, error::ActivateError,
+    ActivateInfo, FirewheelContext, collector::ArcGc, error::ActivateError,
     processor::FirewheelProcessor,
 };
-use std::{cell::RefCell, num::NonZeroU32, rc::Rc, sync::atomic::AtomicBool, time::Duration};
-use wasm_bindgen::{JsCast, JsValue, prelude::wasm_bindgen};
+use std::{
+    cell::RefCell,
+    num::NonZeroU32,
+    rc::Rc,
+    sync::{
+        atomic::AtomicBool,
+        mpsc::{self, TrySendError},
+    },
+};
+use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{AudioContext, AudioContextOptions, AudioWorkletNode};
 
 /// The main-thread host for the Web Audio API backend.
@@ -24,6 +33,7 @@ use web_sys::{AudioContext, AudioContextOptions, AudioWorkletNode};
 /// When dropped, the underlying `AudioContext` is closed and all
 /// resources are released.
 pub struct WebAudioBackend {
+    timestamps: mpsc::SyncSender<Timestamp>,
     is_dropped: Rc<AtomicBool>,
     alive: ArcGc<AtomicBool>,
     web_context: AudioContext,
@@ -131,34 +141,6 @@ pub struct WebAudioConfig {
     pub request_input: bool,
 }
 
-/// Manual javascript bindings to access the audio context's timing information.
-///
-/// https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/getOutputTimestamp
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_name = AudioTimestamp)]
-    pub type AudioTimestamp;
-
-    #[wasm_bindgen(method, getter, js_name = contextTime)]
-    pub fn context_time(this: &AudioTimestamp) -> f64;
-
-    #[wasm_bindgen(method, getter, js_name = performanceTime)]
-    pub fn performance_time(this: &AudioTimestamp) -> f64;
-}
-
-#[wasm_bindgen]
-extern "C" {
-    type AudioContextExt;
-
-    #[wasm_bindgen(method, js_name = getOutputTimestamp)]
-    fn get_output_timestamp(this: &AudioContextExt) -> AudioTimestamp;
-}
-
-fn get_output_timestamp(ctx: &AudioContext) -> AudioTimestamp {
-    let ext: AudioContextExt = ctx.clone().unchecked_into();
-    ext.get_output_timestamp()
-}
-
 impl WebAudioBackend {
     pub fn new(
         cx: &mut FirewheelContext,
@@ -184,6 +166,7 @@ impl WebAudioBackend {
         let alive = ArcGc::new(AtomicBool::new(true));
         let processor_node = Rc::new(RefCell::new(None));
         let is_dropped = Rc::new(AtomicBool::new(false));
+        let (timestamp_tx, timestamp_rx) = mpsc::sync_channel(4);
 
         let info = ActivateInfo {
             max_block_frames: NonZeroU32::new(crate::BLOCK_FRAMES as u32).unwrap(),
@@ -209,6 +192,7 @@ impl WebAudioBackend {
                     alive,
                     is_dropped,
                     processor_node,
+                    timestamp_rx,
                 )
                 .await;
 
@@ -301,204 +285,27 @@ impl WebAudioBackend {
             alive,
             web_context,
             processor_node,
+            timestamps: timestamp_tx,
         })
     }
-}
 
-// impl AudioBackend for WebAudioBackend {
-//     type Enumerator = ();
-//     type Instant = Instant;
-//     type Config = WebAudioConfig;
-//     type StartStreamError = WebAudioStartError;
-//     type StreamError = WebAudioStreamError;
-//
-//     fn delay_from_last_process(&self, _: Self::Instant) -> Option<Duration> {
-//         let timestamp = get_output_timestamp(&self.web_context);
-//         let performance_time = timestamp.performance_time();
-//         let now = web_sys::window()?.performance()?.now();
-//
-//         Some(Duration::from_secs_f64(
-//             (now - performance_time).max(0.0) / 1000.0,
-//         ))
-//     }
-//
-//     fn enumerator() -> Self::Enumerator {}
-//
-//     fn input_devices_simple(&mut self) -> Vec<firewheel::backend::DeviceInfoSimple> {
-//         vec![DeviceInfoSimple {
-//             name: "default input".into(),
-//             id: "default input".into(),
-//         }]
-//     }
-//
-//     fn output_devices_simple(&mut self) -> Vec<DeviceInfoSimple> {
-//         vec![DeviceInfoSimple {
-//             name: "default input".into(),
-//             id: "default input".into(),
-//         }]
-//     }
-//
-//     fn start_stream(config: Self::Config) -> Result<(Self, StreamInfo), Self::StartStreamError> {
-//         let (sender, receiver) = mpsc::channel();
-//
-//         let context = match config.sample_rate {
-//             Some(sample_rate) => {
-//                 let options = AudioContextOptions::new();
-//                 options.set_sample_rate(sample_rate.get() as f32);
-//                 web_sys::AudioContext::new_with_context_options(&options)
-//                     .map_err(|e| WebAudioStartError::Initialization(format!("{e:?}")))?
-//             }
-//             None => web_sys::AudioContext::new()
-//                 .map_err(|e| WebAudioStartError::Initialization(format!("{e:?}")))?,
-//         };
-//
-//         let _ = context.suspend();
-//
-//         let sample_rate = context.sample_rate();
-//         let inputs = if config.request_input { 2 } else { 0 };
-//         let outputs = 2;
-//
-//         let alive = ArcGc::new(AtomicBool::new(true));
-//         let processor_node = Rc::new(RefCell::new(None));
-//         let is_dropped = Rc::new(AtomicBool::new(false));
-//
-//         wasm_bindgen_futures::spawn_local({
-//             let context = context.clone();
-//             let processor_node = processor_node.clone();
-//             let alive = alive.clone();
-//             let is_dropped = is_dropped.clone();
-//             async move {
-//                 let result = prepare_context(
-//                     context.clone(),
-//                     inputs,
-//                     outputs,
-//                     receiver,
-//                     alive,
-//                     is_dropped,
-//                     processor_node,
-//                 )
-//                 .await;
-//
-//                 match result {
-//                     Ok(firewheel_worklet) if inputs > 0 => {
-//                         let result = crate::auto_resume::setup_autoresume(
-//                             context.clone(),
-//                             move || {
-//                                 // Request microphone access
-//                                 let window = web_sys::window().expect("Window should be available");
-//                                 let navigator = window.navigator();
-//                                 let media_devices = navigator
-//                                     .media_devices()
-//                                     .expect("`mediaDevices` should be available");
-//
-//                                 let constraints = web_sys::MediaStreamConstraints::new();
-//                                 constraints.set_audio(&JsValue::TRUE);
-//
-//                                 let get_user_media_promise = media_devices
-//                                     .get_user_media_with_constraints(&constraints)
-//                                     .expect("Failed to call getUserMedia");
-//
-//                                 let context = context.clone();
-//                                 let firewheel_worklet = firewheel_worklet.clone();
-//                                 wasm_bindgen_futures::spawn_local(async move {
-//                                     let future = wasm_bindgen_futures::JsFuture::from(
-//                                         get_user_media_promise,
-//                                     );
-//                                     match future.await {
-//                                         Ok(media_stream_jsvalue) => {
-//                                             let media_stream: web_sys::MediaStream =
-//                                                 media_stream_jsvalue
-//                                                     .dyn_into()
-//                                                     .expect("Failed to cast to MediaStream");
-//
-//                                             // Create MediaStreamAudioSourceNode
-//                                             let options =
-//                                                 web_sys::MediaStreamAudioSourceOptions::new(
-//                                                     &media_stream,
-//                                                 );
-//                                             let audio_source_node =
-//                                                 web_sys::MediaStreamAudioSourceNode::new(
-//                                                     &context, &options,
-//                                                 )
-//                                                 .expect(
-//                                                     "Failed to create MediaStreamAudioSourceNode",
-//                                                 );
-//
-//                                             if let Err(e) = audio_source_node
-//                                                 .connect_with_audio_node(&firewheel_worklet)
-//                                             {
-//                                                 log::error!(
-//                                                     "Failed to connect media stream to Firewheel worklet: {e:?}"
-//                                                 );
-//                                             }
-//                                         }
-//                                         Err(err) => {
-//                                             // Handle the error (e.g., user denied microphone access)
-//                                             log::error!("Failed to acquire audio input: {err:?}");
-//                                         }
-//                                     }
-//                                 });
-//                             },
-//                         );
-//
-//                         if let Err(e) = result {
-//                             log::error!("Failed to set up autoresume: {e:?}");
-//                         };
-//                     }
-//                     Ok(_) => {
-//                         if let Err(e) = setup_autoresume(context.clone(), || ()) {
-//                             log::error!("Failed to set up autoresume: {e:?}");
-//                         }
-//                     }
-//                     Err(e) => {
-//                         log::error!("Failed to initialize Web Audio backend: {e:?}");
-//                         log::warn!(
-//                             "Audio initialization failed. \
-//                             Ensure the document is served with appropriate cross origin isolation headers \
-//                             (https://developer.mozilla.org/en-US/docs/Web/API/Window/crossOriginIsolated) \
-//                             and compile your wasm with the `+atomics` target feature."
-//                         );
-//                     }
-//                 }
-//             }
-//         });
-//
-//         Ok((
-//             Self {
-//                 web_context: context,
-//                 is_dropped,
-//                 processor: sender,
-//                 processor_node,
-//                 alive,
-//             },
-//             StreamInfo {
-//                 sample_rate: NonZeroU32::new(sample_rate as u32)
-//                     .expect("Web Audio API sample rate should be non-zero"),
-//                 max_block_frames: NonZeroU32::new(crate::BLOCK_FRAMES as u32).unwrap(),
-//                 num_stream_in_channels: inputs as u32,
-//                 num_stream_out_channels: outputs as u32,
-//                 input_device_id: Some("default input".into()),
-//                 output_device_id: "default output".into(),
-//                 ..Default::default()
-//             },
-//         ))
-//     }
-//
-//     fn set_processor(&mut self, processor: FirewheelProcessor<Self>) {
-//         if self.processor.send(processor).is_err() {
-//             self.is_dropped
-//                 .store(true, std::sync::atomic::Ordering::Relaxed);
-//         }
-//     }
-//
-//     fn poll_status(&mut self) -> Result<(), Self::StreamError> {
-//         if self.is_dropped.load(std::sync::atomic::Ordering::Relaxed) {
-//             Err(WebAudioStreamError::UnexpectedDrop)
-//         } else {
-//             Ok(())
-//         }
-//     }
-// }
+    pub fn poll(&mut self) -> Result<(), WebAudioStreamError> {
+        if self.is_dropped.load(std::sync::atomic::Ordering::Relaxed) {
+            return Err(WebAudioStreamError::UnexpectedDrop);
+        }
+
+        let main_thread = bevy_platform::time::Instant::now();
+        let audio_thread = self.web_context.current_time();
+        if let Err(TrySendError::Disconnected(_)) = self.timestamps.try_send(Timestamp {
+            main_thread,
+            audio_thread,
+        }) {
+            return Err(WebAudioStreamError::UnexpectedDrop);
+        }
+
+        Ok(())
+    }
+}
 
 async fn prepare_context(
     context: AudioContext,
@@ -508,6 +315,7 @@ async fn prepare_context(
     alive: ArcGc<AtomicBool>,
     is_dropeed: Rc<AtomicBool>,
     processor_node: Rc<RefCell<Option<AudioWorkletNode>>>,
+    timestamps: mpsc::Receiver<Timestamp>,
 ) -> Result<AudioWorkletNode, String> {
     let mod_url = crate::dynamic_module::dependent_module!("./js/audio-worklet.js")
         .context("loading dynamic context")?;
@@ -522,8 +330,15 @@ async fn prepare_context(
     .await
     .context("creating audio worklet module")?;
 
+    let latest_timestamp = Timestamp {
+        main_thread: bevy_platform::time::Instant::now(),
+        audio_thread: context.current_time(),
+    };
+
     let wrapper = ProcessorHost {
         processor,
+        timestamps,
+        latest_timestamp,
         alive,
         inputs,
         outputs,

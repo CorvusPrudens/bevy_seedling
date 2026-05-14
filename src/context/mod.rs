@@ -129,13 +129,6 @@ impl AudioThreadState {
 #[derive(Default)]
 pub(crate) struct LocalStore(HashMap<TypeId, Box<dyn Any>>);
 
-#[cfg_attr(
-    not(any(
-        feature = "cpal",
-        all(feature = "rtaudio", not(target_arch = "wasm32"))
-    )),
-    expect(dead_code)
-)]
 impl LocalStore {
     pub(crate) fn insert<T: 'static>(&mut self, value: T) -> Option<T> {
         self.0

@@ -40,7 +40,6 @@ mod auto_resume;
 mod backend;
 mod dynamic_module;
 mod error;
-mod instant;
 mod wasm_processor;
 
 pub use backend::{WebAudioBackend, WebAudioConfig, WebAudioStartError, WebAudioStreamError};

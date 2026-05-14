@@ -1,16 +1,18 @@
-use crate::instant::Instant;
 use audioadapter::{Adapter, AdapterMut};
+use bevy_platform::time::Instant;
 use firewheel::{
     backend::BackendProcessInfo, collector::ArcGc, node::StreamStatus,
     processor::FirewheelProcessor,
 };
 use js_sys::{Array, Float32Array};
-use std::sync::atomic::AtomicBool;
+use std::sync::{atomic::AtomicBool, mpsc};
 use wasm_bindgen::{JsCast, prelude::wasm_bindgen};
 
 #[wasm_bindgen]
 pub(crate) struct ProcessorHost {
     pub(crate) processor: FirewheelProcessor,
+    pub(crate) timestamps: mpsc::Receiver<Timestamp>,
+    pub(crate) latest_timestamp: Timestamp,
     pub(crate) alive: ArcGc<AtomicBool>,
     pub(crate) inputs: usize,
     pub(crate) outputs: usize,
@@ -171,6 +173,14 @@ impl ProcessorHost {
             }
         }
 
+        if let Some(timestamp) = self.timestamps.try_iter().last() {
+            self.latest_timestamp = timestamp;
+        }
+
+        let time_since_stamp = current_time - self.latest_timestamp.audio_thread;
+        let process_timestamp = self.latest_timestamp.main_thread
+            + std::time::Duration::from_secs_f64(time_since_stamp / 1000.0);
+
         self.processor.process(
             &WorkletBuffer {
                 array: inputs,
@@ -183,7 +193,7 @@ impl ProcessorHost {
             BackendProcessInfo {
                 process_to_playback_delay: None,
                 frames: crate::BLOCK_FRAMES,
-                process_timestamp: None,
+                process_timestamp: Some(process_timestamp),
                 duration_since_stream_start: std::time::Duration::from_secs_f64(current_time),
                 input_stream_status: StreamStatus::empty(),
                 output_stream_status: StreamStatus::empty(),
@@ -222,4 +232,9 @@ impl ProcessorHost {
         self.process_fallible(inputs, outputs, current_time)
             .unwrap_or(true)
     }
+}
+
+pub struct Timestamp {
+    pub main_thread: Instant,
+    pub audio_thread: f64,
 }

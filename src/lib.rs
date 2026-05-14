@@ -471,14 +471,14 @@ plugin_group! {
     pub struct SeedlingPlugins {
         :SeedlingCorePlugin,
 
-        #[custom(cfg(all(feature = "cpal", not(feature = "rtaudio"))))]
-        platform::cpal:::CpalPlatformPlugin,
+        #[cfg(feature = "web_audio")]
+        platform::web_audio:::WebAudioPlatformPlugin,
 
         #[cfg(feature = "rtaudio")]
         platform::rtaudio:::RtAudioPlatformPlugin,
 
-        #[custom(cfg(feature = "web_audio"))]
-        platform::web_audio:::WebAudioPlatformPlugin,
+        #[cfg(feature = "cpal")]
+        platform::cpal:::CpalPlatformPlugin,
 
         #[cfg(feature = "diagnostics")]
         diagnostics:::AudioDiagnosticsPlugin,
