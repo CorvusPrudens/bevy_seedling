@@ -307,6 +307,7 @@ impl WebAudioBackend {
     }
 }
 
+#[expect(clippy::too_many_arguments)]
 async fn prepare_context(
     context: AudioContext,
     inputs: usize,
