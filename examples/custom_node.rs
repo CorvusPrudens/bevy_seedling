@@ -1,7 +1,7 @@
 //! This example demonstrates how to define and use a custom
 //! Firewheel node.
 
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_seedling::firewheel::{
     channel_config::{ChannelConfig, NonZeroChannelCount},
     diff::{Diff, Patch},
@@ -13,7 +13,6 @@ use bevy_seedling::firewheel::{
 };
 use bevy_seedling::prelude::*;
 use firewheel::node::NodeError;
-use std::time::Duration;
 
 fn main() {
     App::new()

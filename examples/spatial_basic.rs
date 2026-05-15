@@ -1,8 +1,7 @@
 //! This example demonstrates how to use the basic spatial node.
 
-use bevy::{app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*};
+use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::prelude::*;
-use std::time::Duration;
 
 fn main() {
     App::new()

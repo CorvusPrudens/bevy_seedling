@@ -126,9 +126,11 @@ impl AudioThreadState {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Default)]
 pub(crate) struct LocalStore(HashMap<TypeId, Box<dyn Any>>);
 
+#[allow(dead_code)]
 impl LocalStore {
     pub(crate) fn insert<T: 'static>(&mut self, value: T) -> Option<T> {
         self.0

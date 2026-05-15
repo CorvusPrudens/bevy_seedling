@@ -9,9 +9,8 @@
 //! HRTFs are fairly expensive, so be careful with the number of
 //! actively processing nodes you spawn.
 
-use bevy::{app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*};
+use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::prelude::*;
-use std::time::Duration;
 
 fn main() {
     App::new()

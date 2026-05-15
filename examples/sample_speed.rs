@@ -1,9 +1,8 @@
 //! This example demonstrates how to adjust a sample's speed
 //! (and therefore pitch) during playback.
 
-use bevy::{app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*};
+use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::prelude::*;
-use std::time::Duration;
 
 fn main() {
     App::new()

@@ -7,9 +7,8 @@
 //!
 //! Unlike an HRTF, simulating ITD is very cheap.
 
-use bevy::{app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*};
+use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::{nodes::itd::ItdNode, prelude::*};
-use std::time::Duration;
 
 fn main() {
     App::new()
