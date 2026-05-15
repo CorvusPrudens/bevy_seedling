@@ -197,16 +197,10 @@ impl DiffTimestamp {
 /// This can also increase the pressure on the audio thread, which may
 /// lead to worse performance.
 ///
-/// This defaults to `true`.
-#[derive(Resource, Debug)]
+/// This defaults to `false`.
+#[derive(Resource, Debug, Default)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct ScheduleDiffing(pub bool);
-
-impl Default for ScheduleDiffing {
-    fn default() -> Self {
-        Self(false)
-    }
-}
 
 /// Provides information about a node's audio processor.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]

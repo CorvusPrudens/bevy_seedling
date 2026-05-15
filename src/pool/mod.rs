@@ -964,6 +964,9 @@ mod test {
         let mut app = prepare_app(|mut commands: Commands, server: Res<AssetServer>| {
             // make sure we can spawn dynamic pools
             commands.spawn((VolumeNode::default(), dynamic::DynamicBus));
+            commands
+                .spawn((VolumeNode::default(), MainBus))
+                .connect(crate::edge::AudioGraphOutput);
 
             // We'll play a short sample
             commands.spawn((
@@ -1012,6 +1015,9 @@ mod test {
                 SamplerPool(TestPool),
                 sample_effects![FastLowpassNode::<2>::default()],
             ));
+            commands
+                .spawn((VolumeNode::default(), MainBus))
+                .connect(crate::edge::AudioGraphOutput);
 
             commands.spawn((
                 TestPool,

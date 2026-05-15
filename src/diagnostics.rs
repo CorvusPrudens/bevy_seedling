@@ -14,11 +14,16 @@ pub struct AudioDiagnosticsPlugin;
 impl AudioDiagnosticsPlugin {
     /// Records the total CPU usage of all real-time audio processing.
     pub const AUDIO_BLOCK: DiagnosticPath = DiagnosticPath::const_new("audio_block");
+
+    /// Records the CPU usage of Firewheel's graph bookkeeping.
+    pub const AUDIO_GRAPH_OVERHEAD: DiagnosticPath =
+        DiagnosticPath::const_new("audio_graph_overhead");
 }
 
 impl Plugin for AudioDiagnosticsPlugin {
     fn build(&self, app: &mut App) {
         app.register_diagnostic(Diagnostic::new(Self::AUDIO_BLOCK).with_suffix("%"))
+            .register_diagnostic(Diagnostic::new(Self::AUDIO_GRAPH_OVERHEAD).with_suffix("%"))
             .init_resource::<AudioProfilingData>()
             .add_systems(Last, diagnostic_system.after(SeedlingSystems::Flush));
     }
@@ -44,6 +49,12 @@ fn diagnostic_system(
             diagnostics.add_measurement(&AudioDiagnosticsPlugin::AUDIO_BLOCK, || {
                 data.0.overall_cpu_usage * 100.0
             });
+
+            if let Some(overhead) = data.0.engine_bookkeeping_cpu_usage {
+                diagnostics.add_measurement(&AudioDiagnosticsPlugin::AUDIO_GRAPH_OVERHEAD, || {
+                    overhead * 100.0
+                });
+            }
         }
     });
 }
