@@ -1,4 +1,4 @@
-name: ircam CI Checks
+name: Web Audio CI Checks
 
 on:
   pull_request:
