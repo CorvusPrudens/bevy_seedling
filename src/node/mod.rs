@@ -47,12 +47,9 @@ impl Plugin for NodePlugin {
             .init_resource::<AudioScheduleLookahead>()
             .init_resource::<PendingRemovals>()
             .add_systems(Last, flush_events.in_set(SeedlingSystems::Flush))
-            .add_systems(
-                Last,
-                AudioBypass::update_bypassed.in_set(SeedlingSystems::Queue),
-            )
             .add_observer(label::NodeLabels::on_add_observer)
             .add_observer(label::NodeLabels::on_replace_observer)
+            .add_observer(AudioBypass::insert_bypass)
             .add_observer(AudioBypass::remove_bypass);
     }
 }
@@ -62,39 +59,33 @@ impl Plugin for NodePlugin {
 pub struct AudioBypass;
 
 impl AudioBypass {
-    fn remove_bypass(
-        trigger: On<Remove, AudioBypass>,
+    fn insert_bypass(
+        trigger: On<Insert, AudioBypass>,
         node: Query<&FirewheelNode>,
-        time: Res<Time<Audio>>,
         mut context: ResMut<AudioContext>,
     ) -> Result {
         let node = node.get(trigger.entity)?;
-
-        context.with(|context| {
-            context.queue_event(NodeEvent {
-                node_id: node.0,
-                time: Some(EventInstant::AtClockSeconds(time.now())),
-                event: NodeEventType::SetBypassed(false),
-            });
-        });
-
+        Self::queue_set_bypassed(&mut context, node, true);
         Ok(())
     }
 
-    fn update_bypassed(
-        bypassed: Query<&FirewheelNode, Changed<AudioBypass>>,
-        time: Res<Time<Audio>>,
+    fn remove_bypass(
+        trigger: On<Remove, AudioBypass>,
+        node: Query<&FirewheelNode>,
         mut context: ResMut<AudioContext>,
-    ) {
-        let now = time.now();
+    ) -> Result {
+        let node = node.get(trigger.entity)?;
+        Self::queue_set_bypassed(&mut context, node, false);
+        Ok(())
+    }
+
+    fn queue_set_bypassed(context: &mut AudioContext, node: &FirewheelNode, bypassed: bool) {
         context.with(|context| {
-            for node in bypassed {
-                context.queue_event(NodeEvent {
-                    node_id: node.0,
-                    time: Some(EventInstant::AtClockSeconds(now)),
-                    event: NodeEventType::SetBypassed(true),
-                });
-            }
+            context.queue_event(NodeEvent {
+                node_id: node.0,
+                time: None,
+                event: NodeEventType::SetBypassed(bypassed),
+            });
         });
     }
 }
