@@ -62,35 +62,28 @@ impl AudioBypass {
     fn insert_bypass(
         trigger: On<Insert, AudioBypass>,
         node: Query<&FirewheelNode>,
-        time: Res<Time<Audio>>,
         mut context: ResMut<AudioContext>,
     ) -> Result {
         let node = node.get(trigger.entity)?;
-        Self::queue_set_bypassed(&mut context, node, &time, true);
+        Self::queue_set_bypassed(&mut context, node, true);
         Ok(())
     }
 
     fn remove_bypass(
         trigger: On<Remove, AudioBypass>,
         node: Query<&FirewheelNode>,
-        time: Res<Time<Audio>>,
         mut context: ResMut<AudioContext>,
     ) -> Result {
         let node = node.get(trigger.entity)?;
-        Self::queue_set_bypassed(&mut context, node, &time, false);
+        Self::queue_set_bypassed(&mut context, node, false);
         Ok(())
     }
 
-    fn queue_set_bypassed(
-        context: &mut AudioContext,
-        node: &FirewheelNode,
-        time: &Time<Audio>,
-        bypassed: bool,
-    ) {
+    fn queue_set_bypassed(context: &mut AudioContext, node: &FirewheelNode, bypassed: bool) {
         context.with(|context| {
             context.queue_event(NodeEvent {
                 node_id: node.0,
-                time: Some(EventInstant::AtClockSeconds(time.now())),
+                time: None,
                 event: NodeEventType::SetBypassed(bypassed),
             });
         });

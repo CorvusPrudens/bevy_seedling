@@ -117,6 +117,7 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "f1e8219", def
 ] }
 bevy = { version = "0.18.0", default-features = false, features = [
   "2d_bevy_render",
+  "3d_bevy_render",
   "default_app",
   "picking",
   "ui_bevy_render",
