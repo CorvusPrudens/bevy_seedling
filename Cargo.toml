@@ -88,9 +88,8 @@ symphonium = { version = "0.9", default-features = false, features = [
 symphonia = { version = "0.5", default-features = false, optional = true }
 smallvec = { version = "1.13", default-features = false }
 bevy_seedling_macros = { path = "./seedling_macros", version = "0.7.0" }
-rand = { version = "0.9", default-features = false, features = [
-  "small_rng",
-  "os_rng",
+rand = { version = "0.10", default-features = false, features = [
+  "sys_rng",
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
