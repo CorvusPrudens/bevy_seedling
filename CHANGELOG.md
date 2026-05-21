@@ -7,6 +7,9 @@
 The backend management code has been significantly simplified following
 Firewheel's backend API changes.
 
+Rather than a generic plugin that takes an implementor
+of `firewheel::Backend`, we use a single plugin collection containing multiple, independent backend plugins.
+
 ### Plugin restructuring
 
 Seedling's top-level plugin has been reduced to a ZST. Its fields have been turned
