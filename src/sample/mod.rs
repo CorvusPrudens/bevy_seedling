@@ -15,6 +15,7 @@ use firewheel::{
 use std::time::Duration;
 
 mod assets;
+mod decoder;
 
 pub use assets::AudioSample;
 
