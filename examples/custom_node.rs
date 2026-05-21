@@ -1,7 +1,7 @@
 //! This example demonstrates how to define and use a custom
 //! Firewheel node.
 
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_seedling::firewheel::{
     channel_config::{ChannelConfig, NonZeroChannelCount},
     diff::{Diff, Patch},
@@ -13,14 +13,11 @@ use bevy_seedling::firewheel::{
 };
 use bevy_seedling::prelude::*;
 use firewheel::node::NodeError;
-use std::time::Duration;
 
 fn main() {
     App::new()
         .add_plugins((
-            // Without a window, the event loop tends to run quite fast.
-            // We'll slow it down so we don't drop any audio events.
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_millis(16))),
+            MinimalPlugins,
             bevy::log::LogPlugin::default(),
             AssetPlugin::default(),
             SeedlingPlugins,

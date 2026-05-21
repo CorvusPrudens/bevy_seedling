@@ -651,10 +651,10 @@ impl firewheel::diff::Diff for PlaybackSettings {
         path: firewheel::diff::PathBuilder,
         event_queue: &mut E,
     ) {
-        self.play.diff(&baseline.play, path.with(2), event_queue);
+        self.play.diff(&baseline.play, path.with(1), event_queue);
         self.play_from
-            .diff(&baseline.play_from, path.with(3), event_queue);
-        self.speed.diff(&baseline.speed, path.with(5), event_queue);
+            .diff(&baseline.play_from, path.with(2), event_queue);
+        self.speed.diff(&baseline.speed, path.with(4), event_queue);
     }
 }
 

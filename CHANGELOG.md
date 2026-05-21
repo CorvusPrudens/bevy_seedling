@@ -7,6 +7,9 @@
 The backend management code has been significantly simplified following
 Firewheel's backend API changes.
 
+Rather than a generic plugin that takes an implementor
+of `firewheel::Backend`, we use a single plugin collection containing multiple, independent backend plugins.
+
 ### Plugin restructuring
 
 Seedling's top-level plugin has been reduced to a ZST. Its fields have been turned
@@ -35,6 +38,14 @@ can be provided with as fully customized `CodecRegistry` and `Probe`
 via the `AudioLoaderConfig` resource. It can also be completely
 disabled along with all `symphonia` crates by disabling the
 `symphonia` feature.
+
+### Default to immediate events
+
+Audio events (messages sent to the audio thread) are now unscheduled
+by default. That means they'll be applied as soon as the audio thread receives
+them. Scheduling-by-default has advantages for total ordering and some users
+may still find it useful, but most should benefit from the improved performance
+and simplified coordination of unscheduled events.
 
 ### Miscellaneous
 

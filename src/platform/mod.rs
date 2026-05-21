@@ -10,6 +10,9 @@ pub mod cpal;
 #[cfg(feature = "rtaudio")]
 pub mod rtaudio;
 
+#[cfg(feature = "web_audio")]
+pub mod web_audio;
+
 #[cfg(any(feature = "profiling", test))]
 pub mod mock;
 
@@ -26,7 +29,6 @@ pub struct AudioStreamConfig<C>(pub C);
 ///
 /// If the current devices are no longer available, this will
 /// attempt to select the default input and output.
-///
 #[derive(Event, Debug)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct RestartAudioStream;

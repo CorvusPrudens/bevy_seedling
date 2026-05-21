@@ -470,10 +470,16 @@ plugin_group! {
     #[derive(Debug)]
     pub struct SeedlingPlugins {
         :SeedlingCorePlugin,
-        #[cfg(feature = "cpal")]
-        platform::cpal:::CpalPlatformPlugin,
+
+        #[cfg(feature = "web_audio")]
+        platform::web_audio:::WebAudioPlatformPlugin,
+
         #[cfg(feature = "rtaudio")]
         platform::rtaudio:::RtAudioPlatformPlugin,
+
+        #[cfg(feature = "cpal")]
+        platform::cpal:::CpalPlatformPlugin,
+
         #[cfg(feature = "diagnostics")]
         diagnostics:::AudioDiagnosticsPlugin,
     }
@@ -530,10 +536,7 @@ impl Plugin for SeedlingCorePlugin {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        platform::{cpal::CpalPlatformPlugin, mock::MockBackendPlugin},
-        prelude::*,
-    };
+    use crate::{node::DiffRate, platform::mock::MockBackendPlugin, prelude::*};
     use bevy::{ecs::system::RunSystemOnce, prelude::*};
     use firewheel::nodes::fast_filters::lowpass::FastLowpassNode;
 
@@ -543,10 +546,11 @@ mod test {
         app.add_plugins((
             MinimalPlugins,
             AssetPlugin::default(),
-            SeedlingPlugins.build().disable::<CpalPlatformPlugin>(),
+            crate::SeedlingCorePlugin,
             MockBackendPlugin,
             TransformPlugin,
         ))
+        .insert_resource(DiffRate(std::time::Duration::from_secs_f32(0f32)))
         .insert_resource(AudioGraphTemplate::Empty)
         .register_node::<FastLowpassNode>()
         .add_systems(Startup, startup);

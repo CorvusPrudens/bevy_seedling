@@ -9,19 +9,19 @@ use crate::{
     prelude::AudioContext,
 };
 use bevy_app::prelude::*;
-use bevy_ecs::component::Components;
-use bevy_ecs::lifecycle::HookContext;
 use bevy_ecs::{
-    component::{ComponentId, Mutable},
+    change_detection::{DetectChanges, Tick},
+    component::{ComponentId, Components, Mutable},
+    lifecycle::HookContext,
     prelude::*,
+    system::SystemChangeTick,
     world::DeferredWorld,
 };
 use bevy_log::prelude::*;
 use bevy_platform::collections::HashSet;
 use bevy_time::Time;
 use bevy_utils::prelude::DebugName;
-use core::any::TypeId;
-use core::ops::DerefMut;
+use core::{any::TypeId, time::Duration};
 use firewheel::channel_config::ChannelConfig;
 use firewheel::clock::{DurationSeconds, EventInstant, InstantSeconds};
 use firewheel::graph::NodeEntry;
@@ -46,6 +46,15 @@ impl Plugin for NodePlugin {
             .init_resource::<ScheduleDiffing>()
             .init_resource::<AudioScheduleLookahead>()
             .init_resource::<PendingRemovals>()
+            .init_resource::<DiffRate>()
+            .init_resource::<DiffStopwatch>()
+            .add_systems(
+                Last,
+                (
+                    DiffStopwatch::pre_diff.in_set(SeedlingSystems::Acquire),
+                    DiffStopwatch::post_diff.in_set(SeedlingSystems::PollStream),
+                ),
+            )
             .add_systems(Last, flush_events.in_set(SeedlingSystems::Flush))
             .add_systems(
                 Last,
@@ -64,40 +73,101 @@ pub struct AudioBypass;
 impl AudioBypass {
     fn remove_bypass(
         trigger: On<Remove, AudioBypass>,
-        node: Query<&FirewheelNode>,
-        time: Res<Time<Audio>>,
-        mut context: ResMut<AudioContext>,
+        mut node: Query<&mut AudioEvents>,
     ) -> Result {
-        let node = node.get(trigger.entity)?;
-
-        context.with(|context| {
-            context.queue_event(NodeEvent {
-                node_id: node.0,
-                time: Some(EventInstant::AtClockSeconds(time.now())),
-                event: NodeEventType::SetBypassed(false),
-            });
-        });
+        let mut events = node.get_mut(trigger.entity)?;
+        events.queue.push(NodeEventType::SetBypassed(false));
 
         Ok(())
     }
 
-    fn update_bypassed(
-        bypassed: Query<&FirewheelNode, Changed<AudioBypass>>,
-        time: Res<Time<Audio>>,
-        mut context: ResMut<AudioContext>,
-    ) {
-        let now = time.now();
-        context.with(|context| {
-            for node in bypassed {
-                context.queue_event(NodeEvent {
-                    node_id: node.0,
-                    time: Some(EventInstant::AtClockSeconds(now)),
-                    event: NodeEventType::SetBypassed(true),
-                });
-            }
-        });
+    fn update_bypassed(bypassed: Query<&mut AudioEvents, Changed<AudioBypass>>) {
+        for mut events in bypassed {
+            events.queue.push(NodeEventType::SetBypassed(true));
+        }
     }
 }
+
+/// Sets the maximum rate at which parameters will be
+/// diffed and flushed to the audio graph.
+///
+/// This rate does not attempt to compensate for accumulated
+/// error. Consequently, while diffing is guaranteed to be no
+/// faster than this rate, it may be slower depending on the ECS
+/// tick rate.
+///
+/// The default rate is 10ms.
+#[derive(Resource, Debug)]
+pub struct DiffRate(pub Duration);
+
+impl core::default::Default for DiffRate {
+    fn default() -> Self {
+        Self(Duration::from_millis(10))
+    }
+}
+
+/// Tracks the duration (in audio time) from the
+/// previous diffing event.
+#[derive(Resource, Debug)]
+struct DiffStopwatch {
+    stopwatch: bevy_time::Stopwatch,
+    last_run: Tick,
+}
+
+impl FromWorld for DiffStopwatch {
+    fn from_world(world: &mut World) -> Self {
+        Self {
+            stopwatch: Default::default(),
+            last_run: world.change_tick(),
+        }
+    }
+}
+
+impl DiffStopwatch {
+    fn pre_diff(time: Res<Time<Audio>>, mut watch: ResMut<Self>) {
+        watch.stopwatch.tick(time.delta());
+    }
+
+    fn post_diff(mut watch: ResMut<Self>, rate: Res<DiffRate>, ticks: SystemChangeTick) {
+        if watch.stopwatch.elapsed() > rate.0 {
+            watch.stopwatch.reset();
+            watch.last_run = ticks.this_run();
+        }
+    }
+}
+
+/// A system param that indicates when diffing should occur.
+#[derive(bevy_ecs::system::SystemParam, Debug)]
+pub struct DiffTimer<'w> {
+    stopwatch: Res<'w, DiffStopwatch>,
+    rate: Res<'w, DiffRate>,
+    tick: SystemChangeTick,
+}
+
+impl DiffTimer<'_> {
+    /// Returns whether diffing should occur on this tick.
+    fn diff_tick(&self) -> bool {
+        self.stopwatch.stopwatch.elapsed() >= self.rate.0 || self.stopwatch.is_added()
+    }
+
+    /// Returns whether diffing should occur on this tick.
+    ///
+    /// This accounts for changes since the last event.
+    pub fn should_diff<T: DetectChanges>(&self, params: &T) -> bool {
+        self.diff_tick()
+            && params
+                .last_changed()
+                .is_newer_than(self.stopwatch.last_run, self.tick.this_run())
+    }
+}
+
+/// Immediately diff a set of parameters, regardless
+/// of the diff timer.
+///
+/// This helps ensure that freshly-queued sounds receive
+/// immediate updates.
+#[derive(Component, Default)]
+pub(crate) struct IgnoreDiffTimer;
 
 /// A node's baseline instance.
 ///
@@ -127,16 +197,10 @@ impl DiffTimestamp {
 /// This can also increase the pressure on the audio thread, which may
 /// lead to worse performance.
 ///
-/// This defaults to `true`.
-#[derive(Resource, Debug)]
+/// This defaults to `false`.
+#[derive(Resource, Debug, Default)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct ScheduleDiffing(pub bool);
-
-impl Default for ScheduleDiffing {
-    fn default() -> Self {
-        Self(true)
-    }
-}
 
 /// Provides information about a node's audio processor.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
@@ -209,22 +273,35 @@ fn apply_patch<T: Patch>(value: &mut T, event: &NodeEventType) -> Result {
 }
 
 fn generate_param_events<T: Diff + Patch + Component<Mutability = Mutable> + Clone>(
-    mut nodes: Query<(Mut<T>, &mut Baseline<T>, &mut AudioEvents, Has<EffectOf>)>,
+    mut nodes: Query<(
+        Entity,
+        Mut<T>,
+        &mut Baseline<T>,
+        &mut AudioEvents,
+        Has<EffectOf>,
+        Has<IgnoreDiffTimer>,
+    )>,
     time: Res<bevy_time::Time<Audio>>,
+    diff_timer: DiffTimer,
+    mut commands: Commands,
 ) -> Result {
     let render_range = time.render_range();
 
-    for (mut params, mut baseline, mut events, effect) in nodes.iter_mut() {
-        if params.is_changed() && !effect {
+    for (entity, mut params, mut baseline, mut events, effect, ignore_timer) in nodes.iter_mut() {
+        if (ignore_timer || params.is_added() || diff_timer.should_diff(&params)) && !effect {
             // This ensures we only apply patches that were generated here.
             // I'm not sure this is correct in all cases, though.
             let starting_len = events.queue.len();
 
-            params.diff(&baseline.0, Default::default(), events.deref_mut());
+            params.diff(&baseline.0, Default::default(), &mut *events);
 
             // Patch the baseline.
             for event in &events.queue[starting_len..] {
                 apply_patch(&mut baseline.0, event)?;
+            }
+
+            if ignore_timer {
+                commands.entity(entity).remove::<IgnoreDiffTimer>();
             }
         }
 
@@ -840,13 +917,14 @@ fn flush_events(
         let range_to_render = InstantSeconds(0.0)..now + lookahead.0;
         for (node_entity, node, mut events, timestamp) in nodes.iter_mut() {
             for event in events.queue.drain(..) {
-                let time = should_schedule.0.then(|| match timestamp {
+                let time = match timestamp {
                     Some(t) => {
                         commands.entity(node_entity).remove::<DiffTimestamp>();
-                        EventInstant::AtClockSeconds(t.0)
+                        Some(EventInstant::AtClockSeconds(t.0))
                     }
-                    None => EventInstant::AtClockSeconds(now),
-                });
+                    None if should_schedule.0 => Some(EventInstant::AtClockSeconds(now)),
+                    _ => None,
+                };
 
                 context.queue_event(NodeEvent {
                     node_id: node.0,

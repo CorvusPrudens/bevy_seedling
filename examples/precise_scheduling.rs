@@ -2,7 +2,10 @@
 
 use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::{
-    node::events::{AudioEvents, VolumeFade},
+    node::{
+        DiffTimestamp,
+        events::{AudioEvents, VolumeFade},
+    },
     prelude::*,
 };
 use bevy_time::common_conditions::once_after_delay;
@@ -54,6 +57,9 @@ fn startup(server: Res<AssetServer>, time: Res<Time<Audio>>, mut commands: Comma
         settings,
         SamplePlayer::new(server.load("midir-chip.ogg")).with_volume(Volume::Decibels(-8.0)),
         sample_effects![fade_in(2.5, &time)],
+        // This timestamp accounts for any initial delay in playback,
+        // including from asset loading and pool voice acquisition.
+        DiffTimestamp::new(&time),
     ));
 }
 

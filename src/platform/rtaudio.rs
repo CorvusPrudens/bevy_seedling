@@ -8,10 +8,15 @@ use bevy_app::prelude::*;
 #[derive(Debug, Default)]
 pub struct RtAudioPlatformPlugin;
 
+#[cfg(target_arch = "wasm32")]
+compile_error!(
+    "RtAudio cannot target the web. Activate the `cpal` feature or provide a custom backend instead."
+);
+
 #[cfg(not(target_arch = "wasm32"))]
 pub use firewheel::rtaudio::*;
 
-#[cfg(all(not(feature = "cpal"), not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 mod inner {
     use super::*;
     use bevy_ecs::prelude::*;
@@ -133,19 +138,12 @@ mod inner {
     }
 }
 
-impl RtAudioPlatformPlugin {
-    #[cfg(all(not(feature = "cpal"), not(target_arch = "wasm32")))]
-    fn build_plugin(&self, app: &mut App) {
-        inner::build_plugin(app);
-    }
-}
-
 impl Plugin for RtAudioPlatformPlugin {
     fn build(&self, app: &mut App) {
-        #[cfg(all(not(feature = "cpal"), not(target_arch = "wasm32")))]
-        self.build_plugin(app);
+        #[cfg(not(target_arch = "wasm32"))]
+        inner::build_plugin(app);
 
-        #[cfg(any(feature = "cpal", target_arch = "wasm32"))]
+        #[cfg(target_arch = "wasm32")]
         let _ = app;
     }
 }
