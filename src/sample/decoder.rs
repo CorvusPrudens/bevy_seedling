@@ -1,6 +1,6 @@
 use core::fmt;
 use core::time::Duration;
-use firewheel::sample_resource::{SampleResource, SampleResourceInfo};
+use firewheel::{nodes::sampler::StreamedSample, sample_resource::SampleResourceInfo};
 use symphonia::{
     core::{
         audio::{AudioBufferRef, SampleBuffer, SignalSpec},
@@ -15,10 +15,6 @@ use symphonia::{
     default::get_probe,
 };
 
-// use crate::{Source, source};
-
-// use super::DecoderError;
-
 // Decoder errors are not considered fatal.
 // The correct action is to just get a new packet and try again.
 // But a decode error in more than 3 consecutive packets is fatal.
@@ -29,8 +25,9 @@ pub(crate) struct SymphoniaDecoder {
     current_frame_offset: usize,
     format: Box<dyn FormatReader>,
     total_duration: Option<Time>,
-    buffer: SampleBuffer<i16>,
+    buffer: SampleBuffer<f32>,
     spec: SignalSpec,
+    frame_position: u64,
 }
 
 impl SymphoniaDecoder {
@@ -52,10 +49,6 @@ impl SymphoniaDecoder {
             Ok(Some(decoder)) => Ok(decoder),
             Ok(None) => Err(DecoderError::NoStreams),
         }
-    }
-
-    pub(crate) fn into_inner(self) -> MediaSourceStream {
-        self.format.into_inner()
     }
 
     fn init(
@@ -141,13 +134,14 @@ impl SymphoniaDecoder {
             total_duration,
             buffer,
             spec,
+            frame_position: 0,
         }))
     }
 
     #[inline]
-    fn get_buffer(decoded: AudioBufferRef, spec: &SignalSpec) -> SampleBuffer<i16> {
+    fn get_buffer(decoded: AudioBufferRef, spec: &SignalSpec) -> SampleBuffer<f32> {
         let duration = units::Duration::from(decoded.capacity() as u64);
-        let mut buffer = SampleBuffer::<i16>::new(duration, *spec);
+        let mut buffer = SampleBuffer::<f32>::new(duration, *spec);
         buffer.copy_interleaved_ref(decoded);
         buffer
     }
@@ -155,7 +149,14 @@ impl SymphoniaDecoder {
 
 impl SampleResourceInfo for SymphoniaDecoder {
     fn len_frames(&self) -> u64 {
-        self.buffer.samples().len() as u64
+        if let Some(frames) = self.num_frames() {
+            return frames;
+        }
+
+        // estimate the frames if no exact value exists
+        self.total_duration()
+            .map(|d| (d.as_secs_f64() * self.spec.rate as f64) as u64)
+            .unwrap_or_default()
     }
 
     fn num_channels(&self) -> core::num::NonZeroUsize {
@@ -167,78 +168,88 @@ impl SampleResourceInfo for SymphoniaDecoder {
     }
 }
 
-// impl SampleResource for SymphoniaDecoder {
-//     fn fill_buffers(
-//             &self,
-//             out_buffer: &mut [&mut [f32]],
-//             out_buffer_range: std::ops::Range<usize>,
-//             start_frame: u64,
-//         ) -> usize {
-//             // fill frame
+impl StreamedSample for SymphoniaDecoder {
+    fn fill_buffers(
+        &mut self,
+        out_buffer: &mut [&mut [f32]],
+        out_buffer_range: std::ops::Range<usize>,
+        start_frame: u64,
+        _speed: f64,
+        _is_backwards: bool,
+    ) -> usize {
+        let len = out_buffer_range.len();
 
-//             for buffer in out_buffer.iter_mut() {
-//                 buffer[0] = self.next()
+        if self.frame_position != start_frame {
+            let position_seconds = start_frame as f64 / self.spec.rate as f64;
+            let position = Duration::from_secs_f64(position_seconds);
+            if self.try_seek(position).is_ok() {
+                self.frame_position = start_frame;
+            }
+        }
 
-//             }
-//     }
-// }
+        for sample in out_buffer_range {
+            for frame in out_buffer.iter_mut() {
+                frame[sample] = self.next().unwrap_or_default();
+            }
+        }
 
-// impl Source for SymphoniaDecoder {
-//     #[inline]
-//     fn current_frame_len(&self) -> Option<usize> {
-//         Some(self.buffer.samples().len())
-//     }
+        self.frame_position += len as u64;
 
-//     #[inline]
-//     fn channels(&self) -> u16 {
-//         self.spec.channels.count() as u16
-//     }
+        len * out_buffer.len()
+    }
 
-//     #[inline]
-//     fn sample_rate(&self) -> u32 {
-//         self.spec.rate
-//     }
+    fn range_is_ready(&mut self, _range: std::ops::Range<u64>) -> bool {
+        true
+    }
 
-//     #[inline]
-//     fn total_duration(&self) -> Option<Duration> {
-//         self.total_duration
-//             .map(|Time { seconds, frac }| Duration::new(seconds, (1f64 / frac) as u32))
-//     }
+    fn cache_new_starting_frame(&mut self, _frame: u64, _speed: f64, _will_play_backwards: bool) {}
+}
 
-//     fn try_seek(&mut self, pos: Duration) -> Result<(), source::SeekError> {
-//         use symphonia::core::formats::{SeekMode, SeekTo};
+impl SymphoniaDecoder {
+    fn num_frames(&self) -> Option<u64> {
+        self.format.default_track()?.codec_params.n_frames
+    }
 
-//         let seek_beyond_end = self
-//             .total_duration()
-//             .is_some_and(|dur| dur.saturating_sub(pos).as_millis() < 1);
+    fn try_seek(&mut self, pos: Duration) -> bevy_ecs::prelude::Result<()> {
+        use symphonia::core::formats::{SeekMode, SeekTo};
 
-//         let time = if seek_beyond_end {
-//             let time = self.total_duration.expect("if guarantees this is Some");
-//             skip_back_a_tiny_bit(time) // some decoders can only seek to just before the end
-//         } else {
-//             pos.as_secs_f64().into()
-//         };
+        let seek_beyond_end = self
+            .total_duration()
+            .is_some_and(|dur| dur.saturating_sub(pos).as_millis() < 1);
 
-//         // make sure the next sample is for the right channel
-//         let to_skip = self.current_frame_offset % self.channels() as usize;
+        let time = if seek_beyond_end {
+            let time = self.total_duration.expect("if guarantees this is Some");
+            skip_back_a_tiny_bit(time) // some decoders can only seek to just before the end
+        } else {
+            pos.as_secs_f64().into()
+        };
 
-//         let seek_res = self
-//             .format
-//             .seek(
-//                 SeekMode::Accurate,
-//                 SeekTo::Time {
-//                     time,
-//                     track_id: None,
-//                 },
-//             )
-//             .map_err(SeekError::BaseSeek)?;
+        // make sure the next sample is for the right channel
+        let to_skip = self.current_frame_offset % self.num_channels().get();
 
-//         self.refine_position(seek_res)?;
-//         self.current_frame_offset += to_skip;
+        let seek_res = self
+            .format
+            .seek(
+                SeekMode::Accurate,
+                SeekTo::Time {
+                    time,
+                    track_id: None,
+                },
+            )
+            .map_err(SeekError::BaseSeek)?;
 
-//         Ok(())
-//     }
-// }
+        self.refine_position(seek_res)?;
+        self.current_frame_offset += to_skip;
+
+        Ok(())
+    }
+
+    #[inline]
+    fn total_duration(&self) -> Option<Duration> {
+        self.total_duration
+            .map(|Time { seconds, frac }| Duration::new(seconds, (1f64 / frac) as u32))
+    }
+}
 
 /// Error returned when the try_seek implementation of the symphonia decoder fails.
 #[derive(Debug)]
@@ -252,6 +263,7 @@ pub enum SeekError {
     /// Decoding failed on multiple consecutive packets
     Decoding(symphonia::core::errors::Error),
 }
+
 impl fmt::Display for SeekError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -282,6 +294,7 @@ impl fmt::Display for SeekError {
         }
     }
 }
+
 impl std::error::Error for SeekError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
@@ -317,7 +330,7 @@ impl SymphoniaDecoder {
         let decoded = decoded.map_err(SeekError::Decoding)?;
         decoded.spec().clone_into(&mut self.spec);
         self.buffer = SymphoniaDecoder::get_buffer(decoded, &self.spec);
-        self.current_frame_offset = samples_to_pass as usize * self.channels() as usize;
+        self.current_frame_offset = samples_to_pass as usize * self.num_channels().get();
         Ok(())
     }
 }
@@ -337,10 +350,10 @@ fn skip_back_a_tiny_bit(
 }
 
 impl Iterator for SymphoniaDecoder {
-    type Item = i16;
+    type Item = f32;
 
     #[inline]
-    fn next(&mut self) -> Option<i16> {
+    fn next(&mut self) -> Option<f32> {
         if self.current_frame_offset >= self.buffer.len() {
             let packet = self.format.next_packet().ok()?;
             let mut decoded = self.decoder.decode(&packet);

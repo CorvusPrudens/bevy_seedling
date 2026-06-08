@@ -1,7 +1,10 @@
 //! This example demonstrates how to play a one-shot sample.
 
+use std::time::Duration;
+
 use bevy::{log::LogPlugin, prelude::*};
 use bevy_seedling::prelude::*;
+use bevy_time::common_conditions::on_timer;
 
 fn main() {
     App::new()
@@ -21,5 +24,16 @@ fn main() {
                 commands.spawn(SamplePlayer::new(server.load("caw.ogg")));
             },
         )
+        .add_systems(
+            Update,
+            make_loop.run_if(on_timer(Duration::from_secs_f32(0.5))),
+        )
         .run();
+}
+
+fn make_loop(sounds: Query<&mut PlaybackSettings>) {
+    for mut settings in sounds {
+        settings.play_from = PlayFrom::Seconds(0.5);
+        *settings.play = true;
+    }
 }

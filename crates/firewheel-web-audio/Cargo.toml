@@ -14,7 +14,7 @@ categories = ["game-development", "multimedia::audio"]
 
 [dependencies]
 log = "0.4"
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "806496c", default-features = false, features = [
+firewheel = { path = "../../../firewheel-upstream", default-features = false, features = [
   "std",
 ] }
 js-sys = { version = "0.3.77", default-features = false }

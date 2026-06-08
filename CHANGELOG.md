@@ -8,7 +8,13 @@ The backend management code has been significantly simplified following
 Firewheel's backend API changes.
 
 Rather than a generic plugin that takes an implementor
-of `firewheel::Backend`, we use a single plugin collection containing multiple, independent backend plugins.
+of `firewheel::Backend`, we use a single plugin collection 
+containing multiple, independent backend plugins.
+
+Each plugin acquires the `FirewheelProcessor` and
+starts an audio stream according to their settings
+resources. They also manage their own automatic restarting, either due to device removal or in
+response to configuration changes.
 
 ### Plugin restructuring
 

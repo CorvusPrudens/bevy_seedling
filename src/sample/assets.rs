@@ -13,8 +13,27 @@ use std::{num::NonZeroU32, sync::Arc};
 /// asset loader.
 #[derive(Asset, TypePath, Clone)]
 pub struct AudioSample {
-    sample: ArcGc<dyn SampleResource + Send + Sync>,
-    original_sample_rate: NonZeroU32,
+    sample: IntoSamplerNodeResource,
+    original_sample_rate: Option<NonZeroU32>,
+}
+
+#[derive(Clone)]
+pub enum IntoSamplerNodeResource {
+    SampleResource(ArcGc<dyn SampleResource + Send + Sync>),
+    RawBytes { bytes: Arc<[u8]>, path: Arc<str> },
+}
+
+impl core::fmt::Debug for IntoSamplerNodeResource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::SampleResource(_) => f.debug_tuple("SampleResource").finish_non_exhaustive(),
+            Self::RawBytes { bytes, path } => f
+                .debug_struct("RawBytes")
+                .field("bytes", &bytes)
+                .field("path", &path)
+                .finish(),
+        }
+    }
 }
 
 impl AudioSample {
@@ -24,18 +43,20 @@ impl AudioSample {
     /// the sample rate prior to resampling.
     pub fn new<S: SampleResource + Send + Sync + 'static>(
         sample: S,
-        original_sample_rate: NonZeroU32,
+        original_sample_rate: Option<NonZeroU32>,
     ) -> Self {
         Self {
-            sample: ArcGc::new_unsized(|| Arc::new(sample) as _),
+            sample: IntoSamplerNodeResource::SampleResource(ArcGc::new_unsized(|| {
+                Arc::new(sample) as _
+            })),
             original_sample_rate,
         }
     }
 
-    /// Share the inner value.
-    pub fn get(&self) -> ArcGc<dyn SampleResource + Send + Sync> {
-        self.sample.clone()
-    }
+    // /// Share the inner value.
+    // pub fn get(&self) -> ArcGc<dyn SampleResource + Send + Sync> {
+    //     self.sample.clone()
+    // }
 
     /// Return the sample resource's original sample rate.
     ///
@@ -43,28 +64,8 @@ impl AudioSample {
     /// a different value than [`SampleResourceInfo::sample_rate`].
     ///
     /// [`SampleResourceInfo::sample_rate`]: firewheel::sample_resource::SampleResourceInfo::sample_rate
-    pub fn original_sample_rate(&self) -> NonZeroU32 {
+    pub fn original_sample_rate(&self) -> Option<NonZeroU32> {
         self.original_sample_rate
-    }
-}
-
-#[cfg(feature = "symphonia")]
-impl From<firewheel::SymphoniumAudioF32> for AudioSample {
-    fn from(source: firewheel::SymphoniumAudioF32) -> Self {
-        Self {
-            original_sample_rate: source.original_sample_rate(),
-            sample: ArcGc::new_unsized(|| Arc::new(source) as _),
-        }
-    }
-}
-
-#[cfg(feature = "symphonia")]
-impl From<firewheel::SymphoniumAudio> for AudioSample {
-    fn from(source: firewheel::SymphoniumAudio) -> Self {
-        Self {
-            original_sample_rate: source.original_sample_rate(),
-            sample: ArcGc::new_unsized(|| Arc::new(source) as _),
-        }
     }
 }
 
@@ -78,13 +79,22 @@ impl core::fmt::Debug for AudioSample {
 
 #[cfg(feature = "symphonia")]
 pub mod loader {
+    use std::sync::Arc;
+
+    use crate::sample::assets::IntoSamplerNodeResource;
+    use crate::sample::decoder::SymphoniaDecoder;
+
     use super::AudioSample;
     use bevy_app::prelude::*;
     use bevy_asset::{AssetLoader, AssetServer};
     use bevy_ecs::prelude::*;
     use bevy_reflect::TypePath;
-    use symphonia::core::{codecs::CodecRegistry, probe::Probe};
-    use symphonium::{DecodeConfig, cache::SymphoniumCache};
+    use firewheel::event::NodeEventType;
+    use firewheel::nodes::sampler::SamplerNode;
+    use firewheel::{collector::ArcGc, nodes::sampler::SamplerNodeResource};
+    use firewheel::{collector::OwnedGcUnsized, nodes::sampler::StreamedSample};
+    use symphonia::core::{codecs::CodecRegistry, io::MediaSourceStream, probe::Probe};
+    use symphonium::cache::SymphoniumCache;
 
     pub struct SymphoniumLoaderPlugin;
 
@@ -100,6 +110,64 @@ pub mod loader {
             });
 
             app.add_observer(init_loader);
+        }
+    }
+
+    impl From<firewheel::SymphoniumAudioF32> for AudioSample {
+        fn from(source: firewheel::SymphoniumAudioF32) -> Self {
+            Self {
+                original_sample_rate: Some(source.original_sample_rate()),
+                sample: IntoSamplerNodeResource::SampleResource(ArcGc::new_unsized(|| {
+                    Arc::new(source) as _
+                })),
+            }
+        }
+    }
+
+    impl From<firewheel::SymphoniumAudio> for AudioSample {
+        fn from(source: firewheel::SymphoniumAudio) -> Self {
+            Self {
+                original_sample_rate: Some(source.original_sample_rate()),
+                sample: IntoSamplerNodeResource::SampleResource(ArcGc::new_unsized(|| {
+                    Arc::new(source) as _
+                })),
+            }
+        }
+    }
+
+    impl AudioSample {
+        pub(crate) fn generate_sample_event(&self) -> NodeEventType {
+            match &self.sample {
+                IntoSamplerNodeResource::SampleResource(resource) => {
+                    SamplerNode::set_dyn_sample_event(resource.clone())
+                }
+                IntoSamplerNodeResource::RawBytes { bytes, path } => {
+                    let cursor = std::io::Cursor::new(bytes.clone());
+                    let source = Box::new(cursor);
+                    let stream = MediaSourceStream::new(source, Default::default());
+                    let sample = SymphoniaDecoder::new(stream, Some(path)).unwrap();
+
+                    SamplerNode::set_streamed_sample_event(sample)
+                }
+            }
+        }
+    }
+
+    impl From<IntoSamplerNodeResource> for SamplerNodeResource {
+        fn from(value: IntoSamplerNodeResource) -> Self {
+            match value {
+                IntoSamplerNodeResource::SampleResource(s) => SamplerNodeResource::InMemory(s),
+                IntoSamplerNodeResource::RawBytes { bytes, path } => {
+                    let cursor = std::io::Cursor::new(bytes);
+                    let source = Box::new(cursor);
+                    let stream = MediaSourceStream::new(source, Default::default());
+                    let sample = SymphoniaDecoder::new(stream, Some(&path)).unwrap();
+
+                    SamplerNodeResource::Streamed(OwnedGcUnsized::new_unsized(
+                        Box::new(sample) as Box<dyn StreamedSample>
+                    ))
+                }
+            }
         }
     }
 
@@ -297,25 +365,31 @@ pub mod loader {
             let mut bytes = Vec::new();
             reader.read_to_end(&mut bytes).await?;
 
-            let mut hint = symphonia::core::probe::Hint::new();
-            hint.with_extension(&load_context.path().to_string());
+            // let mut hint = symphonia::core::probe::Hint::new();
+            // hint.with_extension(&load_context.path().to_string());
 
-            let probed = symphonium::probe_from_source(
-                Box::new(std::io::Cursor::new(bytes)),
-                Some(hint),
-                Some(&self.config.probe),
-            )?;
-            let source = CACHE.with(|cache| {
-                symphonium::decode_f32(
-                    probed,
-                    &DecodeConfig::default(),
-                    Some(self.sample_rate.get()),
-                    Some(cache),
-                    Some(&self.config.codec_registry),
-                )
-            })?;
+            // let probed = symphonium::probe_from_source(
+            //     Box::new(std::io::Cursor::new(bytes)),
+            //     Some(hint),
+            //     Some(&self.config.probe),
+            // )?;
+            // let source = CACHE.with(|cache| {
+            //     symphonium::decode_f32(
+            //         probed,
+            //         &DecodeConfig::default(),
+            //         Some(self.sample_rate.get()),
+            //         Some(cache),
+            //         Some(&self.config.codec_registry),
+            //     )
+            // })?;
 
-            Ok(firewheel::SymphoniumAudioF32(source).into())
+            Ok(AudioSample {
+                sample: IntoSamplerNodeResource::RawBytes {
+                    bytes: Arc::from(bytes),
+                    path: Arc::from(load_context.path().to_string()),
+                },
+                original_sample_rate: None,
+            })
         }
 
         fn extensions(&self) -> &[&str] {

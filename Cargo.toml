@@ -70,7 +70,7 @@ bevy_reflect = { version = "0.18.0", default-features = false, features = [
 bevy_utils = { version = "0.18.0", default-features = false }
 bevy_diagnostic = { version = "0.18.0", default-features = false, optional = true }
 
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "806496c", default-features = false, features = [
+firewheel = { path = "../firewheel-upstream", default-features = false, features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
@@ -103,7 +103,7 @@ firewheel-web-audio = { version = "0.5.0", path = "crates/firewheel-web-audio", 
 audioadapter-buffers = { version = "3.0", default-features = false, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "806496c", default-features = false, features = [
+firewheel = { path = "../firewheel-upstream", default-features = false, features = [
   "wasm-bindgen",
 ] }
 
@@ -114,7 +114,7 @@ bevy_seedling = { path = ".", features = [
   "resample_inputs",
   "effects",
 ] }
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "806496c", default-features = false, features = [
+firewheel = { path = "../firewheel-upstream", default-features = false, features = [
   "fast_filter_nodes",
 ] }
 bevy = { version = "0.18.0", default-features = false, features = [

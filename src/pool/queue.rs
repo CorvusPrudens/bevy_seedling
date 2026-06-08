@@ -326,7 +326,7 @@ pub(super) fn assign_work(
                 let (sampler_entity, mut params, mut events, state, _) =
                     nodes.get_mut(*inactive.next().unwrap())?;
 
-                events.push(SamplerNode::set_dyn_sample_event(asset.get()));
+                events.push(asset.generate_sample_event());
                 params.volume = player.volume;
                 params.repeat_mode = player.repeat_mode;
                 state.0.clear_finished();
@@ -412,7 +412,7 @@ pub(super) fn assign_work(
             let (sampler_entity, mut params, mut events, state, _) =
                 nodes.get_mut(sampler_entity)?;
 
-            events.push(SamplerNode::set_dyn_sample_event(asset.get()));
+            events.push(asset.generate_sample_event());
             params.volume = player.volume;
             params.repeat_mode = player.repeat_mode;
             state.0.clear_finished();
