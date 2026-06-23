@@ -342,7 +342,7 @@ impl Sampler {
     pub fn is_playing(&self) -> bool {
         self.state
             .as_ref()
-            .map(|s| !s.stopped())
+            .map(|s| s.currently_playing())
             .unwrap_or_default()
     }
 
@@ -787,7 +787,7 @@ fn poll_finished(
     mut commands: Commands,
 ) {
     for (node, active, state) in nodes.iter() {
-        let finished = *node.play && state.0.finished() == node.play.id();
+        let finished = *node.play && state.0.playback_finished(node.playback_id());
 
         if finished {
             commands.trigger(PlaybackCompletion {
