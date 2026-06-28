@@ -107,7 +107,7 @@ fn set_up_ui(mut commands: Commands) {
             (
                 Text::new("Reverb Tails"),
                 TextFont {
-                    font_size: 32.0,
+                    font_size: 32.0.into(),
                     ..Default::default()
                 },
             ),

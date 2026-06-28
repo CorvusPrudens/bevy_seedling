@@ -45,7 +45,7 @@ use os::InnerContext;
 ///     });
 /// }
 /// ```
-#[derive(Debug, Resource, Component)]
+#[derive(Debug, Resource)]
 pub struct AudioContext(InnerContext);
 
 impl AudioContext {
