@@ -63,7 +63,7 @@ fn setup(mut master: Single<&mut VolumeNode, With<MainBus>>, mut commands: Comma
             text((
                 Text::new("Sound Settings"),
                 TextFont {
-                    font_size: 32.0,
+                    font_size: 32.0.into(),
                     ..Default::default()
                 },
             )),

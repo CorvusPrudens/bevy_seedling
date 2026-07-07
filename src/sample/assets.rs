@@ -83,7 +83,7 @@ pub mod loader {
     use bevy_asset::{AssetLoader, AssetServer};
     use bevy_ecs::prelude::*;
     use bevy_reflect::TypePath;
-    use symphonia::core::{codecs::CodecRegistry, probe::Probe};
+    use symphonia::core::{codecs::registry::CodecRegistry, formats::probe::Probe};
     use symphonium::{DecodeConfig, cache::SymphoniumCache};
 
     pub struct SymphoniumLoaderPlugin;
@@ -114,18 +114,15 @@ pub mod loader {
     /// use bevy::prelude::*;
     /// use bevy_seedling::{prelude::*, sample::AudioLoaderConfig};
     /// use symphonia::{
-    ///     core::{
-    ///         codecs::{CodecRegistry, Decoder},
-    ///         probe::{Probe, QueryDescriptor},
-    ///     },
+    ///     core::{codecs::registry::CodecRegistry, formats::probe::Probe},
     ///     default::{codecs::PcmDecoder, formats::WavReader},
     /// };
     ///
     /// fn main() {
     ///     let mut config = AudioLoaderConfig::default();
     ///     config.register_codec(["wav"], |registry, probe| {
-    ///         registry.register_all::<PcmDecoder>();
-    ///         probe.register_all::<WavReader>();
+    ///         registry.register_audio_decoder::<PcmDecoder>();
+    ///         probe.register_format::<WavReader>();
     ///     });
     ///
     ///     App::new()
@@ -297,7 +294,7 @@ pub mod loader {
             let mut bytes = Vec::new();
             reader.read_to_end(&mut bytes).await?;
 
-            let mut hint = symphonia::core::probe::Hint::new();
+            let mut hint = symphonia::core::formats::probe::Hint::new();
             hint.with_extension(&load_context.path().to_string());
 
             let probed = symphonium::probe_from_source(

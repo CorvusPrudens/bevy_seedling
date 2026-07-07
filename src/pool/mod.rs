@@ -67,7 +67,7 @@ impl Plugin for SamplePoolPlugin {
             .add_observer(remove_finished)
             .add_observer(generate_snapshots)
             .add_observer(apply_snapshots)
-            .add_observer(Sampler::observe_replace)
+            .add_observer(Sampler::observe_discard)
             .add_plugins(dynamic::DynamicPlugin);
     }
 }
@@ -342,7 +342,7 @@ impl Sampler {
     pub fn is_playing(&self) -> bool {
         self.state
             .as_ref()
-            .map(|s| !s.stopped())
+            .map(|s| s.currently_playing())
             .unwrap_or_default()
     }
 
@@ -414,8 +414,8 @@ impl Sampler {
     }
 
     // Whenever this link is broken, all the effects should also remove their control.
-    fn observe_replace(
-        trigger: On<Replace, Self>,
+    fn observe_discard(
+        trigger: On<Discard, Self>,
         target: Query<&SampleEffects>,
         mut commands: Commands,
     ) {
@@ -787,7 +787,7 @@ fn poll_finished(
     mut commands: Commands,
 ) {
     for (node, active, state) in nodes.iter() {
-        let finished = *node.play && state.0.finished() == node.play.id();
+        let finished = *node.play && state.0.playback_finished(node.playback_id());
 
         if finished {
             commands.trigger(PlaybackCompletion {
@@ -829,6 +829,7 @@ impl<T: PoolLabel + Component + Clone> PoolDespawn<T> {
 }
 
 impl<T: PoolLabel + Component + Clone> Command for PoolDespawn<T> {
+    type Out = ();
     fn apply(self, world: &mut World) {
         let mut roots = world.query_filtered::<(Entity, &PoolLabelContainer), (
             With<SamplerPool<T>>,

@@ -20,7 +20,7 @@ pub mod mock;
 ///
 /// Mutating this resource will cause the audio stream to stop
 /// and restart, applying the latest changes.
-#[derive(Resource, Component, Debug, Default)]
+#[derive(Resource, Debug, Default)]
 #[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
 pub struct AudioStreamConfig<C>(pub C);
 

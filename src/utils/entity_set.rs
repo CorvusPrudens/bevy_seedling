@@ -143,7 +143,7 @@ unsafe impl EntitySetIterator for OrderedEntitySetIter<'_> {}
 #[cfg(feature = "reflect")]
 mod reflect {
     use super::*;
-    use bevy_reflect::{FromReflect, PartialReflect, SetInfo, Typed};
+    use bevy_reflect::{FromReflect, PartialReflect, Typed, set::SetInfo};
 
     impl bevy_reflect::GetTypeRegistration for OrderedEntitySet {
         fn get_type_registration() -> bevy_reflect::TypeRegistration {
@@ -213,7 +213,7 @@ mod reflect {
         }
     }
 
-    impl bevy_reflect::Set for OrderedEntitySet {
+    impl bevy_reflect::set::Set for OrderedEntitySet {
         fn len(&self) -> usize {
             self.0.len()
         }
@@ -248,8 +248,8 @@ mod reflect {
             self.0.retain(|e| f(e))
         }
 
-        fn to_dynamic_set(&self) -> bevy_reflect::DynamicSet {
-            let mut set = bevy_reflect::DynamicSet::default();
+        fn to_dynamic_set(&self) -> bevy_reflect::set::DynamicSet {
+            let mut set = bevy_reflect::set::DynamicSet::default();
             set.set_represented_type(Some(Self::type_info()));
 
             for value in &self.0 {
@@ -367,7 +367,7 @@ mod reflect {
         }
 
         fn reflect_partial_eq(&self, value: &dyn bevy_reflect::PartialReflect) -> Option<bool> {
-            bevy_reflect::set_partial_eq(self, value)
+            bevy_reflect::set::set_partial_eq(self, value)
         }
 
         #[inline]

@@ -2,7 +2,7 @@
 name = "bevy_seedling"
 version = "0.8.0"
 edition = "2024"
-rust-version = "1.93.0"
+rust-version = "1.95.0"
 license = "MIT OR Apache-2.0"
 authors = ["Corvus Prudens <corvusprudens@gmail.com>"]
 description = "A sprouting integration of the Firewheel audio engine"
@@ -49,43 +49,43 @@ effects = ["firewheel/all_nodes"]
 profiling = ["dep:audioadapter-buffers"]
 
 [dependencies]
-bevy_ecs = { version = "0.18.0", default-features = false }
-bevy_app = { version = "0.18.0", default-features = false }
-bevy_math = { version = "0.18.0", default-features = false, features = [
+bevy_ecs = { version = "0.19.0", default-features = false }
+bevy_app = { version = "0.19.0", default-features = false }
+bevy_math = { version = "0.19.0", default-features = false, features = [
   "curve",
   "std",
 ] }
-bevy_asset = { version = "0.18.0", default-features = false }
-bevy_transform = { version = "0.18.0", default-features = false, features = [
+bevy_asset = { version = "0.19.0", default-features = false }
+bevy_transform = { version = "0.19.0", default-features = false, features = [
   "bevy-support",
 ] }
-bevy_log = { version = "0.18.0", default-features = false }
-bevy_platform = { version = "0.18.0", default-features = false, features = [
+bevy_log = { version = "0.19.0", default-features = false }
+bevy_platform = { version = "0.19.0", default-features = false, features = [
   "alloc",
 ] }
-bevy_time = { version = "0.18.0", default-features = false }
-bevy_reflect = { version = "0.18.0", default-features = false, features = [
+bevy_time = { version = "0.19.0", default-features = false }
+bevy_reflect = { version = "0.19.0", default-features = false, features = [
   "glam",
 ] }
-bevy_utils = { version = "0.18.0", default-features = false }
-bevy_diagnostic = { version = "0.18.0", default-features = false, optional = true }
+bevy_utils = { version = "0.19.0", default-features = false }
+bevy_diagnostic = { version = "0.19.0", default-features = false, optional = true }
 
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "806496c", default-features = false, features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", default-features = false, features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
   "musical_transport",
-  "glam-30",
+  "glam-32",
   "sampler_node",
   "std",
   "tracing",
 ] }
-symphonium = { version = "0.9", default-features = false, features = [
+symphonium = { version = "0.11", default-features = false, features = [
   "opt-simd",
   "fft-resampler",
   "resampler",
 ], optional = true }
-symphonia = { version = "0.5", default-features = false, optional = true }
+symphonia = { version = "0.6", default-features = false, optional = true }
 smallvec = { version = "1.13", default-features = false }
 bevy_seedling_macros = { path = "./seedling_macros", version = "0.7.0" }
 rand = { version = "0.10", default-features = false, features = [
@@ -96,15 +96,13 @@ portable-atomic = { version = "1.11", optional = true, features = ["float"] }
 firewheel-ircam-hrtf = { version = "0.5.0", path = "crates/firewheel-ircam-hrtf", optional = true, features = [
   "bevy",
 ] }
-cpal = { version = "0.17", default-features = false, optional = true }
+cpal = { version = "0.18", default-features = false, optional = true }
 rtaudio = { version = "0.8", default-features = false, optional = true }
 firewheel-web-audio = { version = "0.5.0", path = "crates/firewheel-web-audio", optional = true }
 audioadapter-buffers = { version = "3.0", default-features = false, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "806496c", default-features = false, features = [
-  "wasm-bindgen",
-] }
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
 bevy_seedling = { path = ".", features = [
@@ -113,10 +111,10 @@ bevy_seedling = { path = ".", features = [
   "resample_inputs",
   "effects",
 ] }
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "806496c", default-features = false, features = [
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", default-features = false, features = [
   "fast_filter_nodes",
 ] }
-bevy = { version = "0.18.0", default-features = false, features = [
+bevy = { version = "0.19.0", default-features = false, features = [
   "2d_bevy_render",
   "default_app",
   "picking",

@@ -34,18 +34,18 @@ include = [
 all-features = true
 
 [dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "806496c", default-features = false, features = [
-  "glam-30",
+firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", default-features = false, features = [
+  "glam-32",
   "std",
 ] }
-glam = { version = "0.30", default-features = false, features = ["std"] }
+glam = { version = "0.32", default-features = false, features = ["std"] }
 hrtf = "0.8.1"
 
 # Bevy dependencies
-bevy_ecs = { version = "0.18.0", default-features = false, features = [
+bevy_ecs = { version = "0.19.0", default-features = false, features = [
   "std",
 ], optional = true }
-bevy_reflect = { version = "0.18.0", default-features = false, features = [
+bevy_reflect = { version = "0.19.0", default-features = false, features = [
   "glam",
   "std",
 ], optional = true }

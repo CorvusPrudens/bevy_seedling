@@ -15,6 +15,8 @@ use crate::{
 
 pub use firewheel::cpal::*;
 
+use cpal::cpal::ErrorKind;
+
 /// `bevy_seedling`'s `cpal` platform plugin.
 ///
 /// This plugin spawns and manages a `cpal` audio stream.
@@ -85,28 +87,45 @@ fn poll_stream(mut context: ResMut<AudioContext>, mut commands: Commands) -> Res
 
     for error in errors.into_iter().flatten() {
         match error {
-            IoStreamError::Input(error) => match error {
-                StreamError::StreamInvalidated | StreamError::DeviceNotAvailable => {
+            IoStreamError::Input(error) => match error.kind() {
+                // nothing to do here
+                ErrorKind::DeviceChanged => {}
+                ErrorKind::Xrun => {
+                    warn!("audio input stream encountered underrun or overrun");
+                }
+                ErrorKind::StreamInvalidated | ErrorKind::DeviceNotAvailable => {
                     warn!("audio input stream stopped: {error:?}");
                 }
-                StreamError::BufferUnderrun => {
-                    warn!("audio input stream encountered underrun");
-                }
-                StreamError::BackendSpecific { err } => {
-                    error!("unexpected audio input error: {err}");
-                }
+                kind => match error.message() {
+                    Some(message) => {
+                        error!("audio input error: {message}");
+                    }
+                    None => {
+                        error!("audio input error: {kind}");
+                    }
+                },
             },
-            IoStreamError::Output(error) => match error {
-                StreamError::StreamInvalidated | StreamError::DeviceNotAvailable => {
+            IoStreamError::Output(error) => match error.kind() {
+                // nothing to do here
+                ErrorKind::DeviceChanged => {}
+                ErrorKind::Xrun => {
+                    warn!("audio output stream encountered underrun or overrun");
+                }
+                ErrorKind::StreamInvalidated
+                | ErrorKind::DeviceNotAvailable
+                | ErrorKind::DeviceBusy
+                | ErrorKind::HostUnavailable => {
                     warn!("audio stream stopped: {error:?}");
                     commands.trigger(RestartAudioStream);
                 }
-                StreamError::BufferUnderrun => {
-                    warn!("audio stream encountered underrun");
-                }
-                StreamError::BackendSpecific { err } => {
-                    error!("unexpected audio backend error: {err}");
-                }
+                kind => match error.message() {
+                    Some(message) => {
+                        error!("audio output error: {message}");
+                    }
+                    None => {
+                        error!("audio output error: {kind}");
+                    }
+                },
             },
         }
     }
