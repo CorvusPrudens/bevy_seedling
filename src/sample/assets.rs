@@ -114,18 +114,15 @@ pub mod loader {
     /// use bevy::prelude::*;
     /// use bevy_seedling::{prelude::*, sample::AudioLoaderConfig};
     /// use symphonia::{
-    ///     core::{
-    ///         codecs::{CodecRegistry, Decoder},
-    ///         probe::{Probe, QueryDescriptor},
-    ///     },
+    ///     core::{codecs::registry::CodecRegistry, formats::probe::Probe},
     ///     default::{codecs::PcmDecoder, formats::WavReader},
     /// };
     ///
     /// fn main() {
     ///     let mut config = AudioLoaderConfig::default();
     ///     config.register_codec(["wav"], |registry, probe| {
-    ///         registry.register_all::<PcmDecoder>();
-    ///         probe.register_all::<WavReader>();
+    ///         registry.register_audio_decoder::<PcmDecoder>();
+    ///         probe.register_format::<WavReader>();
     ///     });
     ///
     ///     App::new()
