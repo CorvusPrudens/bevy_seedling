@@ -88,9 +88,8 @@ symphonium = { version = "0.9", default-features = false, features = [
 symphonia = { version = "0.5", default-features = false, optional = true }
 smallvec = { version = "1.13", default-features = false }
 bevy_seedling_macros = { path = "./seedling_macros", version = "0.7.0" }
-rand = { version = "0.9", default-features = false, features = [
-  "small_rng",
-  "os_rng",
+rand = { version = "0.10", default-features = false, features = [
+  "sys_rng",
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
@@ -137,7 +136,7 @@ criterion = { version = "0.5", default-features = false, features = [
 audioadapter-buffers = { version = "3.0", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-getrandom = { version = "0.3", default-features = false, features = [
+getrandom = { version = "0.4", default-features = false, features = [
   "wasm_js",
 ] }
 

@@ -697,13 +697,19 @@ mod random {
     use super::PlaybackSettings;
     use bevy_app::prelude::*;
     use bevy_ecs::prelude::*;
-    use rand::{SeedableRng, rngs::SmallRng};
+    use rand::{
+        RngExt, SeedableRng,
+        rand_core::UnwrapErr,
+        rngs::{SmallRng, SysRng},
+    };
 
     pub struct RandomPlugin;
 
     impl Plugin for RandomPlugin {
         fn build(&self, app: &mut App) {
-            app.insert_resource(PitchRngSource::new(SmallRng::from_os_rng()))
+            let mut sys_rng = UnwrapErr(SysRng);
+
+            app.insert_resource(PitchRngSource::new(SmallRng::from_rng(&mut sys_rng)))
                 .add_systems(Last, RandomPitch::apply.before(SeedlingSystems::Acquire));
         }
     }
