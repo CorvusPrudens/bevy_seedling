@@ -16,6 +16,9 @@ use firewheel::{
     },
 };
 
+// Settle at 1% offset
+const SETTLE_RATIO: f32 = 0.01;
+
 /// The configuration for an [`AsymmetricalSmoothedParam`]
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct AsymmetricalSmootherConfig {
@@ -44,8 +47,9 @@ impl AsymmetricalSmoothedParam {
         assert!(config.smooth_secs_up > 0.0);
         assert!(config.smooth_secs_down > 0.0);
 
-        let coeff_up = SmoothingFilterCoeff::new(sample_rate, config.smooth_secs_up);
-        let coeff_down = SmoothingFilterCoeff::new(sample_rate, config.smooth_secs_down);
+        let coeff_up = SmoothingFilterCoeff::new(sample_rate, config.smooth_secs_up, SETTLE_RATIO);
+        let coeff_down =
+            SmoothingFilterCoeff::new(sample_rate, config.smooth_secs_down, SETTLE_RATIO);
 
         Self {
             target_value: value,
@@ -73,14 +77,14 @@ impl AsymmetricalSmoothedParam {
 
     /// Set the smooth rate when the target value is higher than the current value.
     pub fn set_smooth_secs_up(&mut self, sample_rate: NonZeroU32, smooth_secs_up: f32) {
-        let coeff_up = SmoothingFilterCoeff::new(sample_rate, smooth_secs_up);
+        let coeff_up = SmoothingFilterCoeff::new(sample_rate, smooth_secs_up, SETTLE_RATIO);
         self.smooth_secs_up = smooth_secs_up;
         self.coeff_up = coeff_up;
     }
 
     /// Set the smooth rate when the target value is lower than the current value.
     pub fn set_smooth_secs_down(&mut self, sample_rate: NonZeroU32, smooth_secs_down: f32) {
-        let coeff_down = SmoothingFilterCoeff::new(sample_rate, smooth_secs_down);
+        let coeff_down = SmoothingFilterCoeff::new(sample_rate, smooth_secs_down, SETTLE_RATIO);
         self.smooth_secs_down = smooth_secs_down;
         self.coeff_down = coeff_down;
     }
@@ -103,8 +107,9 @@ impl AsymmetricalSmoothedParam {
 
     /// Update the sample rate.
     pub fn update_sample_rate(&mut self, sample_rate: NonZeroU32) {
-        self.coeff_up = SmoothingFilterCoeff::new(sample_rate, self.smooth_secs_up);
-        self.coeff_down = SmoothingFilterCoeff::new(sample_rate, self.smooth_secs_down);
+        self.coeff_up = SmoothingFilterCoeff::new(sample_rate, self.smooth_secs_up, SETTLE_RATIO);
+        self.coeff_down =
+            SmoothingFilterCoeff::new(sample_rate, self.smooth_secs_down, SETTLE_RATIO);
         self.target_times_a_up = self.target_value() * self.coeff_up.a0;
         self.target_times_a_down = self.target_value() * self.coeff_down.a0;
     }
