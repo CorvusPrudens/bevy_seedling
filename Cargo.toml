@@ -70,7 +70,7 @@ bevy_reflect = { version = "0.19.0", default-features = false, features = [
 bevy_utils = { version = "0.19.0", default-features = false }
 bevy_diagnostic = { version = "0.19.0", default-features = false, optional = true }
 
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", default-features = false, features = [
+firewheel = { version = "0.12.0", default-features = false, features = [
   "bevy",
   "spatial_basic_node",
   "scheduled_events",
@@ -80,7 +80,7 @@ firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", def
   "std",
   "tracing",
 ] }
-symphonium = { version = "0.11", default-features = false, features = [
+symphonium = { version = "0.12", default-features = false, features = [
   "opt-simd",
   "fft-resampler",
   "resampler",
@@ -99,10 +99,10 @@ firewheel-ircam-hrtf = { version = "0.5.0", path = "crates/firewheel-ircam-hrtf"
 cpal = { version = "0.18", default-features = false, optional = true }
 rtaudio = { version = "0.8", default-features = false, optional = true }
 firewheel-web-audio = { version = "0.5.0", path = "crates/firewheel-web-audio", optional = true }
-audioadapter-buffers = { version = "3.0", default-features = false, optional = true }
+audioadapter-buffers = { version = "4.0", default-features = false, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", features = ["wasm-bindgen"] }
+firewheel = { version = "0.12.0", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
 bevy_seedling = { path = ".", features = [
@@ -111,7 +111,7 @@ bevy_seedling = { path = ".", features = [
   "resample_inputs",
   "effects",
 ] }
-firewheel = { git = "https://github.com/BillyDM/Firewheel", rev = "fdf9fbb", default-features = false, features = [
+firewheel = { version = "0.12.0", default-features = false, features = [
   "fast_filter_nodes",
 ] }
 bevy = { version = "0.19.0", default-features = false, features = [
@@ -131,7 +131,7 @@ criterion = { version = "0.5", default-features = false, features = [
   "plotters",
   "cargo_bench_support",
 ] }
-audioadapter-buffers = { version = "3.0", default-features = false }
+audioadapter-buffers = { version = "4.0", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.4", default-features = false, features = [
