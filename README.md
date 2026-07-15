@@ -54,7 +54,7 @@ bevy = { version = "0.18.0", default-features = false, features = [
 
 </details>
 
-Then, you'll need to add the `SeedlingPlugin` to your app.
+Then, you'll need to add `SeedlingPlugins` to your app.
 
 ```rs
 use bevy::prelude::*;
@@ -62,7 +62,7 @@ use bevy_seedling::prelude::*;
 
 fn main() {
     App::default()
-        .add_plugins((DefaultPlugins, SeedlingPlugin::default()))
+        .add_plugins((DefaultPlugins, SeedlingPlugins))
         .run();
 }
 ```
