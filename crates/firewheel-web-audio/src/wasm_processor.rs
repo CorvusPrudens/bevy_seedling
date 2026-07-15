@@ -34,7 +34,7 @@ impl ProcessorHost {
             array: js_sys::Array,
         }
 
-        unsafe impl Adapter<'_, f32> for WorkletBuffer {
+        unsafe impl Adapter<f32> for WorkletBuffer {
             // # Safety
             //
             // We don't actually dance with unsafe here.
@@ -102,7 +102,7 @@ impl ProcessorHost {
             }
         }
 
-        unsafe impl AdapterMut<'_, f32> for WorkletBuffer {
+        unsafe impl AdapterMut<f32> for WorkletBuffer {
             unsafe fn write_sample_unchecked(
                 &mut self,
                 channel: usize,
