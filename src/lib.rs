@@ -403,7 +403,8 @@ pub mod prelude {
     };
     pub use crate::sample_effects;
     pub use crate::spatial::{
-        DefaultSpatialScale, SpatialListener2D, SpatialListener3D, SpatialScale,
+        DefaultSpatialScale, Doppler, PropagationDelay, SpatialListener2D, SpatialListener3D,
+        SpatialScale, SpeedOfSound,
     };
     pub use crate::time::{Audio, AudioTime};
     pub use crate::utils::perceptual_volume::PerceptualVolume;
