@@ -336,7 +336,7 @@
 //! [`AudioSample`]: prelude::AudioSample
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![allow(clippy::type_complexity)]
+#![allow(clippy::type_complexity, clippy::too_many_arguments)]
 #![expect(clippy::needless_doctest_main)]
 #![warn(missing_debug_implementations)]
 #![warn(missing_docs)]
