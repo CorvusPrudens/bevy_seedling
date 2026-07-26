@@ -38,6 +38,7 @@ mod inner {
 
     pub fn build(app: &mut App) {
         app.init_resource::<AudioStreamConfig<WebAudioConfig>>()
+            .insert_resource(ProcessorActive(false))
             .add_systems(
                 PostStartup,
                 start_stream.in_set(SeedlingStartupSystems::StreamInitialization),
@@ -74,13 +75,18 @@ mod inner {
         Ok(())
     }
 
-    fn poll_stream(mut context: ResMut<AudioContext>) -> Result {
-        context.with_store(|_, store| {
+    fn poll_stream(
+        mut context: ResMut<AudioContext>,
+        mut active: ResMut<ProcessorActive>,
+    ) -> Result {
+        let new_active = context.with_store(|_, store| {
             store
                 .get_mut::<WebAudioBackend>()
                 .map(|context| context.poll())
-                .unwrap_or(Ok(()))
+                .unwrap_or(Ok(false))
         })?;
+
+        active.0 = new_active;
 
         Ok(())
     }
@@ -98,7 +104,6 @@ mod inner {
         sample_rate: Res<SampleRate>,
         mut commands: Commands,
     ) -> Result {
-        // drop it like it's hot
         let current_rate = graph.with_store(|context, store| -> Result<_, WebAudioStartError> {
             let _ = store.remove::<WebAudioBackend>();
 

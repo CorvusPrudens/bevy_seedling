@@ -499,6 +499,7 @@ impl Plugin for SeedlingCorePlugin {
         use prelude::*;
 
         app.init_resource::<pool::DefaultPoolSize>()
+            .init_resource::<platform::ProcessorActive>()
             .init_asset::<sample::AudioSample>();
 
         app.configure_sets(

@@ -4,6 +4,7 @@ use super::{
 };
 use crate::{
     node::{AudioState, EffectId, IgnoreDiffTimer, follower::FollowerOf},
+    platform::ProcessorActive,
     pool::label::PoolLabelContainer,
     prelude::{AudioEvents, DefaultPool},
     sample::{AudioSample, QueuedSample, SamplePlayer, SamplePriority, SampleQueueLifetime},
@@ -262,6 +263,7 @@ pub(super) fn assign_work(
     active_samples: Query<(&SamplePlayer, &SamplePriority)>,
     mut effects: Query<&EffectId, With<EffectOf>>,
     assets: Res<Assets<AudioSample>>,
+    active: Res<ProcessorActive>,
     mut commands: Commands,
 ) -> Result {
     let mut queued_samples: HashMap<_, Vec<_>> = queued_samples
@@ -405,6 +407,18 @@ pub(super) fn assign_work(
             // We'll also skip over samples that won't loop
             // when the occupied sampler is currently looping.
             if sampler_score.is_looping && player.repeat_mode == RepeatMode::PlayOnce {
+                continue;
+            }
+
+            // Finally, we'll never allow a non-looping sound to
+            // steal another non-looping sound of equal priority
+            // when the processor is inactive to avoid runaway sound queuing.
+            if !active.0
+                && sampler_score.has_assignment
+                && &sampler_score.priority == priority
+                && !sampler_score.is_looping
+                && player.repeat_mode == RepeatMode::PlayOnce
+            {
                 continue;
             }
 

@@ -1,6 +1,7 @@
 //! Audio node registration and management.
 
 use crate::error::{SeedlingError, render_errors};
+use crate::platform::ProcessorActive;
 use crate::pool::sample_effects::EffectOf;
 use crate::time::{Audio, AudioTime};
 use crate::{
@@ -128,10 +129,19 @@ impl DiffStopwatch {
         watch.stopwatch.tick(time.delta());
     }
 
-    fn post_diff(mut watch: ResMut<Self>, rate: Res<DiffRate>, ticks: SystemChangeTick) {
+    fn post_diff(
+        mut watch: ResMut<Self>,
+        rate: Res<DiffRate>,
+        active: Res<ProcessorActive>,
+        ticks: SystemChangeTick,
+    ) {
         if watch.stopwatch.elapsed() > rate.0 {
             watch.stopwatch.reset();
-            watch.last_run = ticks.this_run();
+
+            // only advance the diffing if we know the processor is active
+            if active.0 {
+                watch.last_run = ticks.this_run();
+            }
         }
     }
 }
@@ -141,13 +151,16 @@ impl DiffStopwatch {
 pub struct DiffTimer<'w> {
     stopwatch: Res<'w, DiffStopwatch>,
     rate: Res<'w, DiffRate>,
+    active: Res<'w, ProcessorActive>,
     tick: SystemChangeTick,
 }
 
 impl DiffTimer<'_> {
     /// Returns whether diffing should occur on this tick.
     fn diff_tick(&self) -> bool {
-        self.stopwatch.stopwatch.elapsed() >= self.rate.0 || self.stopwatch.is_added()
+        // only advance the diffing if we know the processor is active
+        self.active.0
+            && (self.stopwatch.stopwatch.elapsed() >= self.rate.0 || self.stopwatch.is_added())
     }
 
     /// Returns whether diffing should occur on this tick.

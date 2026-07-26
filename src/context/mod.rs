@@ -160,8 +160,18 @@ impl LocalStore {
 }
 
 /// Provides the [`AudioContext`] its [`FirewheelConfig`].
-#[derive(Resource, Default, Debug)]
+#[derive(Resource, Debug)]
 pub struct AudioContextConfig(pub FirewheelConfig);
+
+impl Default for AudioContextConfig {
+    fn default() -> Self {
+        Self(FirewheelConfig {
+            // 64, the default in 0.12.1, is a bit conservative
+            channel_capacity: 128,
+            ..Default::default()
+        })
+    }
+}
 
 /// Provides the current audio sample rate.
 ///
