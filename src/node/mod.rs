@@ -961,8 +961,16 @@ fn flush_events(
             }
         }
 
-        if let Err(e) = context.update() {
-            errors.push(SeedlingError::Update(e));
+        match context.update() {
+            Ok(_) => {}
+            // we treat this as a warning because the worst symptom would
+            // be (unlikely) audio glitching
+            Err(e @ firewheel::error::UpdateError::MsgChannelFull) => {
+                bevy_log::warn!("{e}");
+            }
+            Err(e) => {
+                errors.push(SeedlingError::Update(e));
+            }
         }
     });
 
