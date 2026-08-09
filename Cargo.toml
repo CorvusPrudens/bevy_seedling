@@ -87,7 +87,7 @@ symphonium = { version = "0.12", default-features = false, features = [
 ], optional = true }
 symphonia = { version = "0.6", default-features = false, optional = true }
 smallvec = { version = "1.13", default-features = false }
-bevy_seedling_macros = { path = "./seedling_macros", version = "0.7.0" }
+bevy_seedling_macros = { path = "./seedling_macros", version = "0.8.0" }
 rand = { version = "0.10", default-features = false, features = [
   "sys_rng",
 ], optional = true }
