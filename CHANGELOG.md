@@ -15,6 +15,9 @@ As part of this work, `cpal` has received its own feature flag, allowing you to
 completely remove it when you don't need it. Consequently, it will need to
 be specifically enabled when disabling default features.
 
+0.8 also feature a new backend, `rtaudio`. In particular, this backend facilitates
+low-latency input-to-output processing on desktop platforms.
+
 Settings that were previously fields on `SeedlingPlgin` have been turned into resources.
 
 #### Migration guide
@@ -46,6 +49,13 @@ app.add_plugins(SeedlingPlugins)
     .insert_resource(AudioGraphTemplate::Minimal);
 ```
 
+### Easier Wasm multi-threading setup
+
+Following from the plugin restructuring, enabling multi-threaded audio processing
+on the web has been simplified. Rather than requiring `cfg` gating in your project, 
+you can simply enable the `web_audio` feature. If you use the Bevy CLI, ensuring
+everything else is set up correctly is as simple as `bevy run web -U multi-threading`.
+
 ### Node Bypassing
 
 Free-standing nodes can now be efficiently bypassed, providing a convenient
@@ -62,14 +72,14 @@ callback and, optionally, each individual node.
 
 ### Node reshuffling
 
-A handful of nodes, including the one pole filters, have moved to Firewheel.
-In addition, all of Firewheel's first-party nodes are now automatically
+The one pole filters, `LowPassNode` and `BandPassNode`, have been replaced by
+Firewheel's nodes.
+In addition, all of Firewheel's first-party nodes (except `BeepTestNode`) are now automatically
 registered when their features are enabled.
+Filter nodes with channel counts are automatically registered only for two channels,
+meaning non-stereo signals will require manual registering.
 
-Most nodes are now gated behind the `effects` features.
-All re-exported nodes from Firewheel are now registered by `bevy_seedling`.
-Filter nodes with channel counts are automatically registered only for two channels.
-Non-stereo signals will require manual registering.
+All non-essential nodes are now gated behind the `effects` feature.
 
 #### Migration guide
 
@@ -86,15 +96,15 @@ commands.spawn((
 
 // 0.8
 commands
-    .spawn(FastLowPassNode::<2>::default())
-    .chain(FastBandPassNode::<2>::default());
+    .spawn(FastLowpassNode::<2>::default())
+    .chain(FastBandpassNode::<2>::default());
 ```
 
 ### Configurable asset loading
 
 Previously, `symphonia` was always enabled and could not be customized.
 In 0.8, `bevy_seedling`'s default asset loader `SampleLoader` 
-can be provided with as fully customized `CodecRegistry` and `Probe`
+can be provided with a fully customized `CodecRegistry` and `Probe`
 via the `AudioLoaderConfig` resource. It can also be completely
 disabled along with all `symphonia` crates by disabling the
 `symphonia` feature.
@@ -110,11 +120,11 @@ and simplified coordination of unscheduled events.
 ### `dev` feature collection
 
 Following Bevy's lead, `bevy_seedling` now has a `dev` feature collection. It
-includes `entity_names` (helpful for inspectors) and `location_tracking`,
+includes `entity_names` (helpful for inspectors) and `track_location`,
 improving the precision of some error messages.
 
-0.7 included location_tracking behavior by default in debug builds,
-so you may notice degraded error messages when the `location_tracking`
+0.7 included location tracking behavior by default in debug builds,
+so you may notice degraded error messages when the `track_location`
 feature is not enabled.
 
 ### Miscellaneous
@@ -122,12 +132,13 @@ feature is not enabled.
 - Bumped MSRV from 1.85 to 1.95
 - Upgraded to Bevy 0.19 and Firewheel 0.12
 - Upgraded rand from 0.9 to 0.10
+- `MsgChannelFull` errors now warn rather than raising a `BevyError`
 
 ## Fixes
 
 - Improved resilience against inactive contexts, particularly on the web
 - Set the rate of event flushing to the audio context independently
-  of ECS tick rate
+  of ECS tick rate. This is controlled by the `DiffRate` resource.
 
 # 0.7.2
 

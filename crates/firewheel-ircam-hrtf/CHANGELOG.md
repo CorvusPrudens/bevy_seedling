@@ -1,3 +1,9 @@
+# 0.5.0
+
+# Changes
+
+- Update Firewheel to 0.12.0 and Bevy to 0.19
+
 # 0.4.0
 
 # Changes
