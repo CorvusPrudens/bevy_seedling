@@ -23,7 +23,7 @@
 //! ```toml
 //! [dependencies]
 //! bevy_seedling = "0.8.0"
-//! bevy = { version = "0.18.0", default-features = false, features = [
+//! bevy = { version = "0.19.0", default-features = false, features = [
 //!   # 2d
 //!   "2d_bevy_render",
 //!   "default_app",
@@ -136,6 +136,7 @@
 //! | `mkv`             | Enable mkv format.                         | No      |
 //! | `adpcm`           | Enable adpcm encoding.                     | No      |
 //! | `flac`            | Enable FLAC format and encoding.           | No      |
+//! | `cpal`            | Enable the cpal backend.                   | Yes     |
 //! | `web_audio`       | Enable the multi-threading web backend.    | No      |
 //! | `rtaudio`         | Enable the native RtAudio backend.         | No      |
 //! | `hrtf`            | Enable HRTF Spatialization.                | No      |
@@ -222,7 +223,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_seedling = { version = "0.3.0", features = ["mp3"] }
+//! bevy_seedling = { version = "0.8.0", features = ["mp3"] }
 //! ```
 //!
 //! ### Why isn't my custom node doing anything?

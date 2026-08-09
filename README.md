@@ -23,8 +23,8 @@ manually!
 
 ```toml
 [dependencies]
-bevy_seedling = "0.7.2"
-bevy = { version = "0.18.0", default-features = false, features = [
+bevy_seedling = "0.8.0"
+bevy = { version = "0.19.0", default-features = false, features = [
   # 2d
   "2d_bevy_render",
   "default_app",
@@ -101,6 +101,7 @@ should help you get up to speed on common usage patterns.
 | `mkv`             | Enable mkv format.                         | No      |
 | `adpcm`           | Enable adpcm encoding.                     | No      |
 | `flac`            | Enable FLAC format and encoding.           | No      |
+| `cpal`            | Enable the cpal backend.                   | Yes     |
 | `web_audio`       | Enable the multi-threading web backend.    | No      |
 | `rtaudio`         | Enable the native RtAudio backend.         | No      |
 | `hrtf`            | Enable HRTF Spatialization.                | No      |
@@ -116,6 +117,7 @@ should help you get up to speed on common usage patterns.
 
 | `bevy` | `bevy_seedling` |
 | ------ | --------------- |
+| 0.19   | 0.8             |
 | 0.18   | 0.7             |
 | 0.17   | 0.6             |
 | 0.16   | 0.4, 0.5        |
