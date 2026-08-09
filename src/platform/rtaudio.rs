@@ -4,7 +4,18 @@ use bevy_app::prelude::*;
 
 /// `bevy_seedling`'s `rtaudio` platform plugin.
 ///
-/// This plugin spawns and manages an `rtaudio` audio stream.
+/// This plugin spawns and manages an `rtaudio` stream.
+///
+/// To adjust `rtaudio`'s settings, such as input or output
+/// device selection, you can mutate or insert
+/// [`AudioStreamConfig<RtAudioConfig>`]. The initial configuration
+/// is applied at [`SeedlingStartupSystems::StreamInitialization`] in
+/// [`PostStartup`], and subsequent changes will automatically cause the
+/// stream to restart with the new settings.
+///
+/// [`AudioStreamConfig<RtAudioConfig>`]: crate::prelude::AudioStreamConfig
+/// [`SeedlingStartupSystems::StreamInitialization`]: crate::prelude::SeedlingStartupSystems::StreamInitialization
+/// [`PostStartup`]: bevy_app::prelude::PostStartup
 #[derive(Debug, Default)]
 pub struct RtAudioPlatformPlugin;
 

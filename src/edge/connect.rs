@@ -135,7 +135,9 @@ impl PendingConnections {
 ///     .chain_node(SpatialBasicNode::default())
 ///     .head();
 ///
-/// commands.spawn(FastBandpassNode::<2>::default()).connect(chain_head);
+/// commands
+///     .spawn(FastBandpassNode::<2>::default())
+///     .connect(chain_head);
 /// # }
 /// ```
 ///

@@ -152,6 +152,18 @@
 //!
 //! ## Frequently asked questions
 //!
+//! ### How do I enable multi-threading on the web?
+//!
+//! To get started with multi-threaded web audio, enable `bevy_seedling`'s
+//! `web_audio` feature and ensure you have
+//! the [Bevy CLI](https://github.com/theBevyFlock/bevy_cli) installed.
+//! Then, run `bevy run web -U multi-threading` to build and serve your
+//! project.
+//!
+//! Refer to the [`WebAudioPlatformPlugin`] for more details.
+//!
+//! [`WebAudioPlatformPlugin`]: crate::platform::web_audio::WebAudioPlatformPlugin
+//!
 //! ### How do I dynamically change a sample's volume?
 //!
 //! The [`SamplePlayer::volume`][prelude::SamplePlayer::volume] field
@@ -464,9 +476,25 @@ pub struct SeedlingCorePlugin;
 plugin_group! {
     /// `bevy_seedling`'s top-level plugin.
     ///
-    /// This spawns the audio task in addition
-    /// to inserting `bevy_seedling`'s systems
-    /// and resources.
+    /// These plugins fall under three categories: core,
+    /// platform, and diagnostic. The latter two can be
+    /// enabled or disabled with their respective features.
+    ///
+    /// # Platforms
+    ///
+    /// `bevy_seedling`'s platform plugins manage the low-level
+    /// audio behavior. `cpal` is enabled by default, and
+    /// `rtaudio` and the Web Audio backend can be enabled
+    /// on top. These plugins are well-behaved; they will not
+    /// try to overwrite each other. `cpal` has the lowest priority, followed
+    /// by `rtaudio`, and then the Web Audio backend. Regardless, enabling more than
+    /// one may incur unnecessary compilation time and binary size.
+    ///
+    /// The Web Audio backend provides multi-threaded audio on the browser,
+    /// meaning stutters and other performance problems are significantly reduced.
+    /// Refer to [`WebAudioPlatformPlugin`] for the required setup.
+    ///
+    /// [`WebAudioPlatformPlugin`]: platform::web_audio::WebAudioPlatformPlugin
     #[derive(Debug)]
     pub struct SeedlingPlugins {
         :SeedlingCorePlugin,

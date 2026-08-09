@@ -13,15 +13,24 @@
 //!
 //! 1. A nightly compiler is required along with the Rust standard library source code
 //!    (with `rustup`, you can add it with `rustup component add rust-src`).
-//! 2. You'll need the `atomics`, `bulk-memory`, and `mutable-globals` target features.
+//! 2. You'll need the `atomics` target feature and additional linker settings.
 //!    These can be enabled with a `.cargo/config.toml`:
 //!
 //! ```toml
 //! [target.wasm32-unknown-unknown]
-//! rustflags = ["-C", "target-feature=+atomics,+bulk-memory,+mutable-globals"]
+//! rustflags = [
+//!   "-Ctarget-feature=+atomics",
+//!   "-Clink-arg=--shared-memory",
+//!   "-Clink-arg=--max-memory=1073741824",
+//!   "-Clink-arg=--import-memory",
+//!   "-Clink-arg=--export=__wasm_init_tls",
+//!   "-Clink-arg=--export=__tls_size",
+//!   "-Clink-arg=--export=__tls_align",
+//!   "-Clink-arg=--export=__tls_base",
+//! ]
 //!
 //! [unstable]
-//! build-std = ["std", "core", "alloc", "panic_abort"]
+//! build-std = ["std", "panic_abort"]
 //! ```
 //! 3. Wherever your project is served, the protocol must be secure (usually `https`)
 //!    and the response must include two security headers:

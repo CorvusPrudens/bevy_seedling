@@ -5,6 +5,41 @@ use bevy_app::prelude::*;
 pub use firewheel_web_audio::WebAudioConfig;
 
 /// `bevy_seedling`'s multi-threaded Web Audio platform plugin.
+///
+/// Currently, this backend only supports stereo inputs and outputs.
+///
+/// ## Quick start
+///
+/// To get started with multi-threaded web audio, enable `bevy_seedling`'s
+/// `web_audio` feature and ensure you have
+/// the [Bevy CLI](https://github.com/theBevyFlock/bevy_cli) installed.
+/// Then, run `bevy run web -U multi-threading` to build and serve your
+/// project. That's it!
+///
+/// ## Precise Requirements
+///
+/// Because this backend relies on Wasm multi-threading, it has
+/// some additional requirements.
+///
+/// 1. A nightly compiler is required along with the Rust standard library source code
+///    (with `rustup`, you can add it with `rustup component add rust-src`).
+/// 2. You'll need the `atomics` target feature and additional linker settings.
+///    These can be enabled with a `.cargo/config.toml` as noted in the
+///    [crate docs][firewheel_web_audio]. This is automatically handled by
+///    the [Bevy CLI](https://github.com/theBevyFlock/bevy_cli) with the
+///    `-U multi-threading` flag, and should be the preferred approach for most projects.
+/// 3. Wherever your project is served, the protocol must be secure (usually `https`)
+///    and the response must include two security headers:
+///
+/// ```text
+/// Cross-Origin-Opener-Policy: same-origin
+/// Cross-Origin-Embedder-Policy: require-corp
+/// # or
+/// Cross-Origin-Embedder-Policy: credentialless
+/// ```
+///
+/// Conveniently, the CLI also provides these headers for local development.
+/// itch.io has a checkbox labeled "`SharedArrayBuffer` support" that provides these headers.
 #[derive(Debug, Default)]
 pub struct WebAudioPlatformPlugin;
 
