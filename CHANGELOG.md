@@ -2,18 +2,56 @@
 
 ## Changes
 
-### Backend simplification
+### Plugin restructuring
 
 The backend management code has been significantly simplified following
 Firewheel's backend API changes.
 
 Rather than a generic plugin that takes an implementor
-of `firewheel::Backend`, we use a single plugin collection containing multiple, independent backend plugins.
+of `firewheel::Backend`, we use a single plugin collection containing multiple
+independent backend plugins.
 
-### Plugin restructuring
+As part of this work, `cpal` has received its own feature flag, allowing you to 
+completely remove it when you don't need it. Consequently, it will need to
+be specifically enabled when disabling default features.
 
-Seedling's top-level plugin has been reduced to a ZST. Its fields have been turned
-into resources that can be overwritten or mutated.
+Settings that were previously fields on `SeedlingPlgin` have been turned into resources.
+
+#### Migration guide
+
+```rs
+// 0.7
+app.add_plugins(SeedlingPlugin {
+    config: FirewheelConfig {
+        num_graph_inputs: 1.into(),
+        ..Default::default()
+    },
+    stream_config: CpalConfig {
+        input: Some(Default::default()),
+        ..Default::default()
+    },
+    graph_config: GraphConfiguration::Minimal,
+});
+
+// 0.8
+app.add_plugins(SeedlingPlugins)
+    .insert_resource(AudioContextConfig(FirewheelConfig {
+        num_graph_inputs: 1.into(),
+        ..Default::default()
+    }))
+    .insert_resource(AudioStreamConfig(CpalConfig {
+        input: Some(Default::default()),
+        ..Default::default()
+    }))
+    .insert_resource(AudioGraphTemplate::Minimal);
+```
+
+### Node Bypassing
+
+Free-standing nodes can now be efficiently bypassed, providing a convenient
+mechanism to A/B or disable expensive effects without changing any routing.
+
+A node can be bypassed by inserting the `AudioBypass` component.
 
 ### Audio Diagnostics
 
@@ -47,9 +85,27 @@ them. Scheduling-by-default has advantages for total ordering and some users
 may still find it useful, but most should benefit from the improved performance
 and simplified coordination of unscheduled events.
 
+### `dev` feature collection
+
+Following Bevy's lead, `bevy_seedling` now has a `dev` feature collection. It
+includes `entity_names` (helpful for inspectors) and `location_tracking`,
+improving the precision of some error messages.
+
+0.7 included location_tracking behavior by default in debug builds,
+so you may notice degraded error messages when the `location_tracking`
+feature is not enabled.
+
 ### Miscellaneous
 
-- Bumped MSRV from 1.85 to 1.93
+- Bumped MSRV from 1.85 to 1.95
+- Upgraded to Bevy 0.19 and Firewheel 0.12
+- Upgraded rand from 0.9 to 0.10
+
+## Fixes
+
+- Improved resilience against inactive contexts, particularly on the web
+- Set the rate of event flushing to the audio context independently
+  of ECS tick rate
 
 # 0.7.2
 

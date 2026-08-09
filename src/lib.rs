@@ -53,7 +53,7 @@
 //!
 //! </details>
 //!
-//! Then, you'll need to add the [`SeedlingPlugins`] to your app.
+//! Then, you'll need to add [`SeedlingPlugins`] to your app.
 //!
 //! ```no_run
 //! use bevy::prelude::*;
@@ -475,13 +475,13 @@ pub enum SeedlingSystems {
 pub struct SeedlingCorePlugin;
 
 plugin_group! {
-    /// `bevy_seedling`'s top-level plugin.
+    /// All `bevy_seedling`'s top-level plugins.
     ///
     /// These plugins fall under three categories: core,
-    /// platform, and diagnostic. The latter two can be
+    /// platform, and diagnostics. The latter two can be
     /// enabled or disabled with their respective features.
     ///
-    /// # Platforms
+    /// ## Platforms
     ///
     /// `bevy_seedling`'s platform plugins manage the low-level
     /// audio behavior. `cpal` is enabled by default, and
