@@ -17,7 +17,7 @@ use std::{
     },
 };
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{AudioContext, AudioContextOptions, AudioWorkletNode};
+use web_sys::{AudioContext, AudioContextOptions, AudioContextState, AudioWorkletNode};
 
 /// The main-thread host for the Web Audio API backend.
 ///
@@ -289,7 +289,7 @@ impl WebAudioBackend {
         })
     }
 
-    pub fn poll(&mut self) -> Result<(), WebAudioStreamError> {
+    pub fn poll(&mut self) -> Result<bool, WebAudioStreamError> {
         if self.is_dropped.load(std::sync::atomic::Ordering::Relaxed) {
             return Err(WebAudioStreamError::UnexpectedDrop);
         }
@@ -303,7 +303,10 @@ impl WebAudioBackend {
             return Err(WebAudioStreamError::UnexpectedDrop);
         }
 
-        Ok(())
+        Ok(matches!(
+            self.web_context.state(),
+            AudioContextState::Running
+        ))
     }
 }
 

@@ -159,9 +159,40 @@ impl LocalStore {
     }
 }
 
-/// Provides the [`AudioContext`] its [`FirewheelConfig`].
-#[derive(Resource, Default, Debug)]
+/// Provides the [`AudioContext`] with [`FirewheelConfig`].
+///
+/// [`FirewheelConfig`] is largely concerned with the shape
+/// of the graph's input and output and various graph allocations.
+/// If you want to support more than two I/O channels, or
+/// you observe warnings about audio-thread allocations,
+/// you may want to adjust it.
+///
+/// Simply mutate the resource or replace it before [`Startup`]
+/// to apply custom settings.
+///
+/// ```
+/// # use bevy_app::prelude::*;
+/// # use bevy_seedling::prelude::*;
+/// # use bevy_seedling::context::AudioContextConfig;
+/// fn quad_plugin(app: &mut App) {
+///     app.insert_resource(AudioContextConfig(FirewheelConfig {
+///         num_graph_outputs: 4.into(),
+///         ..Default::default()
+///     }));
+/// }
+/// ```
+#[derive(Resource, Debug)]
 pub struct AudioContextConfig(pub FirewheelConfig);
+
+impl Default for AudioContextConfig {
+    fn default() -> Self {
+        Self(FirewheelConfig {
+            // 64, the default in 0.12.1, is a bit conservative
+            channel_capacity: 128,
+            ..Default::default()
+        })
+    }
+}
 
 /// Provides the current audio sample rate.
 ///

@@ -23,7 +23,7 @@
 //! ```toml
 //! [dependencies]
 //! bevy_seedling = "0.8.0"
-//! bevy = { version = "0.18.0", default-features = false, features = [
+//! bevy = { version = "0.19.0", default-features = false, features = [
 //!   # 2d
 //!   "2d_bevy_render",
 //!   "default_app",
@@ -53,7 +53,7 @@
 //!
 //! </details>
 //!
-//! Then, you'll need to add the [`SeedlingPlugins`] to your app.
+//! Then, you'll need to add [`SeedlingPlugins`] to your app.
 //!
 //! ```no_run
 //! use bevy::prelude::*;
@@ -136,6 +136,7 @@
 //! | `mkv`             | Enable mkv format.                         | No      |
 //! | `adpcm`           | Enable adpcm encoding.                     | No      |
 //! | `flac`            | Enable FLAC format and encoding.           | No      |
+//! | `cpal`            | Enable the cpal backend.                   | Yes     |
 //! | `web_audio`       | Enable the multi-threading web backend.    | No      |
 //! | `rtaudio`         | Enable the native RtAudio backend.         | No      |
 //! | `hrtf`            | Enable HRTF Spatialization.                | No      |
@@ -151,6 +152,18 @@
 //! [`Name`]: bevy_ecs::prelude::Name
 //!
 //! ## Frequently asked questions
+//!
+//! ### How do I enable multi-threading on the web?
+//!
+//! To get started with multi-threaded web audio, enable `bevy_seedling`'s
+//! `web_audio` feature and ensure you have
+//! the [Bevy CLI](https://github.com/theBevyFlock/bevy_cli) installed.
+//! Then, run `bevy run web -U multi-threading` to build and serve your
+//! project.
+//!
+//! Refer to the [`WebAudioPlatformPlugin`] for more details.
+//!
+//! [`WebAudioPlatformPlugin`]: crate::platform::web_audio::WebAudioPlatformPlugin
 //!
 //! ### How do I dynamically change a sample's volume?
 //!
@@ -210,7 +223,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_seedling = { version = "0.3.0", features = ["mp3"] }
+//! bevy_seedling = { version = "0.8.0", features = ["mp3"] }
 //! ```
 //!
 //! ### Why isn't my custom node doing anything?
@@ -336,7 +349,7 @@
 //! [`AudioSample`]: prelude::AudioSample
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![allow(clippy::type_complexity)]
+#![allow(clippy::type_complexity, clippy::too_many_arguments)]
 #![expect(clippy::needless_doctest_main)]
 #![warn(missing_debug_implementations)]
 #![warn(missing_docs)]
@@ -462,11 +475,27 @@ pub enum SeedlingSystems {
 pub struct SeedlingCorePlugin;
 
 plugin_group! {
-    /// `bevy_seedling`'s top-level plugin.
+    /// All `bevy_seedling`'s top-level plugins.
     ///
-    /// This spawns the audio task in addition
-    /// to inserting `bevy_seedling`'s systems
-    /// and resources.
+    /// These plugins fall under three categories: core,
+    /// platform, and diagnostics. The latter two can be
+    /// enabled or disabled with their respective features.
+    ///
+    /// ## Platforms
+    ///
+    /// `bevy_seedling`'s platform plugins manage the low-level
+    /// audio behavior. `cpal` is enabled by default, and
+    /// `rtaudio` and the Web Audio backend can be enabled
+    /// on top. These plugins are well-behaved; they will not
+    /// try to overwrite each other. `cpal` has the lowest priority, followed
+    /// by `rtaudio`, and then the Web Audio backend. Regardless, enabling more than
+    /// one may incur unnecessary compilation time and binary size.
+    ///
+    /// The Web Audio backend provides multi-threaded audio on the browser,
+    /// meaning stutters and other performance problems are significantly reduced.
+    /// Refer to [`WebAudioPlatformPlugin`] for the required setup.
+    ///
+    /// [`WebAudioPlatformPlugin`]: platform::web_audio::WebAudioPlatformPlugin
     #[derive(Debug)]
     pub struct SeedlingPlugins {
         :SeedlingCorePlugin,
@@ -499,6 +528,7 @@ impl Plugin for SeedlingCorePlugin {
         use prelude::*;
 
         app.init_resource::<pool::DefaultPoolSize>()
+            .init_resource::<platform::ProcessorActive>()
             .init_asset::<sample::AudioSample>();
 
         app.configure_sets(

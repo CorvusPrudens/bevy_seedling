@@ -20,6 +20,35 @@ use cpal::cpal::ErrorKind;
 /// `bevy_seedling`'s `cpal` platform plugin.
 ///
 /// This plugin spawns and manages a `cpal` audio stream.
+///
+/// To adjust `cpal`'s settings, such as input or output
+/// device selection, you can mutate or insert
+/// [`AudioStreamConfig<CpalConfig>`]. The initial configuration
+/// is applied at [`SeedlingStartupSystems::StreamInitialization`] in
+/// [`PostStartup`], and subsequent changes will automatically cause the
+/// stream to restart with the new settings.
+///
+/// ```
+/// # use bevy::prelude::*;
+/// # use bevy_seedling::prelude::*;
+/// # use bevy_seedling::platform::cpal::{CpalConfig, CpalInputConfig};
+/// # use bevy_seedling::context::AudioContextConfig;
+/// # fn run() {
+/// App::new()
+///     .add_plugins((DefaultPlugins, SeedlingPlugins))
+///     .insert_resource(AudioStreamConfig(CpalConfig {
+///         // acquire the default system input
+///         input: Some(CpalInputConfig::default()),
+///         ..Default::default()
+///     }))
+///     .insert_resource(AudioContextConfig(FirewheelConfig {
+///         // Ensure the graph has an input
+///         num_graph_inputs: ChannelCount::MONO,
+///         ..Default::default()
+///     }))
+///     .run();
+/// # }
+/// ```
 #[derive(Debug, Default)]
 pub struct CpalPlatformPlugin;
 

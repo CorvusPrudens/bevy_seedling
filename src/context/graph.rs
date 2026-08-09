@@ -111,6 +111,10 @@ pub struct SoundEffectsBus;
 /// For those who want more control, [`Minimal`] and [`Empty`] will get
 /// out of your way.
 ///
+/// To select a template, mutate this resource or replace it
+/// before [`SeedlingStartupSystems::GraphSetup`] in [`PreStartup`].
+/// Changes after this point will not take effect.
+///
 /// [`Game`]: AudioGraphTemplate::Game
 /// [`Minimal`]: AudioGraphTemplate::Minimal
 /// [`Empty`]: AudioGraphTemplate::Empty

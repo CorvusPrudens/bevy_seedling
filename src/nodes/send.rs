@@ -197,6 +197,7 @@ impl AudioNode for SendNode {
         Ok(SendProcessor {
             gain: SmoothedParamBuffer::new(
                 self.send_volume.amp(),
+                10.0,
                 config.smooth_config,
                 ctx.stream_info,
             ),

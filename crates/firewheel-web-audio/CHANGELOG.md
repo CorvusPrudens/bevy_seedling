@@ -1,3 +1,9 @@
+# 0.5.0
+
+## Changes
+
+- Updated to Firewheel 0.12.0
+
 # 0.4.0
 
 ## Changes
