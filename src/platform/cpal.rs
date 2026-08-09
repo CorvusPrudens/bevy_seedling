@@ -29,8 +29,10 @@ use cpal::cpal::ErrorKind;
 /// stream to restart with the new settings.
 ///
 /// ```
-/// # use bevy_app::prelude::*;
+/// # use bevy::prelude::*;
 /// # use bevy_seedling::prelude::*;
+/// # use bevy_seedling::platform::cpal::{CpalConfig, CpalInputConfig};
+/// # use bevy_seedling::context::AudioContextConfig;
 /// # fn run() {
 /// App::new()
 ///     .add_plugins((DefaultPlugins, SeedlingPlugins))

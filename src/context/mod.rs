@@ -172,10 +172,11 @@ impl LocalStore {
 ///
 /// ```
 /// # use bevy_app::prelude::*;
-/// # use bevy_seedling:prelude::*;
+/// # use bevy_seedling::prelude::*;
+/// # use bevy_seedling::context::AudioContextConfig;
 /// fn quad_plugin(app: &mut App) {
 ///     app.insert_resource(AudioContextConfig(FirewheelConfig {
-///         num_graph_outputs: 4,
+///         num_graph_outputs: 4.into(),
 ///         ..Default::default()
 ///     }));
 /// }
