@@ -67,6 +67,28 @@ In addition, all of Firewheel's first-party nodes are now automatically
 registered when their features are enabled.
 
 Most nodes are now gated behind the `effects` features.
+All re-exported nodes from Firewheel are now registered by `bevy_seedling`.
+Filter nodes with channel counts are automatically registered only for two channels.
+Non-stereo signals will require manual registering.
+
+#### Migration guide
+
+```rs
+// 0.7
+commands.spawn((
+        LowPassNode::default(),
+        LowPassConfig {
+            channels: NonZeroChannelCount::new(2).unwrap(),
+            ..Default::default()
+        },
+    ))
+    .chain(BandPassNode::default());
+
+// 0.8
+commands
+    .spawn(FastLowPassNode::<2>::default())
+    .chain(FastBandPassNode::<2>::default());
+```
 
 ### Configurable asset loading
 
