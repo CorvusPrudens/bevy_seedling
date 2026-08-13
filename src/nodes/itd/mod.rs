@@ -15,9 +15,6 @@ use firewheel::{
 
 mod delay_line;
 
-/// The speed of sound in air, 20 degrees C, at sea level, in meters per second.
-const SPEED_OF_SOUND: f32 = 343.0;
-
 /// Interaural time difference node.
 ///
 /// This node simulates the time difference of sounds
@@ -50,6 +47,16 @@ pub struct ItdConfig {
     /// Defaults to `0.22` (22 cm).
     pub inter_ear_distance: f32,
 
+    /// The speed of sound in world units per second.
+    ///
+    /// This is synchronized to the global [`SpeedOfSound`] resource by
+    /// `bevy_seedling`'s spatial systems.
+    ///
+    /// Defaults to `343.0`.
+    ///
+    /// [`SpeedOfSound`]: crate::spatial::SpeedOfSound
+    pub speed_of_sound: f32,
+
     /// The input configuration.
     ///
     /// Defaults to [`InputConfig::Stereo`].
@@ -60,6 +67,7 @@ impl Default for ItdConfig {
     fn default() -> Self {
         Self {
             inter_ear_distance: 0.22,
+            speed_of_sound: 343.0,
             input_config: InputConfig::Stereo,
         }
     }
@@ -93,6 +101,7 @@ struct ItdProcessor {
     left: DelayLine,
     right: DelayLine,
     inter_ear_distance: f32,
+    speed_of_sound: f32,
     input_config: InputConfig,
 }
 
@@ -115,6 +124,7 @@ impl AudioNode for ItdNode {
     ) -> Result<impl firewheel::node::AudioNodeProcessor, NodeError> {
         let maximum_samples = maximum_samples(
             configuration.inter_ear_distance,
+            configuration.speed_of_sound,
             cx.stream_info.sample_rate.get() as f32,
         );
 
@@ -122,14 +132,15 @@ impl AudioNode for ItdNode {
             left: DelayLine::new(maximum_samples),
             right: DelayLine::new(maximum_samples),
             inter_ear_distance: configuration.inter_ear_distance,
+            speed_of_sound: configuration.speed_of_sound,
             input_config: configuration.input_config,
         })
     }
 }
 
 /// The maximum difference in samples between each ear.
-fn maximum_samples(distance: f32, sample_rate: f32) -> usize {
-    let maximum_delay = distance / SPEED_OF_SOUND;
+fn maximum_samples(distance: f32, speed_of_sound: f32, sample_rate: f32) -> usize {
+    let maximum_delay = distance / speed_of_sound.max(0.01);
     (sample_rate * maximum_delay).ceil() as usize
 }
 
@@ -204,6 +215,7 @@ impl AudioNodeProcessor for ItdProcessor {
         if stream_info.sample_rate != stream_info.prev_sample_rate {
             let new_size = maximum_samples(
                 self.inter_ear_distance,
+                self.speed_of_sound,
                 stream_info.sample_rate.get() as f32,
             );
 
