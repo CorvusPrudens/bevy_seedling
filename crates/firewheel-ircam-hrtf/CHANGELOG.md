@@ -1,3 +1,10 @@
+# Unreleased
+
+## Fixes
+
+- `HrtfNode` no longer starts a reused pool slot at the previous occupant's gain
+  and direction, matching `SpatialBasicNode`'s settled-silence snap.
+
 # 0.5.0
 
 # Changes
