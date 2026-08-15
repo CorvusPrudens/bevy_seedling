@@ -271,6 +271,7 @@ impl AudioNode for HrtfNode {
             prev_right_samples: Vec::with_capacity(fft_buffer_len),
             sphere_source: config.hrir_sphere.clone(),
             fft_size: config.fft_size.clone(),
+            prev_input_settled: true,
         })
     }
 }
@@ -289,13 +290,37 @@ struct FyroxHrtfProcessor {
     prev_right_samples: Vec<f32>,
     sphere_source: HrirSource,
     fft_size: FftSize,
+    prev_input_settled: bool,
+}
+
+impl FyroxHrtfProcessor {
+    /// Reset the smoothers and convolution state so the next signal starts from
+    /// silence instead of interpolating out of the previous one. Needed when the
+    /// node is reused, as in a sampler pool.
+    fn reset(&mut self) {
+        self.attenuation_processor.reset();
+        self.previous_offset = self.offset;
+        // Cleared rather than zeroed, since the FFT fires once `fft_input` is full
+        // and `fft_output` is drained a block at a time.
+        self.fft_input.clear();
+        self.fft_output.clear();
+
+        // Zeroed in place rather than cleared, since `hrtf` reallocates these
+        // when their length changes and this runs on the audio thread.
+        self.prev_left_samples.fill(0.0);
+        self.prev_right_samples.fill(0.0);
+    }
 }
 
 impl AudioNodeProcessor for FyroxHrtfProcessor {
     fn events(&mut self, info: &ProcInfo, events: &mut ProcEvents, _extra: &mut ProcExtra) {
+        let mut offset_updated = false;
+
         for patch in events.drain_patches::<HrtfNode>() {
             match patch {
                 HrtfNodePatch::Offset(offset) => {
+                    offset_updated = true;
+
                     let distance = offset.length().max(0.01);
 
                     self.attenuation_processor.compute_values(
@@ -325,19 +350,37 @@ impl AudioNodeProcessor for FyroxHrtfProcessor {
                 }
             }
         }
+
+        // The previous block's input settled at zero, so no need to smooth. Only
+        // the offset affects gain and direction, so other patches are left alone.
+        if offset_updated && self.prev_input_settled {
+            self.reset();
+        }
     }
 
     fn process(
         &mut self,
         proc_info: &ProcInfo,
-        ProcBuffers { inputs, outputs }: ProcBuffers,
+        buffers: ProcBuffers,
         _: &mut ProcExtra,
     ) -> ProcessStatus {
-        if proc_info.in_silence_mask.all_channels_silent(inputs.len()) {
-            self.attenuation_processor.reset();
+        if proc_info
+            .in_silence_mask
+            .all_channels_silent(buffers.inputs.len())
+        {
+            // All channels are silent, so there is no need to process. Reset once
+            // on the way in, since after that there is nothing left to flush.
+            if !self.prev_input_settled {
+                self.reset();
+            }
+            self.prev_input_settled = true;
 
             return ProcessStatus::ClearAllOutputs;
         }
+
+        self.prev_input_settled = buffers.inputs_settled_at_zero();
+
+        let ProcBuffers { inputs, outputs } = buffers;
 
         for frame in 0..proc_info.frames {
             let mut downmixed = 0.0;
