@@ -69,7 +69,8 @@ impl Plugin for SpatialPlugin {
 ///     commands.spawn((
 ///         SamplePlayer::new(server.load("my_sample.wav")),
 ///         Transform::default(),
-///         sample_effects![(SpatialBasicNode::default(), SpatialScale(Vec3::splat(0.25)))],
+///         SpatialScale(Vec3::splat(0.25)),
+///         sample_effects![SpatialBasicNode::default()],
 ///     ));
 /// }
 /// ```
