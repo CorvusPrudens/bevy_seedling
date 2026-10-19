@@ -1,3 +1,11 @@
+# Unreleased
+
+# Fixes
+
+- Fix `HrtfNode` leaving part of its output unwritten when the block size isn't a multiple of the FFT size
+- Fix a reused `HrtfNode` starting at the previous sound's gain and direction
+- Let the HRIR ring out after the input goes silent
+
 # 0.5.0
 
 # Changes
