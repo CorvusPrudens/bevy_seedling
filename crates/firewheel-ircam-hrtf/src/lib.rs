@@ -145,13 +145,12 @@ impl Default for HrtfConfig {
 
 /// Describes the size of the FFT processing block.
 ///
-/// Generally, you should try to match the FFT size (the product of
-/// [`slice_count`][FftSize::slice_count] and [`slice_len`][FftSize::slice_len])
-/// to the audio's processing buffer size if possible.
+/// Generally, you should try to make the audio's processing buffer size
+/// a multiple of [`slice_len`][FftSize::slice_len] if possible.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::Reflect))]
 pub struct FftSize {
-    /// The number of slices the audio stream is split into for overlap-save.
+    /// The number of slices a change in direction is interpolated across.
     ///
     /// Defaults to 4.
     pub slice_count: usize,
@@ -241,17 +240,14 @@ impl AudioNode for HrtfNode {
             .get_sphere(sample_rate)
             .map_err(HrtfError)?;
 
-        let fft_buffer_len = config.fft_size.slice_count * config.fft_size.slice_len;
+        let hrir_len = sphere.len();
 
-        let renderer = HrtfProcessor::new(
-            sphere,
-            config.fft_size.slice_count,
-            config.fft_size.slice_len,
-        );
-
-        let buffer_size = cx.stream_info.max_block_frames.get() as usize;
-        Ok(FyroxHrtfProcessor {
-            renderer,
+        let mut processor = FyroxHrtfProcessor {
+            renderer: HrtfProcessor::new(sphere, 1, config.fft_size.slice_len),
+            offset: self.offset,
+            direction_from: self.offset,
+            direction_to: self.offset,
+            ramp_frames: 0,
             attenuation: self.distance_attenuation,
             attenuation_processor: DistanceAttenuatorStereoDsp::new(
                 firewheel::param::smoother::SmootherConfig {
@@ -262,38 +258,157 @@ impl AudioNode for HrtfNode {
                 self.coeff_update_factor,
             ),
             muffle_cutoff_hz: self.muffle_cutoff_hz,
-            offset: self.offset,
-            previous_offset: self.offset,
             min_gain: self.min_gain,
-            fft_input: Vec::with_capacity(fft_buffer_len),
-            fft_output: Vec::with_capacity(buffer_size.max(fft_buffer_len)),
-            prev_left_samples: Vec::with_capacity(fft_buffer_len),
-            prev_right_samples: Vec::with_capacity(fft_buffer_len),
+            slice: Vec::new(),
+            rendered: Vec::new(),
+            history: Vec::new(),
+            prev_left_samples: Vec::new(),
+            prev_right_samples: Vec::new(),
+            hrir_len,
+            silent_frames: 0,
+            prev_input_settled: true,
             sphere_source: config.hrir_sphere.clone(),
             fft_size: config.fft_size.clone(),
-        })
+        };
+        processor.allocate();
+
+        Ok(processor)
     }
 }
 
 struct FyroxHrtfProcessor {
     renderer: HrtfProcessor,
     offset: Vec3,
-    previous_offset: Vec3,
+    // direction changes are interpolated over `slice_count` slices
+    direction_from: Vec3,
+    direction_to: Vec3,
+    ramp_frames: usize,
     attenuation: DistanceAttenuation,
     attenuation_processor: DistanceAttenuatorStereoDsp,
     muffle_cutoff_hz: f32,
     min_gain: f32,
-    fft_input: Vec<f32>,
-    fft_output: Vec<(f32, f32)>,
+    slice: Vec<f32>,
+    rendered: Vec<(f32, f32)>,
+    // the last `hrir_len - 1` input samples, since `hrtf` would otherwise
+    // keep the padding of a partial slice as history
+    history: Vec<f32>,
     prev_left_samples: Vec<f32>,
     prev_right_samples: Vec<f32>,
+    hrir_len: usize,
+    silent_frames: usize,
+    prev_input_settled: bool,
     sphere_source: HrirSource,
     fft_size: FftSize,
 }
 
+impl FyroxHrtfProcessor {
+    fn ramp_len(&self) -> usize {
+        self.fft_size.slice_count * self.fft_size.slice_len
+    }
+
+    // the HRIR has finished ringing out
+    fn at_rest(&self) -> bool {
+        self.silent_frames >= self.history.len()
+    }
+
+    fn allocate(&mut self) {
+        let slice_len = self.fft_size.slice_len;
+        let history_len = self.hrir_len - 1;
+
+        self.slice = vec![0.0; slice_len];
+        self.rendered = vec![(0.0, 0.0); slice_len];
+        self.history = vec![0.0; history_len];
+        // `hrtf` reallocates these if the length is wrong
+        self.prev_left_samples = vec![0.0; history_len];
+        self.prev_right_samples = vec![0.0; history_len];
+
+        self.clear();
+    }
+
+    // must not allocate, since this runs on the audio thread
+    fn clear(&mut self) {
+        self.history.fill(0.0);
+        self.silent_frames = self.history.len();
+        self.prev_input_settled = true;
+
+        self.snap_direction();
+        self.attenuation_processor.reset();
+    }
+
+    fn snap_direction(&mut self) {
+        self.direction_from = self.offset;
+        self.direction_to = self.offset;
+        self.ramp_frames = self.ramp_len();
+    }
+
+    fn direction(&self) -> Vec3 {
+        let t = self.ramp_frames as f32 / self.ramp_len() as f32;
+
+        // matches `hrtf`'s own lerp
+        self.direction_from + (self.direction_to - self.direction_from) * t
+    }
+
+    fn render(&mut self, frames: usize, left: &mut [f32], right: &mut [f32]) {
+        if self.direction_to != self.offset {
+            self.direction_from = if self.ramp_frames < self.ramp_len() {
+                self.direction()
+            } else {
+                self.direction_to
+            };
+            self.direction_to = self.offset;
+            self.ramp_frames = 0;
+        }
+
+        self.ramp_frames = (self.ramp_frames + frames).min(self.ramp_len());
+        let direction = self.direction();
+        let direction = hrtf::Vec3::new(direction.x, direction.y, direction.z);
+
+        self.slice[frames..].fill(0.0);
+        self.rendered.fill((0.0, 0.0));
+        self.prev_left_samples.copy_from_slice(&self.history);
+        self.prev_right_samples.copy_from_slice(&self.history);
+
+        self.renderer.process_samples(HrtfContext {
+            source: &self.slice,
+            output: &mut self.rendered,
+            new_sample_vector: direction,
+            prev_sample_vector: direction,
+            prev_left_samples: &mut self.prev_left_samples,
+            prev_right_samples: &mut self.prev_right_samples,
+            new_distance_gain: 1.0,
+            prev_distance_gain: 1.0,
+        });
+
+        for ((left, right), &(rendered_left, rendered_right)) in
+            left.iter_mut().zip(right.iter_mut()).zip(&self.rendered)
+        {
+            *left = rendered_left;
+            *right = rendered_right;
+        }
+
+        let input = &self.slice[..frames];
+        let history_len = self.history.len();
+        if frames >= history_len {
+            self.history.copy_from_slice(&input[frames - history_len..]);
+        } else {
+            self.history.copy_within(frames.., 0);
+            self.history[history_len - frames..].copy_from_slice(input);
+        }
+
+        self.silent_frames = match input.iter().rposition(|sample| *sample != 0.0) {
+            Some(last) => frames - 1 - last,
+            None => self.silent_frames.saturating_add(frames),
+        };
+    }
+}
+
 impl AudioNodeProcessor for FyroxHrtfProcessor {
     fn events(&mut self, info: &ProcInfo, events: &mut ProcEvents, _extra: &mut ProcExtra) {
+        let mut updated = false;
+
         for patch in events.drain_patches::<HrtfNode>() {
+            updated = true;
+
             match patch {
                 HrtfNodePatch::Offset(offset) => {
                     let distance = offset.length().max(0.01);
@@ -325,76 +440,63 @@ impl AudioNodeProcessor for FyroxHrtfProcessor {
                 }
             }
         }
+
+        // snap to the new gain between sounds, like `SpatialBasicNode`
+        if updated && self.prev_input_settled {
+            self.attenuation_processor.reset();
+        }
+    }
+
+    fn bypassed(&mut self, _bypassed: bool) {
+        self.clear();
     }
 
     fn process(
         &mut self,
         proc_info: &ProcInfo,
-        ProcBuffers { inputs, outputs }: ProcBuffers,
+        buffers: ProcBuffers,
         _: &mut ProcExtra,
     ) -> ProcessStatus {
-        if proc_info.in_silence_mask.all_channels_silent(inputs.len()) {
+        if proc_info
+            .in_silence_mask
+            .all_channels_silent(buffers.inputs.len())
+        {
+            self.prev_input_settled = true;
             self.attenuation_processor.reset();
 
-            return ProcessStatus::ClearAllOutputs;
-        }
-
-        for frame in 0..proc_info.frames {
-            let mut downmixed = 0.0;
-            for channel in inputs {
-                downmixed += channel[frame];
+            if self.at_rest() {
+                return ProcessStatus::ClearAllOutputs;
             }
-            downmixed /= inputs.len() as f32;
-
-            self.fft_input.push(downmixed);
-
-            // Buffer full, process FFT
-            if self.fft_input.len() == self.fft_input.capacity() {
-                let fft_len = self.fft_input.len();
-
-                let output_start = self.fft_output.len();
-                self.fft_output
-                    .extend(std::iter::repeat_n((0.0, 0.0), fft_len));
-
-                // let (left, right) = outputs.split_at_mut(1);
-                let context = HrtfContext {
-                    source: &self.fft_input,
-                    output: &mut self.fft_output[output_start..],
-                    new_sample_vector: hrtf::Vec3::new(self.offset.x, self.offset.y, self.offset.z),
-                    prev_sample_vector: hrtf::Vec3::new(
-                        self.previous_offset.x,
-                        self.previous_offset.y,
-                        self.previous_offset.z,
-                    ),
-                    prev_left_samples: &mut self.prev_left_samples,
-                    prev_right_samples: &mut self.prev_right_samples,
-                    new_distance_gain: 1.0,
-                    prev_distance_gain: 1.0,
-                };
-
-                self.renderer.process_samples(context);
-
-                self.previous_offset = self.offset;
-                self.fft_input.clear();
-            }
+        } else {
+            self.prev_input_settled = buffers.inputs_settled_at_zero();
         }
 
-        for (i, (left, right)) in self
-            .fft_output
-            .drain(..proc_info.frames.min(self.fft_output.len()))
-            .enumerate()
-        {
-            outputs[0][i] = left;
-            outputs[1][i] = right;
+        if self.at_rest() {
+            self.snap_direction();
         }
 
+        let ProcBuffers { inputs, outputs } = buffers;
         let (left, rest) = outputs.split_first_mut().unwrap();
-        let clear_outputs = self.attenuation_processor.process(
-            proc_info.frames,
-            left,
-            rest[0],
-            proc_info.sample_rate_recip,
-        );
+        let right = &mut *rest[0];
+
+        // render each slice right away, zero-padding a partial one, so the
+        // output is never delayed
+        let frames = proc_info.frames;
+        let slice_len = self.fft_size.slice_len;
+        for start in (0..frames).step_by(slice_len) {
+            let end = (start + slice_len).min(frames);
+
+            for (frame, sample) in (start..end).zip(self.slice.iter_mut()) {
+                *sample =
+                    inputs.iter().map(|channel| channel[frame]).sum::<f32>() / inputs.len() as f32;
+            }
+
+            self.render(end - start, &mut left[start..end], &mut right[start..end]);
+        }
+
+        let clear_outputs =
+            self.attenuation_processor
+                .process(frames, left, right, proc_info.sample_rate_recip);
 
         if clear_outputs {
             self.attenuation_processor.reset();
@@ -417,10 +519,14 @@ impl AudioNodeProcessor for FyroxHrtfProcessor {
                 .get_sphere(sample_rate)
                 .expect("HRIR data should be in a valid format");
 
-            let renderer =
-                HrtfProcessor::new(sphere, self.fft_size.slice_count, self.fft_size.slice_len);
+            self.hrir_len = sphere.len();
+            self.renderer = HrtfProcessor::new(sphere, 1, self.fft_size.slice_len);
+            self.attenuation_processor
+                .update_sample_rate(stream_info.sample_rate);
 
-            self.renderer = renderer;
+            self.allocate();
+        } else {
+            self.clear();
         }
     }
 }
