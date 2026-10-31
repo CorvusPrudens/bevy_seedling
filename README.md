@@ -14,41 +14,16 @@ is simple.
 ## Getting started
 
 First, you'll need to add the dependency to your `Cargo.toml`.
-Note that you'll need to disable Bevy's `bevy_audio` feature,
-meaning you'll need to specify quite a few features
-manually!
+Note that you'll need to disable Bevy's `audio` feature.
 
 <details>
 <summary>Example `Cargo.toml`</summary>
 
 ```toml
 [dependencies]
-bevy_seedling = "0.8.0"
-bevy = { version = "0.19.0", default-features = false, features = [
-  # 2d
-  "2d_bevy_render",
-  "default_app",
-  "picking",
-  "scene",
-
-  # 3d
-  "3d_bevy_render",
-
-  # ui
-  "ui_api",
-  "ui_bevy_render",
-
-  # default_platform
-  "android-game-activity",
-  "bevy_gilrs",
-  "bevy_winit",
-  "default_font",
-  "multi_threaded",
-  "std",
-  "sysinfo_plugin",
-  "wayland",
-  "webgl2",
-  "x11",
+bevy_seedling = "0.9.0"
+bevy = { version = "0.20.0", default-features = false, features = [
+    "2d", "3d", "ui"
 ] }
 ```
 
@@ -117,6 +92,7 @@ should help you get up to speed on common usage patterns.
 
 | `bevy` | `bevy_seedling` |
 | ------ | --------------- |
+| 0.20   | 0.9             |
 | 0.19   | 0.8             |
 | 0.18   | 0.7             |
 | 0.17   | 0.6             |
