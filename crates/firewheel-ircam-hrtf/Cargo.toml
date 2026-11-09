@@ -1,6 +1,6 @@
 [package]
 name = "firewheel-ircam-hrtf"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
@@ -12,42 +12,43 @@ documentation = "https://docs.rs/firewheel-ircam-hrtf"
 keywords = ["gamedev", "audio", "bevy", "firewheel"]
 categories = ["game-development", "multimedia::audio"]
 include = [
-  "README.md",
-  "LICENSE-APACHE",
-  "LICENSE-MIT",
-  "Cargo.toml",
-  "src/*",
-  "assets/irc_1005_c.bin",
-  "assets/irc_1012_c.bin",
-  "assets/irc_1015_c.bin",
-  "assets/irc_1018_c.bin",
-  "assets/irc_1028_c.bin",
-  "assets/irc_1029_c.bin",
-  "assets/irc_1034_c.bin",
-  "assets/irc_1040_c.bin",
-  "assets/irc_1042_c.bin",
-  "assets/irc_1052_c.bin",
-  "assets/irc_1053_c.bin",
+    "README.md",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+    "Cargo.toml",
+    "src/*",
+    "assets/irc_1005_c.bin",
+    "assets/irc_1012_c.bin",
+    "assets/irc_1015_c.bin",
+    "assets/irc_1018_c.bin",
+    "assets/irc_1028_c.bin",
+    "assets/irc_1029_c.bin",
+    "assets/irc_1034_c.bin",
+    "assets/irc_1040_c.bin",
+    "assets/irc_1042_c.bin",
+    "assets/irc_1052_c.bin",
+    "assets/irc_1053_c.bin",
 ]
 
 [package.metadata.docs.rs]
 all-features = true
 
 [dependencies]
-firewheel = { version = "0.12.0", default-features = false, features = [
-  "glam-32",
-  "std",
+# firewheel = { version = "0.14.0", default-features = false, features = [
+firewheel = { git = "https://github.com/eswartz/Firewheel-fork.git", branch = "bevy-0.20", default-features = false, features = [
+    "glam-33",
+    "std",
 ] }
-glam = { version = "0.32", default-features = false, features = ["std"] }
+glam = { version = "0.33", default-features = false, features = ["std"] }
 hrtf = "0.8.1"
 
 # Bevy dependencies
-bevy_ecs = { version = "0.19.0", default-features = false, features = [
-  "std",
+bevy_ecs = { version = "0.20.0", default-features = false, features = [
+    "std",
 ], optional = true }
-bevy_reflect = { version = "0.19.0", default-features = false, features = [
-  "glam",
-  "std",
+bevy_reflect = { version = "0.20.0", default-features = false, features = [
+    "glam",
+    "std",
 ], optional = true }
 
 [features]
@@ -58,16 +59,16 @@ bevy_reflect = ["dep:bevy_reflect", "firewheel/bevy_reflect"]
 
 # Enable all embedded subjects
 all_subjects = [
-  "irc1005",
-  "irc1012",
-  "irc1015",
-  "irc1018",
-  "irc1028",
-  "irc1029",
-  "irc1034",
-  "irc1042",
-  "irc1052",
-  "irc1053",
+    "irc1005",
+    "irc1012",
+    "irc1015",
+    "irc1018",
+    "irc1028",
+    "irc1029",
+    "irc1034",
+    "irc1042",
+    "irc1052",
+    "irc1053",
 ]
 
 # Enable individual subjects for inclusion in the binary

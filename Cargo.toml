@@ -1,6 +1,6 @@
 [package]
 name = "bevy_seedling"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2024"
 rust-version = "1.95.0"
 license = "MIT OR Apache-2.0"
@@ -49,52 +49,53 @@ effects = ["firewheel/all_nodes"]
 profiling = ["dep:audioadapter-buffers"]
 
 [dependencies]
-bevy_ecs = { version = "0.19.0", default-features = false }
-bevy_app = { version = "0.19.0", default-features = false }
-bevy_math = { version = "0.19.0", default-features = false, features = [
-  "curve",
-  "std",
+bevy_ecs = { version = "0.20.0", default-features = false }
+bevy_app = { version = "0.20.0", default-features = false }
+bevy_math = { version = "0.20.0", default-features = false, features = [
+    # "curve",
+    "std",
 ] }
-bevy_asset = { version = "0.19.0", default-features = false }
-bevy_transform = { version = "0.19.0", default-features = false, features = [
-  "bevy-support",
+bevy_asset = { version = "0.20.0", default-features = false }
+bevy_transform = { version = "0.20.0", default-features = false, features = [
+    "bevy-support",
 ] }
-bevy_log = { version = "0.19.0", default-features = false }
-bevy_platform = { version = "0.19.0", default-features = false, features = [
-  "alloc",
+bevy_log = { version = "0.20.0", default-features = false }
+bevy_platform = { version = "0.20.0", default-features = false, features = [
+    "alloc",
 ] }
-bevy_time = { version = "0.19.0", default-features = false }
-bevy_reflect = { version = "0.19.0", default-features = false, features = [
-  "glam",
+bevy_time = { version = "0.20.0", default-features = false }
+bevy_reflect = { version = "0.20.0", default-features = false, features = [
+    "glam",
 ] }
-bevy_utils = { version = "0.19.0", default-features = false }
-bevy_diagnostic = { version = "0.19.0", default-features = false, optional = true }
+bevy_utils = { version = "0.20.0", default-features = false }
+bevy_diagnostic = { version = "0.20.0", default-features = false, optional = true }
 
-firewheel = { version = "0.12.0", default-features = false, features = [
-  "bevy",
-  "spatial_basic_node",
-  "scheduled_events",
-  "musical_transport",
-  "glam-32",
-  "sampler_node",
-  "std",
-  "tracing",
+#firewheel = { version = "0.14.0", default-features = false, features = [
+firewheel = { git = "https://github.com/eswartz/Firewheel-fork.git", branch = "bevy-0.20", default-features = false, features = [
+    "bevy",
+    "spatial_basic_node",
+    "scheduled_events",
+    "musical_transport",
+    "glam-33",
+    "sampler_node",
+    "std",
+    "tracing",
 ] }
-symphonium = { version = "0.12", default-features = false, features = [
-  "opt-simd",
-  "fft-resampler",
-  "resampler",
+symphonium = { version = "0.13", default-features = false, features = [
+    "opt-simd",
+    "fft-resampler",
+    "resampler",
 ], optional = true }
 symphonia = { version = "0.6", default-features = false, optional = true }
 smallvec = { version = "1.13", default-features = false }
 bevy_seedling_macros = { path = "./seedling_macros", version = "0.8.0" }
 rand = { version = "0.10", default-features = false, features = [
-  "sys_rng",
+    "sys_rng",
 ], optional = true }
 ebur128 = { version = "0.1.10", optional = true }
 portable-atomic = { version = "1.11", optional = true, features = ["float"] }
 firewheel-ircam-hrtf = { version = "0.5.0", path = "crates/firewheel-ircam-hrtf", optional = true, features = [
-  "bevy",
+    "bevy",
 ] }
 cpal = { version = "0.18", default-features = false, optional = true }
 rtaudio = { version = "0.8", default-features = false, optional = true }
@@ -102,40 +103,46 @@ firewheel-web-audio = { version = "0.5.0", path = "crates/firewheel-web-audio", 
 audioadapter-buffers = { version = "4.0", default-features = false, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-firewheel = { version = "0.12.0", features = ["wasm-bindgen"] }
+#firewheel = { version = "0.14.0", features = ["wasm-bindgen"] }
+firewheel = { git = "https://github.com/eswartz/Firewheel-fork.git", branch = "bevy-0.20", features = [
+    "wasm-bindgen",
+] }
 
 [dev-dependencies]
 bevy_seedling = { path = ".", features = [
-  "hrtf",
-  "loudness",
-  "resample_inputs",
-  "effects",
+    "hrtf",
+    "loudness",
+    "resample_inputs",
+    "effects",
 ] }
-firewheel = { version = "0.12.0", default-features = false, features = [
-  "fast_filter_nodes",
+# firewheel = { version = "0.14.0", default-features = false, features = [
+firewheel = { git = "https://github.com/eswartz/Firewheel-fork.git", branch = "bevy-0.20", default-features = false, features = [
+    "fast_filter_nodes",
 ] }
-bevy = { version = "0.19.0", default-features = false, features = [
-  "2d_bevy_render",
-  "default_app",
-  "picking",
-  "ui_bevy_render",
-  "bevy_winit",
-  "default_font",
-  "std",
-  "sysinfo_plugin",
-  "wayland",
-  "webgl2",
-  "x11",
+bevy = { version = "0.20.0", default-features = false, features = [
+    "2d_bevy_render",
+    "default_app",
+    "debug",
+    "picking",
+    "ui_bevy_render",
+    "bevy_ui_widgets",
+    "bevy_winit",
+    "default_font",
+    "std",
+    "sysinfo_plugin",
+    "wayland",
+    "webgl2",
+    "x11",
 ] }
 criterion = { version = "0.5", default-features = false, features = [
-  "plotters",
-  "cargo_bench_support",
+    "plotters",
+    "cargo_bench_support",
 ] }
 audioadapter-buffers = { version = "4.0", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.4", default-features = false, features = [
-  "wasm_js",
+    "wasm_js",
 ] }
 
 [profile.dev]
@@ -148,3 +155,4 @@ required-features = ["profiling"]
 
 [package.metadata.docs.rs]
 all-features = true
+

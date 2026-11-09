@@ -85,7 +85,7 @@ fn select_output(
 }
 
 fn observe_selection(
-    trigger: On<Add, SelectedOutput>,
+    trigger: On<Add<SelectedOutput>>,
     outputs: Query<&OutputDevice>,
     mut text: Query<&mut Text, With<SelectedTextNode>>,
     mut stream: ResMut<AudioStreamConfig<CpalConfig>>,
