@@ -415,7 +415,7 @@ impl Sampler {
 
     // Whenever this link is broken, all the effects should also remove their control.
     fn observe_discard(
-        trigger: On<Discard, Self>,
+        trigger: On<Discard<Self>>,
         target: Query<&SampleEffects>,
         mut commands: Commands,
     ) {
