@@ -276,7 +276,10 @@ where
     ///     samples: Query<&SampleEffects, With<UnderwaterSound>>,
     ///     low_pass: Query<&FastLowpassNode>,
     /// ) {
-    ///     for node in samples.iter().flat_map(|s| low_pass.iter_effects(s)) {
+    ///     for node in samples
+    ///         .iter()
+    ///         .flat_map(|s| low_pass.iter_effects(s).matched())
+    ///     {
     ///         info!("Frequency: {}", node.cutoff_hz);
     ///     }
     /// }
@@ -299,7 +302,7 @@ where
     ///     mut low_pass: Query<&mut FastLowpassNode>,
     /// ) {
     ///     for effects in samples {
-    ///         for mut node in low_pass.iter_effects_mut(effects) {
+    ///         for mut node in low_pass.iter_effects_mut(effects).matched() {
     ///             node.cutoff_hz = 500.0;
     ///         }
     ///     }
