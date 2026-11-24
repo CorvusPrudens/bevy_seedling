@@ -16,9 +16,6 @@ is simple.
 First, you'll need to add the dependency to your `Cargo.toml`.
 Note that you'll need to disable Bevy's `audio` feature.
 
-<details>
-<summary>Example `Cargo.toml`</summary>
-
 ```toml
 [dependencies]
 bevy_seedling = "0.9.0"
@@ -26,8 +23,6 @@ bevy = { version = "0.20.0", default-features = false, features = [
     "2d", "3d", "ui"
 ] }
 ```
-
-</details>
 
 Then, you'll need to add `SeedlingPlugins` to your app.
 

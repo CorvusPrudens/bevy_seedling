@@ -1,3 +1,9 @@
+# 0.9.0
+
+## Changes
+
+- Upgraded to Bevy 0.20 and Firewheel 0.15
+
 # 0.8.0
 
 ## Changes
@@ -11,7 +17,7 @@ Rather than a generic plugin that takes an implementor
 of `firewheel::Backend`, we use a single plugin collection containing multiple
 independent backend plugins.
 
-As part of this work, `cpal` has received its own feature flag, allowing you to 
+As part of this work, `cpal` has received its own feature flag, allowing you to
 completely remove it when you don't need it. Consequently, it will need to
 be specifically enabled when disabling default features.
 
@@ -52,7 +58,7 @@ app.add_plugins(SeedlingPlugins)
 ### Easier Wasm multi-threading setup
 
 Following from the plugin restructuring, enabling multi-threaded audio processing
-on the web has been simplified. Rather than requiring `cfg` gating in your project, 
+on the web has been simplified. Rather than requiring `cfg` gating in your project,
 you can simply enable the `web_audio` feature. If you use the Bevy CLI, ensuring
 everything else is set up correctly is as simple as `bevy run web -U multi-threading`.
 
@@ -103,7 +109,7 @@ commands
 ### Configurable asset loading
 
 Previously, `symphonia` was always enabled and could not be customized.
-In 0.8, `bevy_seedling`'s default asset loader `SampleLoader` 
+In 0.8, `bevy_seedling`'s default asset loader `SampleLoader`
 can be provided with a fully customized `CodecRegistry` and `Probe`
 via the `AudioLoaderConfig` resource. It can also be completely
 disabled along with all `symphonia` crates by disabling the

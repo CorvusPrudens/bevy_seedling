@@ -15,9 +15,6 @@
 //! First, you'll need to add the dependency to your `Cargo.toml`.
 //! Note that you'll need to disable Bevy's default `audio` feature.
 //!
-//! <details>
-//! <summary>Example `Cargo.toml`</summary>
-//!
 //! ```toml
 //! [dependencies]
 //! bevy_seedling = "0.9.0"
@@ -25,8 +22,6 @@
 //!   "2d, "3d", "ui"
 //! ] }
 //! ```
-//!
-//! </details>
 //!
 //! Then, you'll need to add [`SeedlingPlugins`] to your app.
 //!
