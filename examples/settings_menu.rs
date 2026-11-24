@@ -16,7 +16,10 @@
 use bevy::{
     app::App,
     ecs::{spawn::SpawnWith, system::IntoObserverSystem},
+    picking::hover::Hovered,
     prelude::*,
+    ui::Pressed,
+    ui_widgets::{Activate, Button},
 };
 use bevy_seedling::prelude::*;
 
@@ -74,7 +77,7 @@ fn setup(mut master: Single<&mut VolumeNode, With<MainBus>>, mut commands: Comma
 }
 
 fn play_music(
-    _: On<Pointer<Click>>,
+    _: On<Activate>,
     playing: Query<(), (With<MusicPool>, With<SamplePlayer>)>,
     mut commands: Commands,
     server: Res<AssetServer>,
@@ -92,7 +95,7 @@ fn play_music(
     ));
 }
 
-fn play_sfx(_: On<Pointer<Click>>, mut commands: Commands, server: Res<AssetServer>) {
+fn play_sfx(_: On<Activate>, mut commands: Commands, server: Res<AssetServer>) {
     let source = server.load("caw.ogg");
 
     // The default pool is routed to the `SoundEffectsBus`, so we don't
@@ -121,11 +124,11 @@ fn decrement_volume(volume: Volume) -> Volume {
 }
 
 // Master
-fn lower_master(_: On<Pointer<Click>>, mut master: Single<&mut VolumeNode, With<MainBus>>) {
+fn lower_master(_: On<Activate>, mut master: Single<&mut VolumeNode, With<MainBus>>) {
     master.volume = decrement_volume(master.volume);
 }
 
-fn raise_master(_: On<Pointer<Click>>, mut master: Single<&mut VolumeNode, With<MainBus>>) {
+fn raise_master(_: On<Activate>, mut master: Single<&mut VolumeNode, With<MainBus>>) {
     master.volume = increment_volume(master.volume);
 }
 
@@ -139,17 +142,11 @@ fn update_master_volume_label(
 }
 
 // Music
-fn lower_music(
-    _: On<Pointer<Click>>,
-    mut music: Single<&mut VolumeNode, With<SamplerPool<MusicPool>>>,
-) {
+fn lower_music(_: On<Activate>, mut music: Single<&mut VolumeNode, With<SamplerPool<MusicPool>>>) {
     music.volume = decrement_volume(music.volume);
 }
 
-fn raise_music(
-    _: On<Pointer<Click>>,
-    mut music: Single<&mut VolumeNode, With<SamplerPool<MusicPool>>>,
-) {
+fn raise_music(_: On<Activate>, mut music: Single<&mut VolumeNode, With<SamplerPool<MusicPool>>>) {
     music.volume = increment_volume(music.volume);
 }
 
@@ -163,11 +160,11 @@ fn update_music_volume_label(
 }
 
 // SFX
-fn lower_sfx(_: On<Pointer<Click>>, mut sfx: Single<&mut VolumeNode, With<SoundEffectsBus>>) {
+fn lower_sfx(_: On<Activate>, mut sfx: Single<&mut VolumeNode, With<SoundEffectsBus>>) {
     sfx.volume = decrement_volume(sfx.volume);
 }
 
-fn raise_sfx(_: On<Pointer<Click>>, mut sfx: Single<&mut VolumeNode, With<SoundEffectsBus>>) {
+fn raise_sfx(_: On<Activate>, mut sfx: Single<&mut VolumeNode, With<SoundEffectsBus>>) {
     sfx.volume = increment_volume(sfx.volume);
 }
 
@@ -260,11 +257,10 @@ fn sfx_volume() -> impl Bundle {
 #[reflect(Component)]
 struct SfxVolumeLabel;
 
-pub fn btn<E, B, M, I>(t: impl Into<String>, action: I) -> impl Bundle
+pub fn btn<E, M, I>(t: impl Into<String>, action: I) -> impl Bundle
 where
     E: EntityEvent,
-    B: Bundle,
-    I: IntoObserverSystem<E, B, M>,
+    I: IntoObserverSystem<E, M>,
 {
     let action = IntoObserverSystem::into_system(action);
     let t: String = t.into();
@@ -276,8 +272,9 @@ where
             parent
                 .spawn((
                     Button,
+                    Hovered::default(),
                     BorderColor::all(Color::WHITE),
-                    children![Name::new("Button text"), text(Text(t))],
+                    text(Text(t)),
                 ))
                 .observe(action);
         })),
@@ -333,22 +330,20 @@ const NORMAL_BUTTON: Color = Color::srgb(0.9, 0.9, 0.9);
 const HOVERED_BUTTON: Color = Color::srgb(0.7, 0.7, 0.7);
 
 fn button_hover(
-    interaction_query: Query<(&Interaction, &Children), (Changed<Interaction>, With<Button>)>,
-    mut text: Query<&mut BackgroundColor>,
+    mut interaction_query: Query<
+        (Has<Pressed>, &Hovered, &mut BackgroundColor),
+        (Or<(Changed<Pressed>, Changed<Hovered>)>, With<Button>),
+    >,
 ) {
-    for (interaction, children) in &interaction_query {
-        let Some(mut color) = children.get(1).and_then(|c| text.get_mut(*c).ok()) else {
-            continue;
-        };
-
-        match *interaction {
-            Interaction::Pressed => {
+    for (pressed, hovered, mut color) in interaction_query.iter_mut() {
+        match (hovered.get(), pressed) {
+            (_, true) => {
                 *color = NORMAL_BUTTON.into();
             }
-            Interaction::Hovered => {
+            (true, false) => {
                 *color = HOVERED_BUTTON.into();
             }
-            Interaction::None => {
+            (false, false) => {
                 *color = NORMAL_BUTTON.into();
             }
         }

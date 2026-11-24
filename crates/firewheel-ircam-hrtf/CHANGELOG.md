@@ -1,18 +1,24 @@
+# 0.6.0
+
+## Changes
+
+- Update Firewheel to 0.15.0 and Bevy to 0.20
+
 # 0.5.0
 
-# Changes
+## Changes
 
 - Update Firewheel to 0.12.0 and Bevy to 0.19
 
 # 0.4.0
 
-# Changes
+## Changes
 
 - Update Firewheel to 0.10.0 and Bevy to 0.18
 
 # 0.2.0
 
-# Features
+## Features
 
 - Introduced `HrtfNode::coeff_update_factor`, which provides a bit
   more granular control over parameter smoothing.

@@ -30,7 +30,6 @@ pub use firewheel::rtaudio::*;
 #[cfg(not(target_arch = "wasm32"))]
 mod inner {
     use super::*;
-    use bevy_ecs::prelude::*;
     use bevy_log::{error, warn};
     use firewheel::rtaudio::rtaudio::RtAudioErrorType;
     use std::num::NonZeroU32;

@@ -22,8 +22,7 @@ bevy_ecs::define_label!(
     /// #[derive(PoolLabel, Debug, Clone, PartialEq, Eq, Hash)]
     /// struct MyPool;
     /// ```
-    PoolLabel,
-    POOL_LABEL_INTERNER
+    PoolLabel
 );
 
 /// The default sample pool.

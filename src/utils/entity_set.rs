@@ -148,10 +148,11 @@ mod reflect {
     impl bevy_reflect::GetTypeRegistration for OrderedEntitySet {
         fn get_type_registration() -> bevy_reflect::TypeRegistration {
             let mut registration = bevy_reflect::TypeRegistration::of::<Self>();
-            registration
-            .insert::<bevy_reflect::ReflectFromPtr>(bevy_reflect::FromType::<Self>::from_type());
+            registration.insert::<bevy_reflect::ReflectFromPtr>(
+                bevy_reflect::CreateTypeData::<Self>::create_type_data(()),
+            );
             registration.insert::<bevy_reflect::ReflectFromReflect>(
-                bevy_reflect::FromType::<Self>::from_type(),
+                bevy_reflect::CreateTypeData::<Self>::create_type_data(()),
             );
             registration
         }
@@ -248,7 +249,9 @@ mod reflect {
             self.0.retain(|e| f(e))
         }
 
-        fn to_dynamic_set(&self) -> bevy_reflect::set::DynamicSet {
+        fn to_dynamic_set(
+            &self,
+        ) -> Result<bevy_reflect::set::DynamicSet, bevy_reflect::ReflectCloneError> {
             let mut set = bevy_reflect::set::DynamicSet::default();
             set.set_represented_type(Some(Self::type_info()));
 
@@ -256,7 +259,7 @@ mod reflect {
                 set.insert(*value);
             }
 
-            set
+            Ok(set)
         }
 
         fn insert_boxed(&mut self, value: Box<dyn PartialReflect>) -> bool {

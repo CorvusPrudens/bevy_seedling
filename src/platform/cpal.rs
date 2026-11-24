@@ -1,7 +1,6 @@
 //! Stream management for `cpal`.
 
 use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
 use bevy_log::{error, warn};
 use firewheel::cpal::{self};
 
@@ -149,7 +148,7 @@ fn poll_stream(mut context: ResMut<AudioContext>, mut commands: Commands) -> Res
                 }
                 kind => match error.message() {
                     Some(message) => {
-                        error!("audio output error: {message}");
+                        error!("audio output error: {kind} msg {message:?}");
                     }
                     None => {
                         error!("audio output error: {kind}");

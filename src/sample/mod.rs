@@ -269,7 +269,7 @@ impl SamplePlayer {
 }
 
 pub(super) fn observe_player_insert(
-    player: On<Insert, SamplePlayer>,
+    player: On<Insert<SamplePlayer>>,
     time: Res<bevy_time::Time<Audio>>,
     mut commands: Commands,
 ) {
