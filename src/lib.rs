@@ -19,7 +19,7 @@
 //! [dependencies]
 //! bevy_seedling = "0.9.0"
 //! bevy = { version = "0.20.0", default-features = false, features = [
-//!   "2d, "3d", "ui"
+//!   "2d", "3d", "ui"
 //! ] }
 //! ```
 //!
