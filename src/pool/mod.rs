@@ -9,6 +9,7 @@ use crate::{
     pool::label::PoolLabelContainer,
     prelude::{AudioEvents, PoolLabel},
     sample::{OnComplete, PlaybackSettings, QueuedSample, SamplePlayer},
+    spatial::Doppler,
     time::{Audio, AudioTime},
 };
 use bevy_app::prelude::*;
@@ -528,6 +529,7 @@ fn watch_sample_players(
             &mut PlaybackSettings,
             &mut AudioEvents,
             Option<&DiffTimestamp>,
+            Option<&Doppler>,
         ),
         Without<SamplerOf>,
     >,
@@ -537,7 +539,8 @@ fn watch_sample_players(
     let render_range = time.render_range();
 
     for (sampler_entity, mut sampler_node, mut events, sample) in q.iter_mut() {
-        let Ok((mut settings, mut source_events, timestamp)) = samples.get_mut(sample.0) else {
+        let Ok((mut settings, mut source_events, timestamp, doppler)) = samples.get_mut(sample.0)
+        else {
             continue;
         };
 
@@ -547,7 +550,8 @@ fn watch_sample_players(
         // produce incorrectly duplicated, potentially unscheduled events.
         sampler_node.play = settings.play;
         sampler_node.play_from = settings.play_from;
-        sampler_node.speed = settings.speed;
+        let doppler_factor = doppler.map(|doppler| doppler.factor).unwrap_or(1.0);
+        sampler_node.speed = settings.speed * doppler_factor;
 
         // TODO: consider collecting these errors
         if source_events.active_within(render_range.start, render_range.end) {
